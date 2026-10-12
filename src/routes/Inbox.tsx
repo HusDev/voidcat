@@ -1,22 +1,9 @@
 import { CheckCheck } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { SourcePage } from "../components/SourcePage";
 import { type Fact, type Page, LIBRARY_CHANGED, announceChange, documentPages, listFacts, settleFact } from "../lib/library";
 
 const quiet = "h-10 rounded-lg border border-[#d3d8dd] bg-card px-3.5 text-sm text-ink hover:border-ink-2";
-
-/** Marks where the fact's value appears on the page, ignoring case. */
-function Highlighted({ text, value }: { text: string; value: string }) {
-  const needle = value.trim();
-  const at = needle ? text.toLowerCase().indexOf(needle.toLowerCase()) : -1;
-  if (at < 0) return <>{text}</>;
-  return (
-    <>
-      {text.slice(0, at)}
-      <mark className="bg-[#fbe3ae] px-0.5">{text.slice(at, at + needle.length)}</mark>
-      {text.slice(at + needle.length)}
-    </>
-  );
-}
 
 export function Inbox() {
   const [facts, setFacts] = useState<Fact[]>([]);
@@ -130,9 +117,11 @@ export function Inbox() {
             {current.documentTitle}
             {page ? ` · page ${page.page}` : ""}
           </span>
-          <div data-selectable className="max-h-[560px] overflow-y-auto whitespace-pre-wrap rounded-xl border border-line bg-card px-6 py-6 text-xs leading-relaxed text-[#3c444d]">
-            {page ? <Highlighted text={page.text} value={current.value} /> : "No text for this page."}
-          </div>
+          {page ? (
+            <SourcePage text={page.text} mime={current.documentMime} highlight={current.value} />
+          ) : (
+            <p className="m-0 rounded-xl border border-line bg-card px-6 py-6 text-xs text-ink-2">No text for this page.</p>
+          )}
           <span className="text-[12.5px] text-ink-2">Read on this Mac. This page was not sent to any AI.</span>
         </aside>
       )}

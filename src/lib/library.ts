@@ -40,7 +40,7 @@ export function formatSize(bytes: number) {
 export const formatDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export type Hit = { documentId: string; title: string; page: number; snippet: string };
-export type Fact = { id: string; documentId: string; documentTitle: string; label: string; value: string; page: number | null; status: "pending" | "approved" | "rejected" };
+export type Fact = { id: string; documentId: string; documentTitle: string; documentMime: string | null; label: string; value: string; page: number | null; status: "pending" | "approved" | "rejected" };
 export type Page = { page: number; text: string };
 
 export const searchLibrary = (query: string) => invoke<Hit[]>("search", { query });

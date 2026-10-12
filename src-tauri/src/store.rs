@@ -52,6 +52,7 @@ pub struct Fact {
     id: String,
     document_id: String,
     document_title: String,
+    document_mime: Option<String>,
     label: String,
     value: String,
     page: Option<i64>,
@@ -329,14 +330,23 @@ impl Store {
         let db = self.db.lock().unwrap();
         let mut stmt = db
             .prepare(
-                "select f.id, f.document_id, d.title, f.label, f.value, f.page, f.status
+                "select f.id, f.document_id, d.title, d.mime, f.label, f.value, f.page, f.status
                  from facts f join documents d on d.id = f.document_id
                  where f.status = ?1 order by d.added_at desc, f.page, f.rowid",
             )
             .map_err(|e| e.to_string())?;
         let rows = stmt
             .query_map([status], |r| {
-                Ok(Fact { id: r.get(0)?, document_id: r.get(1)?, document_title: r.get(2)?, label: r.get(3)?, value: r.get(4)?, page: r.get(5)?, status: r.get(6)? })
+                Ok(Fact {
+                    id: r.get(0)?,
+                    document_id: r.get(1)?,
+                    document_title: r.get(2)?,
+                    document_mime: r.get(3)?,
+                    label: r.get(4)?,
+                    value: r.get(5)?,
+                    page: r.get(6)?,
+                    status: r.get(7)?,
+                })
             })
             .map_err(|e| e.to_string())?;
         rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
