@@ -246,9 +246,9 @@ pub fn run() {
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             legacy::move_library(&dir)?;
-            // Other apps set up under the old name now start the renamed server.
+            // Other apps set up under the old name, or before the app moved, start this copy of the server.
             for name in ["claude-desktop", "cursor"] {
-                apps::upgrade_legacy(name);
+                apps::sync_entry(name);
             }
             let store = Store::open(&dir)
                 .map_err(|e| format!("Could not open the library in {}: {e}", dir.display()))?;

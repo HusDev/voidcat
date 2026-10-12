@@ -119,14 +119,21 @@ fn set_server(config: &mut Value, server: Option<&Path>) -> Result<(), String> {
     Ok(())
 }
 
-/// Replaces an app's old "safebox" MCP entry with the "voidcat" one. Does nothing when there is no old entry.
-pub fn upgrade_legacy(app: &str) {
-    let had_old = config_path(app)
+/// Keeps an app's Voidcat entry pointing at this copy of the server: replaces the old "safebox" entry from the app's
+/// first name, and updates the path when the app or its folder moved. Does nothing for apps Voidcat isn't added to.
+pub fn sync_entry(app: &str) {
+    let Ok(server) = server_path() else { return };
+    let config = config_path(app)
         .ok()
         .and_then(|p| std::fs::read_to_string(p).ok())
-        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-        .is_some_and(|v| v.pointer("/mcpServers/safebox").is_some());
-    if had_old {
+        .and_then(|s| serde_json::from_str::<Value>(&s).ok());
+    let Some(config) = config else { return };
+    let old_name = config.pointer("/mcpServers/safebox").is_some();
+    let stale = config
+        .pointer("/mcpServers/voidcat/command")
+        .and_then(Value::as_str)
+        .is_some_and(|c| Path::new(c) != server);
+    if old_name || stale {
         let _ = connect(app, true);
     }
 }

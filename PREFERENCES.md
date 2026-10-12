@@ -47,7 +47,7 @@ Every product, design and working decision Hussein made, with the date. When he 
 - **Short answers;** challenge with evidence rather than folding.
 - **Plan, then build one phase at a time.** After each step: checks, commit, **push**, restart the app so he can try it.
 - **Record every decision** in this file, with the date.
-- **GitLab:** repo at gitlab.com/hus.dev/safebox, private for now; public + MIT for the GitLab Transcend hackathon. The hackathon judges DevSecOps automation, so a lifecycle-automation angle is still to be added.
+- **GitLab:** repo at gitlab.com/hus.dev/voidcat, private for now; public + MIT for the GitLab Transcend hackathon. The hackathon judges DevSecOps automation, so a lifecycle-automation angle is still to be added.
 
 ## Change log
 - 12 Oct 2026 — Idea: smart storage that any AI can use, with a privacy filter and a library of facts; a new project separate from Hus.
@@ -75,3 +75,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 12 Oct 2026 — Settings screen added (sidebar link at the bottom): Appearance (Auto / Light / Dark) and Privacy (Hide private details, ⌘⇧H). Sidebar theme switch removed; "Hide private details" fits on one line, shortcut in its tooltip.
 - 12 Oct 2026 — Private-details colour changed from amber to cyan (#5EEAD4; chips dark teal with cyan text).
 - 12 Oct 2026 — Renamed everything in the app from SafeBox to Voidcat ("rename all to voidcat"), including internal names; the library, Keychain key and Claude Desktop entry move over automatically.
+- 12 Oct 2026 — Local folder renamed to ~/lab/voidcat and the GitLab project to hus.dev/voidcat.
