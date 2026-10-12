@@ -134,7 +134,7 @@ export function Library() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-wrap items-center gap-4">
-        <h1 className="m-0 text-[26px] font-bold tracking-tight">
+        <h1 className="m-0 text-[30px] font-light tracking-tight">
           {folder ? (
             <>
               <Link to="/" className="text-ink-2 no-underline hover:text-ink">
@@ -150,7 +150,7 @@ export function Library() {
           {shown.length} {shown.length === 1 ? "document" : "documents"}
           {!folder && ` · ${facts.length} ${facts.length === 1 ? "fact" : "facts"}`}
         </span>
-        <label htmlFor="lib-search" className="ml-auto flex h-10 w-80 items-center gap-2 rounded-lg border border-[#d3d8dd] bg-card px-3 text-sm text-ink-2">
+        <label htmlFor="lib-search" className="ml-auto flex h-10 w-80 items-center gap-2 rounded-lg border border-line-strong bg-card px-3 text-sm text-ink-2">
           <Search aria-hidden className="size-4" />
           <input
             id="lib-search"
@@ -188,7 +188,7 @@ export function Library() {
         <>
           <section
             aria-label="Drop files"
-            className={`flex items-center gap-4.5 rounded-xl border-2 border-dashed px-6 py-5 transition-colors ${dragging ? "border-link bg-[#e3eef2]" : "border-[#9fb4c1] bg-[#f7fafb]"}`}
+            className={`flex items-center gap-4.5 rounded-xl border-2 border-dashed px-6 py-5 transition-colors ${dragging ? "border-accent bg-accent-soft" : "border-accent/40 bg-accent-soft/40"}`}
           >
             <Upload aria-hidden className="size-10 text-link" strokeWidth={1.6} />
             <div className="flex flex-col gap-0.5">
@@ -199,7 +199,7 @@ export function Library() {
               type="button"
               onClick={choose}
               disabled={!hasLibrary}
-              className="ml-auto h-10 rounded-lg bg-ink px-4 text-sm font-semibold text-white hover:bg-rail-2 disabled:opacity-50"
+              className="ml-auto h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
             >
               Choose files
             </button>
@@ -220,7 +220,7 @@ export function Library() {
               <span className="flex-1">
                 {unsorted.length} {unsorted.length === 1 ? "document has" : "documents have"} no folder yet.
               </span>
-              <button type="button" onClick={() => process(unsorted)} className="h-8 rounded-md bg-ink px-3 text-[13px] font-semibold text-white hover:bg-rail-2">
+              <button type="button" onClick={() => process(unsorted)} className="h-8 rounded-md bg-accent px-3 text-[13px] font-semibold text-white hover:bg-accent-strong">
                 Suggest folders
               </button>
             </div>
@@ -296,14 +296,14 @@ export function Library() {
                       <button
                         type="button"
                         onClick={() => openDocument(d.id)}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d3d8dd] px-2.5 text-[13px] hover:border-ink-2"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2"
                       >
                         <Eye aria-hidden className="size-4" /> Open
                       </button>
                       <button
                         type="button"
                         onClick={() => setMoving(moving === d.id ? null : d.id)}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d3d8dd] px-2.5 text-[13px] hover:border-ink-2"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2"
                       >
                         <FolderInput aria-hidden className="size-4" /> Move
                       </button>
@@ -311,7 +311,7 @@ export function Library() {
                         <button
                           type="button"
                           onClick={() => process([d])}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d3d8dd] px-2.5 text-[13px] hover:border-ink-2"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2"
                         >
                           <Sparkles aria-hidden className="size-4" /> Find facts
                         </button>
@@ -325,7 +325,7 @@ export function Library() {
                               setConfirming(null);
                               announceChange();
                             }}
-                            className="h-8 rounded-md bg-[#b42318] px-2.5 text-[13px] font-semibold text-white"
+                            className="h-8 rounded-md bg-danger px-2.5 text-[13px] font-semibold text-white"
                           >
                             Remove for good
                           </button>

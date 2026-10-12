@@ -1,6 +1,6 @@
 # SafeBox — status and next steps
 
-Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026 (MCP server built).
+Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026 (Voidcat rebrand).
 
 ## The product
 **SafeBox** (working name): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
@@ -45,6 +45,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - Claude Desktop, Cursor and Claude Code can list documents, read approved facts and see upcoming dates, all masked;
    - searching and reading pages need the higher level; each app starts at "masked facts and dates" and you change it in Connected AIs;
    - one click adds SafeBox to Claude Desktop or Cursor; Claude Code gets a command to copy. ChatGPT isn't supported (it needs an internet server).
+12. **Voidcat rebrand:** line-cat logo and app icon, violet accent, Outfit headings, light and dark themes that follow the Mac (sidebar dark in both), name Voidcat in the window and the interface. Canvas: https://claude.ai/artifact/97fHrNDyKQs6Q6DQ7cmB1Z (dark and light rows).
 
 ## Next, in order
 1. **GitLab hackathon work:**

@@ -26,7 +26,7 @@ const FIT: Record<Opportunity["fit"], [string, string]> = {
   maybe: ["Check", "bg-private-soft text-private-ink"],
   no: ["Not for you", "bg-ground text-ink-2"],
 };
-const button = "inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d3d8dd] bg-card px-2.5 text-[12.5px] hover:border-ink-2 disabled:opacity-40";
+const button = "inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-card px-2.5 text-[12.5px] hover:border-ink-2 disabled:opacity-40";
 
 type Review = { sent: string; number: Map<string, string>; masker: Masker; hidden: number; cost: string | null };
 
@@ -82,7 +82,7 @@ function Card({ o, onStatus }: { o: Opportunity; onStatus: (status: Opportunity[
         <h3 className="m-0 flex-1 text-[16px] font-bold leading-snug">
           <Private>{o.title}</Private>
         </h3>
-        {o.status === "kept" && <span className="shrink-0 rounded-full bg-ink px-2 py-0.5 text-[12px] font-semibold text-white">Kept</span>}
+        {o.status === "kept" && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold text-white">Kept</span>}
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold ${fitCls}`}>{fit}</span>
       </div>
       <p data-selectable className="m-0 text-[14px] leading-relaxed text-ink">
@@ -126,7 +126,7 @@ function Card({ o, onStatus }: { o: Opportunity; onStatus: (status: Opportunity[
           </button>
         ) : (
           <>
-            <button type="button" onClick={() => onStatus(o.status === "kept" ? "new" : "kept")} aria-pressed={o.status === "kept"} className={`${button} ${o.status === "kept" ? "border-ink bg-ink text-white hover:bg-rail-2" : ""}`}>
+            <button type="button" onClick={() => onStatus(o.status === "kept" ? "new" : "kept")} aria-pressed={o.status === "kept"} className={`${button} ${o.status === "kept" ? "border-ink bg-accent text-white hover:bg-accent-strong" : ""}`}>
               <Sparkles aria-hidden className="size-3.5" /> {o.status === "kept" ? "Kept" : "Keep"}
             </button>
             {added ? (
@@ -138,7 +138,7 @@ function Card({ o, onStatus }: { o: Opportunity; onStatus: (status: Opportunity[
                 <label htmlFor={`d-${o.key}`} className="sr-only">
                   Date
                 </label>
-                <input id={`d-${o.key}`} type="date" value={date} onChange={(e) => setDate(e.currentTarget.value)} className="h-8 rounded-md border border-[#d3d8dd] bg-card px-2 text-[12.5px]" />
+                <input id={`d-${o.key}`} type="date" value={date} onChange={(e) => setDate(e.currentTarget.value)} className="h-8 rounded-md border border-line-strong bg-card px-2 text-[12.5px]" />
                 <button type="button" disabled={!date} onClick={toCalendar} className={button}>
                   Add
                 </button>
@@ -151,7 +151,7 @@ function Card({ o, onStatus }: { o: Opportunity; onStatus: (status: Opportunity[
             <button type="button" onClick={() => onStatus("done")} className={button}>
               <Check aria-hidden className="size-3.5" /> Done
             </button>
-            <button type="button" onClick={() => onStatus("dismissed")} className={`${button} ml-auto border-transparent text-ink-2 hover:border-[#d3d8dd]`}>
+            <button type="button" onClick={() => onStatus("dismissed")} className={`${button} ml-auto border-transparent text-ink-2 hover:border-line-strong`}>
               <X aria-hidden className="size-3.5" /> Dismiss
             </button>
           </>
@@ -266,7 +266,7 @@ export function Opportunities() {
     <div ref={top} className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <header className="flex flex-wrap items-start gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="m-0 text-[26px] font-bold tracking-tight">Opportunities</h1>
+          <h1 className="m-0 text-[30px] font-light tracking-tight">Opportunities</h1>
           <span className="text-sm text-ink-2">
             {items.length
               ? `${forYou} for you · ${toCheck} to check${scannedAt ? ` · scanned ${day(scannedAt)}` : ""}`
@@ -277,7 +277,7 @@ export function Opportunities() {
           type="button"
           onClick={prepare}
           disabled={state !== "idle" || !hasLibrary || hasKey === false}
-          className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-ink px-3.5 text-[13.5px] font-semibold text-white hover:bg-rail-2 disabled:opacity-40"
+          className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-[13.5px] font-semibold text-white hover:bg-accent-strong disabled:opacity-40"
         >
           {state === "building" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <ScanSearch aria-hidden className="size-4" />}
           {items.length ? "Scan again" : "Find opportunities"}
@@ -290,7 +290,7 @@ export function Opportunities() {
         </Link>
       )}
       {error && (
-        <p role="alert" className="m-0 text-sm text-[#b42318]">
+        <p role="alert" className="m-0 text-sm text-danger">
           {error}
         </p>
       )}
@@ -309,12 +309,12 @@ export function Opportunities() {
               <ShieldCheck aria-hidden className="size-3.5 text-private-ink" />
               Will be sent to <span className="font-mono">{model}</span> · zero data retention
             </summary>
-            <pre data-selectable className="m-0 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-b-lg bg-ink p-3.5 font-mono text-[12px] leading-relaxed text-rail-ink">
+            <pre data-selectable className="m-0 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-b-lg bg-code p-3.5 font-mono text-[12px] leading-relaxed text-rail-ink">
               <Placeholders text={review.sent} />
             </pre>
           </details>
           <label className="flex items-start gap-2.5 text-[13.5px]">
-            <input type="checkbox" checked={web} onChange={(e) => toggleWeb(e.currentTarget.checked)} className="mt-0.5 size-4 accent-ink" />
+            <input type="checkbox" checked={web} onChange={(e) => toggleWeb(e.currentTarget.checked)} className="mt-0.5 size-4 accent-accent" />
             <span className="flex flex-col gap-0.5">
               <span className="inline-flex items-center gap-1.5 font-semibold">
                 <Globe aria-hidden className="size-3.5" /> Check current rules on the web
@@ -323,7 +323,7 @@ export function Opportunities() {
             </span>
           </label>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={scan} disabled={state === "scanning"} className="inline-flex h-10 items-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-white hover:bg-rail-2 disabled:opacity-60">
+            <button type="button" onClick={scan} disabled={state === "scanning"} className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-60">
               {state === "scanning" && <LoaderCircle aria-hidden className="size-4 animate-spin" />}
               {state === "scanning" ? "Scanning… (up to a minute)" : "Scan"}
             </button>
@@ -337,7 +337,7 @@ export function Opportunities() {
 
       {items.length === 0 && !review && hasLibrary && (
         <div className="rounded-xl border border-line bg-card px-5 py-8 text-sm text-ink-2">
-          No scan yet. SafeBox sends your approved facts, with private details hidden, to the AI you chose, and lists tax reliefs, residency milestones and other
+          No scan yet. Voidcat sends your approved facts, with private details hidden, to the AI you chose, and lists tax reliefs, residency milestones and other
           advantages that fit your situation. You see exactly what is sent first.
         </div>
       )}
@@ -351,7 +351,7 @@ export function Opportunities() {
               key={a}
               aria-selected={area === a}
               onClick={() => setArea(a)}
-              className={`rounded-full px-3 py-1.5 text-[13px] ${area === a ? "bg-ink font-semibold text-white" : "bg-card text-ink hover:bg-white/70"}`}
+              className={`rounded-full px-3 py-1.5 text-[13px] ${area === a ? "bg-accent font-semibold text-white" : "bg-card text-ink hover:bg-white/70"}`}
             >
               {a === "all" ? "All" : AREA_NAMES[a]}
             </button>

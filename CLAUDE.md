@@ -7,7 +7,7 @@ Desktop app (Tauri 2) for smart personal document storage: drop files in, they a
 Decisions:
 - Desktop first (Tauri 2), data stays on the Mac.
 - Models through the Vercel AI SDK with the OpenRouter provider; every request sets `zdr: true` and prompt logging stays off. Users may add their own Anthropic/OpenAI key; Ollama for local.
-- UI from the approved mockup: dark rail, grey workspace, amber = private, Instrument Sans + IBM Plex Mono (self-hosted via Fontsource), Headless UI for menus, Lucide icons.
+- UI: the Voidcat look (rebrand, 12 Oct 2026; the repo, identifier `dev.hus.safebox`, Keychain service and MCP key `safebox` keep the old name so nothing breaks). Theme tokens in `src/index.css` `@theme` (light) with a `prefers-color-scheme: dark` override of the same `--color-*` variables; the rail tokens are the same in both (sidebar always dark). Primary actions `bg-accent` (never `bg-ink`, which is text colour and flips in dark); private = amber tokens; `text-[#0b0b0f]` only for text on amber. Headings: Outfit (`font-display`, light weight) via `h1` in index.css; body Instrument Sans; data IBM Plex Mono (Fontsource). `components/Logo.tsx` = the line cat; selected nav item = `bg-rail-2` + glowing `bg-void` dot (`group-aria-[current=page]`). App icon source `src-tauri/icons/voidcat-icon.svg` → `bun tauri icon <1024 png>`. Headless UI, Lucide icons.
 - The repo will be public (MIT) for the GitLab Transcend hackathon.
 
 Map:

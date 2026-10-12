@@ -188,7 +188,7 @@ const icsTime = (e: CalEvent) => `${e.date.replace(/-/g, "")}T${(e.time ?? "09:0
 
 /** An .ics file for Apple or Google Calendar, with the same reminders as the app. Stable UIDs so re-imports update. */
 export function toIcs(events: CalEvent[], stamp = new Date()): string {
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//SafeBox//Calendar//EN", "CALSCALE:GREGORIAN", "X-WR-CALNAME:SafeBox"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Voidcat//Calendar//EN", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Voidcat"];
   const dtstamp = `${stamp.toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`;
   for (const e of events) {
     lines.push("BEGIN:VEVENT", `UID:${e.key.replace(/[^\w:.-]/g, "-")}@safebox`, `DTSTAMP:${dtstamp}`, `SUMMARY:${icsText(e.title)}`);

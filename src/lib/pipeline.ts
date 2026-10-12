@@ -49,7 +49,7 @@ async function run() {
         continue;
       }
       if (reading.method === "unsupported") {
-        set(doc.id, { stage: "failed", message: "SafeBox can't read this file type yet." });
+        set(doc.id, { stage: "failed", message: "Voidcat can't read this file type yet." });
         continue;
       }
       set(doc.id, { stage: "filing" });

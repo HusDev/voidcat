@@ -4,7 +4,7 @@ import { type CalEvent, claimReminder, dueReminders } from "./calendar";
 import { hasLibrary } from "./library";
 
 /**
- * Shows calendar reminders as Mac notifications while SafeBox is open, checking every minute.
+ * Shows calendar reminders as Mac notifications while Voidcat is open, checking every minute.
  * Each reminder is recorded on this Mac, so it's shown once even across restarts.
  */
 export function useReminders(events: CalEvent[], done: Set<string>) {
@@ -20,7 +20,7 @@ export function useReminders(events: CalEvent[], done: Set<string>) {
       for (const r of due) {
         if (await claimReminder(r.key)) {
           const e = r.event;
-          sendNotification({ title: `${e.title} · ${r.when}`, body: [e.time, e.place, e.detail].filter(Boolean).join(" · ") || "Open SafeBox for details." });
+          sendNotification({ title: `${e.title} · ${r.when}`, body: [e.time, e.place, e.detail].filter(Boolean).join(" · ") || "Open Voidcat for details." });
         }
       }
     };

@@ -23,15 +23,15 @@ import { useCalendar } from "../lib/useCalendar";
 import { Private } from "../lib/veil";
 
 const TAG: Record<Kind, [string, string]> = {
-  appointment: ["Appointment", "bg-[#e3eef2] text-link"],
-  deadline: ["Deadline", "bg-[#fde8e6] text-[#b42318]"],
-  expires: ["Expires", "bg-[#fde8e6] text-[#b42318]"],
+  appointment: ["Appointment", "bg-accent-soft text-link"],
+  deadline: ["Deadline", "bg-danger-soft text-danger"],
+  expires: ["Expires", "bg-danger-soft text-danger"],
   payment: ["Payment", "bg-private-soft text-private-ink"],
   contract: ["Contract", "bg-ground text-ink-2"],
   work: ["Work", "bg-ground text-ink-2"],
   other: ["Date", "bg-ground text-ink-2"],
 };
-const DOT: Partial<Record<Kind, string>> = { appointment: "bg-link", deadline: "bg-[#b42318]", expires: "bg-[#b42318]", payment: "bg-[#d9a441]" };
+const DOT: Partial<Record<Kind, string>> = { appointment: "bg-accent", deadline: "bg-danger", expires: "bg-danger", payment: "bg-private-line" };
 
 const day = (iso: string, opts: Intl.DateTimeFormatOptions) => fromIso(iso).toLocaleDateString("en-GB", opts);
 const daysUntil = (iso: string) => Math.round((fromIso(iso).getTime() - new Date(new Date().toDateString()).getTime()) / 86_400_000);
@@ -84,7 +84,7 @@ function Papers({ event, docs }: { event: CalEvent; docs: Document[] }) {
                 <Check aria-hidden className="size-3" strokeWidth={3} />
               </span>
             ) : (
-              <span className="grid size-4.5 place-items-center rounded-full border-2 border-[#d9a441] text-[10px] font-bold text-private-ink">!</span>
+              <span className="grid size-4.5 place-items-center rounded-full border-2 border-private-line text-[10px] font-bold text-private-ink">!</span>
             )}
             <span className="flex-1">{p.name}</span>
             {doc ? (
@@ -105,7 +105,7 @@ function Papers({ event, docs }: { event: CalEvent; docs: Document[] }) {
 function AddEvent({ onDone }: { onDone: () => void }) {
   const [form, setForm] = useState({ title: "", date: "", time: "", place: "", kind: "appointment" as Kind });
   const [error, setError] = useState<string | null>(null);
-  const field = "h-9 rounded-md border border-[#d3d8dd] bg-card px-2.5 text-[13.5px] outline-none focus:border-ink-2";
+  const field = "h-9 rounded-md border border-line-strong bg-card px-2.5 text-[13.5px] outline-none focus:border-ink-2";
   return (
     <form
       onSubmit={async (e) => {
@@ -136,10 +136,10 @@ function AddEvent({ onDone }: { onDone: () => void }) {
           </option>
         ))}
       </select>
-      <button type="submit" className="h-9 rounded-md bg-ink px-3.5 text-[13px] font-semibold text-white hover:bg-rail-2">
+      <button type="submit" className="h-9 rounded-md bg-accent px-3.5 text-[13px] font-semibold text-white hover:bg-accent-strong">
         Add
       </button>
-      {error && <span className="col-span-full text-[12.5px] text-[#b42318]">{error}</span>}
+      {error && <span className="col-span-full text-[12.5px] text-danger">{error}</span>}
     </form>
   );
 }
@@ -164,7 +164,7 @@ export function Calendar() {
   };
 
   const exportIcs = async () => {
-    const path = await save({ defaultPath: "SafeBox.ics", filters: [{ name: "Calendar", extensions: ["ics"] }] });
+    const path = await save({ defaultPath: "Voidcat.ics", filters: [{ name: "Calendar", extensions: ["ics"] }] });
     if (!path) return;
     await saveCalendarFile(path, toIcs(upcoming));
     setNotice(`Saved ${upcoming.length} events. Open the file to add them to Apple Calendar, or import it in Google Calendar.`);
@@ -178,14 +178,14 @@ export function Calendar() {
       <section className="flex min-w-0 flex-1 flex-col gap-3">
         <header className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="m-0 text-[26px] font-bold tracking-tight">Calendar</h1>
+            <h1 className="m-0 text-[30px] font-light tracking-tight">Calendar</h1>
             <span className="text-sm text-ink-2">Every date in your approved facts, with a reminder before it.</span>
           </div>
           <div className="ml-auto flex gap-2">
-            <button type="button" onClick={() => setAdding(!adding)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d3d8dd] bg-card px-3 text-[13.5px] hover:border-ink-2">
+            <button type="button" onClick={() => setAdding(!adding)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line-strong bg-card px-3 text-[13.5px] hover:border-ink-2">
               <Plus aria-hidden className="size-4" /> Add event
             </button>
-            <button type="button" onClick={exportIcs} disabled={!upcoming.length} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d3d8dd] bg-card px-3 text-[13.5px] hover:border-ink-2 disabled:opacity-40">
+            <button type="button" onClick={exportIcs} disabled={!upcoming.length} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line-strong bg-card px-3 text-[13.5px] hover:border-ink-2 disabled:opacity-40">
               <Download aria-hidden className="size-4" /> Add to Apple or Google Calendar
             </button>
           </div>
@@ -200,9 +200,9 @@ export function Calendar() {
         )}
 
         {next && (
-          <article className="flex flex-col gap-3 rounded-xl border-2 border-link bg-card p-4.5">
+          <article className="flex flex-col gap-3 rounded-xl border-2 border-accent bg-card p-4.5">
             <div className="flex items-start gap-3.5">
-              <div className="flex w-15 shrink-0 flex-col items-center rounded-lg bg-link py-1.5 text-white">
+              <div className="flex w-15 shrink-0 flex-col items-center rounded-lg bg-accent py-1.5 text-white">
                 <span className="text-[11px] font-semibold uppercase tracking-wider">{day(next.date, { weekday: "short" })}</span>
                 <span className="text-2xl font-bold leading-tight">{fromIso(next.date).getDate()}</span>
                 <span className="text-[11px]">{day(next.date, { month: "short" })}</span>
@@ -229,7 +229,7 @@ export function Calendar() {
                   </button>
                 )}
               </div>
-              <button type="button" onClick={() => markDone(next, true)} className="h-8 rounded-md border border-[#d3d8dd] px-2.5 text-[12.5px] hover:border-ink-2">
+              <button type="button" onClick={() => markDone(next, true)} className="h-8 rounded-md border border-line-strong px-2.5 text-[12.5px] hover:border-ink-2">
                 Done
               </button>
             </div>
@@ -254,7 +254,7 @@ export function Calendar() {
                 <span className="truncate text-[12.5px] text-ink-2">
                   {e.time && `${e.time} · `}
                   {e.detail && <Private>{e.detail}</Private>}
-                  {e.origin === "worked-out" && " · worked out by SafeBox"}
+                  {e.origin === "worked-out" && " · worked out by Voidcat"}
                 </span>
               </div>
               {e.documentId && (
@@ -262,7 +262,7 @@ export function Calendar() {
                   <FileText aria-hidden className="size-4" />
                 </button>
               )}
-              <button type="button" onClick={() => markDone(e, true)} className="h-8 rounded-md border border-[#d3d8dd] px-2.5 text-[12.5px] hover:border-ink-2">
+              <button type="button" onClick={() => markDone(e, true)} className="h-8 rounded-md border border-line-strong px-2.5 text-[12.5px] hover:border-ink-2">
                 Done
               </button>
               {e.manualId && (
@@ -337,9 +337,9 @@ export function Calendar() {
             })}
           </div>
           <div className="flex flex-wrap gap-3 text-[11.5px] text-ink-2">
-            <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-link" /> Appointment</span>
-            <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-[#b42318]" /> Deadline</span>
-            <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-[#d9a441]" /> Payment</span>
+            <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-accent" /> Appointment</span>
+            <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-danger" /> Deadline</span>
+            <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-private-line" /> Payment</span>
           </div>
         </div>
 
@@ -361,7 +361,7 @@ export function Calendar() {
           <span>Appointments: {REMINDERS.appointment.map((r) => r.label).join(" and ")}.</span>
           <span>Expiry dates: {REMINDERS.expires.map((r) => r.label.replace("in ", "")).join(", ")} before.</span>
           <span>Payments: 2 days before.</span>
-          <span>Shown as Mac notifications while SafeBox is open. Nothing is sent to a server.</span>
+          <span>Shown as Mac notifications while Voidcat is open. Nothing is sent to a server.</span>
         </div>
       </aside>
     </div>

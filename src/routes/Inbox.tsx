@@ -4,7 +4,7 @@ import { SourcePage } from "../components/SourcePage";
 import { Blurred, Private } from "../lib/veil";
 import { type Fact, type Page, LIBRARY_CHANGED, announceChange, documentPages, listFacts, settleFact } from "../lib/library";
 
-const quiet = "h-10 rounded-lg border border-[#d3d8dd] bg-card px-3.5 text-sm text-ink hover:border-ink-2";
+const quiet = "h-10 rounded-lg border border-line-strong bg-card px-3.5 text-sm text-ink hover:border-ink-2";
 
 export function Inbox() {
   const [facts, setFacts] = useState<Fact[]>([]);
@@ -38,7 +38,7 @@ export function Inbox() {
     <div className="flex gap-6">
       <section className="flex min-w-0 flex-1 flex-col gap-3">
         <header className="mb-1 flex flex-col gap-1">
-          <h1 className="m-0 text-[26px] font-bold tracking-tight">Facts to approve</h1>
+          <h1 className="m-0 text-[30px] font-light tracking-tight">Facts to approve</h1>
           <span className="text-sm text-ink-2">Nothing becomes a fact until you approve it. Each one shows where it came from.</span>
         </header>
 
@@ -71,7 +71,7 @@ export function Inbox() {
                       if (e.key === "Enter") settle(f, "approved", draft);
                       if (e.key === "Escape") setEditing(null);
                     }}
-                    className="h-9 rounded-md border border-[#d3d8dd] px-2 text-[16px] font-semibold"
+                    className="h-9 rounded-md border border-line-strong px-2 text-[16px] font-semibold"
                   />
                 ) : (
                   <span data-selectable className="text-[17px] font-semibold">
@@ -85,7 +85,7 @@ export function Inbox() {
                   <button type="button" onClick={() => setEditing(null)} className={quiet}>
                     Cancel
                   </button>
-                  <button type="button" onClick={() => settle(f, "approved", draft)} className="h-10 rounded-lg bg-ink px-4 text-sm font-semibold text-white hover:bg-rail-2">
+                  <button type="button" onClick={() => settle(f, "approved", draft)} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong">
                     Save and approve
                   </button>
                 </>
@@ -104,7 +104,7 @@ export function Inbox() {
                   <button type="button" onClick={() => settle(f, "rejected")} className={quiet}>
                     Reject
                   </button>
-                  <button type="button" onClick={() => settle(f, "approved")} className="h-10 rounded-lg bg-ink px-4 text-sm font-semibold text-white hover:bg-rail-2">
+                  <button type="button" onClick={() => settle(f, "approved")} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong">
                     Approve
                   </button>
                 </>

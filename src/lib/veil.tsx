@@ -69,7 +69,7 @@ export function Placeholders({ text }: { text: string }) {
     <>
       {text.split(PLACEHOLDER).map((part, i) =>
         i % 2 ? (
-          <span key={i} className="rounded bg-[#3a3220] px-1 font-mono text-[0.9em] text-private">
+          <span key={i} className="rounded bg-chip px-1 font-mono text-[0.9em] text-private">
             {part}
           </span>
         ) : (

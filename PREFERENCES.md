@@ -70,3 +70,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 12 Oct 2026 — Logo chosen: the line cat; the faceted cat and its colours are dropped.
 - 12 Oct 2026 — Sidebar highlight: neutral fill + violet dot instead of purple tint with a left bar.
 - 12 Oct 2026 — Rebrand planned: Voidcat on the screens, dark + light themes following the Mac, sidebar dark in both; canvas redesigned first.
+- 12 Oct 2026 — Rebrand applied to the app (approved the canvas: "looks good"): Voidcat name in the window and interface, line-cat logo and app icon, light/dark themes. Internal names (data folder, Keychain, MCP key) stay "safebox" until the name is final.

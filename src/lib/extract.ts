@@ -75,7 +75,7 @@ export async function fileDocument(pages: string[], folders: Folder[] = []): Pro
       ],
     }),
   }).catch(() => {
-    throw new Error("Ollama isn't running. Start it to let SafeBox find facts on this Mac.");
+    throw new Error("Ollama isn't running. Start it to let Voidcat find facts on this Mac.");
   });
   if (!res.ok) throw new Error(`The local model failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
   const body = (await res.json()) as { message?: { content?: string } };

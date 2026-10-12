@@ -57,7 +57,7 @@ function CloudCard() {
               await removeSecret("openrouter");
               setHasKey(false);
             }}
-            className="ml-auto h-8 rounded-md border border-[#d3d8dd] px-2.5 text-[13px] hover:border-ink-2"
+            className="ml-auto h-8 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2"
           >
             Remove key
           </button>
@@ -84,9 +84,9 @@ function CloudCard() {
             onChange={(e) => setDraft(e.currentTarget.value)}
             placeholder="sk-or-…"
             autoComplete="off"
-            className="h-10 min-w-0 flex-1 rounded-lg border border-[#d3d8dd] px-3 font-mono text-sm"
+            className="h-10 min-w-0 flex-1 rounded-lg border border-line-strong px-3 font-mono text-sm"
           />
-          <button type="submit" disabled={!hasLibrary} className="h-10 rounded-lg bg-ink px-4 text-sm font-semibold text-white hover:bg-rail-2 disabled:opacity-40">
+          <button type="submit" disabled={!hasLibrary} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-40">
             Save in Keychain
           </button>
         </form>
@@ -103,7 +103,7 @@ function CloudCard() {
       >
         <div className="relative">
           <span className="mb-1 block text-xs font-semibold text-ink-2">Model</span>
-          <div className="flex h-10 items-center rounded-lg border border-[#d3d8dd] bg-card focus-within:border-ink-2">
+          <div className="flex h-10 items-center rounded-lg border border-line-strong bg-card focus-within:border-ink-2">
             <ComboboxInput
               id="cloud-model"
               aria-label="Model"
@@ -131,7 +131,7 @@ function CloudCard() {
           </ComboboxOptions>
         </div>
       </Combobox>
-      {error && <p className="m-0 text-[13px] text-[#b42318]">{error}</p>}
+      {error && <p className="m-0 text-[13px] text-danger">{error}</p>}
     </article>
   );
 }
@@ -184,7 +184,7 @@ function McpCard() {
   };
   useEffect(() => {
     refresh();
-    // Apps show up here the first time they call SafeBox, which happens outside the app.
+    // Apps show up here the first time they call Voidcat, which happens outside the app.
     window.addEventListener("focus", refresh);
     window.addEventListener(LIBRARY_CHANGED, refresh);
     return () => {
@@ -216,11 +216,11 @@ function McpCard() {
       </div>
       <p className="m-0 text-[13px] text-ink-2">
         Let Claude Desktop, Cursor, Claude Code and other apps use your library, with the same masking: they see placeholders, never your names, IDs, addresses or dates.
-        You choose what each app may see. Nothing is sent anywhere until you use SafeBox from that app.
+        You choose what each app may see. Nothing is sent anywhere until you use Voidcat from that app.
       </p>
 
       <div className="flex flex-col divide-y divide-line rounded-lg border border-line">
-        {apps.length === 0 && <p className="m-0 px-3.5 py-3 text-[13px] text-ink-2">No app has used SafeBox yet. Add it to an app below, then ask that app about your documents.</p>}
+        {apps.length === 0 && <p className="m-0 px-3.5 py-3 text-[13px] text-ink-2">No app has used Voidcat yet. Add it to an app below, then ask that app about your documents.</p>}
         {apps.map((a) => (
           <div key={a.name} className="flex flex-wrap items-center gap-3 px-3.5 py-2.5">
             <span className="flex min-w-0 flex-1 flex-col">
@@ -239,7 +239,7 @@ function McpCard() {
                 await setAiAppLevel(a.name, e.currentTarget.value as Level);
                 refresh();
               }}
-              className={`h-8 rounded-md border px-2 text-[13px] ${a.level === "off" ? "border-[#d3d8dd] text-ink-2" : "border-ok/40 bg-ok-soft text-ok"}`}
+              className={`h-8 rounded-md border px-2 text-[13px] ${a.level === "off" ? "border-line-strong text-ink-2" : "border-ok/40 bg-ok-soft text-ok"}`}
             >
               {(Object.keys(LEVELS) as Level[]).map((l) => (
                 <option key={l} value={l}>
@@ -264,7 +264,7 @@ function McpCard() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-semibold text-ink-2">Add SafeBox to</span>
+        <span className="text-xs font-semibold text-ink-2">Add Voidcat to</span>
         <div className="flex flex-wrap gap-2">
           {SETUP.map((s) =>
             setup?.[s.key] ? (
@@ -277,7 +277,7 @@ function McpCard() {
                 type="button"
                 disabled={!setup?.server}
                 onClick={() => toggle(s, true)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d3d8dd] bg-card px-3 text-[13.5px] hover:border-ink-2 disabled:opacity-40"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line-strong bg-card px-3 text-[13.5px] hover:border-ink-2 disabled:opacity-40"
               >
                 <Plus aria-hidden className="size-4" /> {s.name}
               </button>
@@ -292,7 +292,7 @@ function McpCard() {
                 setTimeout(() => setCopied(false), 2000);
               }}
               title={command}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d3d8dd] bg-card px-3 text-[13.5px] hover:border-ink-2"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line-strong bg-card px-3 text-[13.5px] hover:border-ink-2"
             >
               {copied ? <Check aria-hidden className="size-4 text-ok" /> : <Copy aria-hidden className="size-4" />} {copied ? "Copied, paste it in Terminal" : "Claude Code command"}
             </button>
@@ -303,7 +303,7 @@ function McpCard() {
             {notice}
           </p>
         )}
-        {setup && !setup.server && hasLibrary && <p className="m-0 text-[13px] text-[#b42318]">The MCP server isn't built into this copy of SafeBox yet.</p>}
+        {setup && !setup.server && hasLibrary && <p className="m-0 text-[13px] text-danger">The MCP server isn't built into this copy of Voidcat yet.</p>}
         <p className="m-0 text-[12.5px] text-ink-2">ChatGPT only connects to servers on the internet, and your library stays on this Mac, so it isn't supported yet.</p>
       </div>
     </article>
@@ -314,7 +314,7 @@ export function Connections() {
   return (
     <div className="flex max-w-4xl flex-col gap-5">
       <header className="flex flex-col gap-1">
-        <h1 className="m-0 text-[26px] font-bold tracking-tight">Connected AIs</h1>
+        <h1 className="m-0 text-[30px] font-light tracking-tight">Connected AIs</h1>
         <span className="text-sm text-ink-2">Which AIs can use your library, and what each one sees.</span>
       </header>
       <div className="grid gap-3.5 lg:grid-cols-2">

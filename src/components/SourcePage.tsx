@@ -19,7 +19,7 @@ function markFirst(root: HTMLElement, value: string) {
     hit.splitText(needle.length);
     const mark = document.createElement("mark");
     mark.dataset.fact = "";
-    mark.className = "bg-[#fbe3ae] px-0.5";
+    mark.className = "bg-private-mark px-0.5";
     hit.replaceWith(mark);
     mark.append(hit);
     // Scroll only this page's box (never the window) so the list beside it stays put.
@@ -40,7 +40,7 @@ export function SourcePage({ text, mime, highlight }: { text: string; mime: stri
     <div
       ref={ref}
       data-selectable
-      className={`max-h-[calc(100vh-11rem)] overflow-y-auto rounded-xl border border-line bg-card px-6 py-6 text-[#3c444d] ${isMarkdown(mime) ? "md-page text-[13px] leading-relaxed" : "whitespace-pre-wrap text-xs leading-relaxed"}`}
+      className={`max-h-[calc(100vh-11rem)] overflow-y-auto rounded-xl border border-line bg-card px-6 py-6 text-page-ink ${isMarkdown(mime) ? "md-page text-[13px] leading-relaxed" : "whitespace-pre-wrap text-xs leading-relaxed"}`}
     >
       {isMarkdown(mime) ? <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown> : text}
     </div>

@@ -24,7 +24,7 @@ export function FolderPicker({ folders, area, onPick, onCancel }: { folders: Fol
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Escape" && onCancel()}
           placeholder="Find a folder, or type a new name…"
-          className="h-9 rounded-md border border-[#d3d8dd] bg-card px-2.5 text-[13.5px] outline-none focus:border-ink-2"
+          className="h-9 rounded-md border border-line-strong bg-card px-2.5 text-[13.5px] outline-none focus:border-ink-2"
         />
         <ComboboxOptions anchor="bottom start" className="z-20 max-h-64 w-(--input-width) overflow-y-auto rounded-lg border border-line bg-card p-1 shadow-lg [--anchor-gap:4px] empty:invisible">
           {choices.map((c) => (
@@ -45,7 +45,7 @@ export function FolderPicker({ folders, area, onPick, onCancel }: { folders: Fol
       </Combobox>
       <div className="flex items-center gap-2 text-[12.5px] text-ink-2">
         <label htmlFor="new-folder-area">New folders go in</label>
-        <select id="new-folder-area" value={newArea} onChange={(e) => setNewArea(e.currentTarget.value)} className="h-7 rounded-md border border-[#d3d8dd] bg-card px-1.5 text-[12.5px] text-ink">
+        <select id="new-folder-area" value={newArea} onChange={(e) => setNewArea(e.currentTarget.value)} className="h-7 rounded-md border border-line-strong bg-card px-1.5 text-[12.5px] text-ink">
           {AREAS.map((a) => (
             <option key={a}>{a}</option>
           ))}

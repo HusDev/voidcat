@@ -54,7 +54,7 @@ function MaskedText({ text }: { text: string }) {
     <>
       {text.split(PLACEHOLDER).map((part, i) =>
         i % 2 ? (
-          <span key={i} className="rounded bg-[#3a3220] px-1 text-private">
+          <span key={i} className="rounded bg-chip px-1 text-private">
             {part}
           </span>
         ) : (
@@ -73,7 +73,7 @@ function Sent({ e, open }: { e: Exchange; open?: boolean }) {
         <ShieldCheck aria-hidden className="size-3.5 text-private-ink" />
         {e.state === "review" ? "Will be sent" : "What was sent"} · {e.hidden ? `${e.hidden} private ${e.hidden === 1 ? "detail" : "details"} hidden` : "nothing private"} · zero data retention
       </summary>
-      <pre data-selectable className="m-0 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-b-lg bg-ink p-3.5 font-mono text-[12px] leading-relaxed text-rail-ink">
+      <pre data-selectable className="m-0 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-b-lg bg-code p-3.5 font-mono text-[12px] leading-relaxed text-rail-ink">
         <MaskedText text={e.sent} />
       </pre>
     </details>
@@ -150,7 +150,7 @@ export function Ask() {
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl min-h-0 flex-1 flex-col">
       <header className="flex items-center gap-3 pb-4">
-        <h1 className="m-0 text-[26px] font-bold tracking-tight">Ask</h1>
+        <h1 className="m-0 text-[30px] font-light tracking-tight">Ask</h1>
         <span className="rounded-full bg-card px-2.5 py-1 font-mono text-[12px] text-ink-2">{model}</span>
         {thread.length > 0 && (
           <button type="button" onClick={restart} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-card hover:text-ink">
@@ -162,7 +162,7 @@ export function Ask() {
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-6">
         {thread.length === 0 ? (
           <div className="m-auto flex max-w-lg flex-col items-center gap-4 py-10 text-center">
-            <span className="grid size-12 place-items-center rounded-2xl bg-ink">
+            <span className="grid size-12 place-items-center rounded-2xl bg-rail text-void">
               <ShieldCheck aria-hidden className="size-6 text-private" />
             </span>
             <div className="flex flex-col gap-1">
@@ -186,7 +186,7 @@ export function Ask() {
         ) : (
           thread.map((e, i) => (
             <article key={e.id} className="flex flex-col gap-3">
-              <p data-selectable className="m-0 max-w-[85%] self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-[15px] text-white">
+              <p data-selectable className="m-0 max-w-[85%] self-end rounded-2xl rounded-br-md bg-accent-soft px-4 py-2.5 text-[15px] text-ink">
                 <Private>{e.question}</Private>
               </p>
 
@@ -197,7 +197,7 @@ export function Ask() {
                   </p>
                   <Sent e={e} open />
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => send(e, thread.slice(0, i))} className="h-10 rounded-lg bg-ink px-4 text-sm font-semibold text-white hover:bg-rail-2">
+                    <button type="button" onClick={() => send(e, thread.slice(0, i))} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong">
                       Send
                     </button>
                     <button
@@ -225,7 +225,7 @@ export function Ask() {
                     </span>
                   ) : null}
                   {e.error && (
-                    <p role="alert" className="m-0 text-sm text-[#b42318]">
+                    <p role="alert" className="m-0 text-sm text-danger">
                       {e.error}
                     </p>
                   )}
@@ -257,7 +257,7 @@ export function Ask() {
           ev.preventDefault();
           ask(draft);
         }}
-        className="flex items-end gap-2 rounded-2xl border border-[#d3d8dd] bg-card p-2 shadow-sm focus-within:border-ink-2"
+        className="flex items-end gap-2 rounded-2xl border border-line-strong bg-card p-2 shadow-sm focus-within:border-ink-2"
       >
         <label htmlFor="ask-question" className="sr-only">
           Your question
@@ -281,7 +281,7 @@ export function Ask() {
           type="submit"
           disabled={!draft.trim() || busy}
           aria-label="Ask"
-          className="grid size-10 place-items-center rounded-xl bg-ink text-white hover:bg-rail-2 disabled:opacity-30"
+          className="grid size-10 place-items-center rounded-xl bg-accent text-white hover:bg-accent-strong disabled:opacity-30"
         >
           {busy ? <LoaderCircle aria-hidden className="size-5 animate-spin" /> : <ArrowUp aria-hidden className="size-5" />}
         </button>

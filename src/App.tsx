@@ -47,7 +47,7 @@ export default function App() {
             <button
               type="button"
               onClick={veil.toggle}
-              className="inline-flex items-center gap-1.5 rounded-full bg-private px-3 py-0.5 text-[12px] font-semibold text-ink"
+              className="inline-flex items-center gap-1.5 rounded-full bg-private px-3 py-0.5 text-[12px] font-semibold text-[#0b0b0f]"
             >
               <EyeOff aria-hidden className="size-3.5" /> Private details hidden · ⌘⇧H to show
             </button>

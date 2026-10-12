@@ -2,28 +2,76 @@
 @import "@fontsource-variable/instrument-sans";
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource-variable/outfit";
 
-/* SafeBox: dark rail, quiet grey workspace, amber marks anything private. */
+/* Voidcat: Deep Space and Void Purple; amber marks anything private. Light by default, dark when the Mac is dark;
+   the sidebar stays dark in both. Every colour is a token so the two themes stay in step. */
 @theme {
   --font-sans: "Instrument Sans Variable", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-display: "Outfit Variable", "Outfit", system-ui, sans-serif;
 
-  --color-ink: #15191e;
-  --color-ink-2: #5b6570;
-  --color-ground: #eef0f2;
+  --color-ink: #0b0b0f;
+  --color-ink-2: #5e5c6b;
+  --color-ground: #f4f3f8;
   --color-card: #ffffff;
-  --color-line: #dfe3e7;
-  --color-rail: #15191e;
-  --color-rail-2: #252b33;
-  --color-rail-3: #1d232a;
-  --color-rail-ink: #e9edf1;
-  --color-rail-mute: #b8c0c9;
+  --color-line: #e2e0ea;
+  --color-line-strong: #d3d0de;
+  --color-accent: #7c4deb;
+  --color-accent-strong: #6236d6;
+  --color-accent-soft: #eee8fd;
+  --color-link: #6a3fd9;
   --color-private: #f2b84b;
   --color-private-soft: #fbefd5;
   --color-private-ink: #8a5a00;
+  --color-private-line: #d9a441;
+  --color-private-mark: #fbe3ae;
+  --color-chip: #3a3220;
   --color-ok: #276b45;
   --color-ok-soft: #e2f2e8;
-  --color-link: #1f6f8b;
+  --color-danger: #b42318;
+  --color-danger-soft: #fde8e6;
+  --color-code: #0b0b0f;
+  --color-code-ink: #e9e7f2;
+  --color-page-ink: #3c3a46;
+
+  /* The sidebar: the same in both themes. */
+  --color-rail: #08080b;
+  --color-rail-2: rgb(255 255 255 / 0.06);
+  --color-rail-3: #121119;
+  --color-rail-ink: #f5f5f7;
+  --color-rail-mute: #a1a1aa;
+  --color-rail-faint: #6e6c7a;
+  --color-rail-text: #c9c7d3;
+  --color-void: #8b5cf6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-ink: #f5f5f7;
+    --color-ink-2: #a1a1aa;
+    --color-ground: #0b0b0f;
+    --color-card: #131219;
+    --color-line: #26252f;
+    --color-line-strong: #34323f;
+    --color-accent: #8b5cf6;
+    --color-accent-strong: #a685fa;
+    --color-accent-soft: rgb(139 92 246 / 0.16);
+    --color-link: #b49bfb;
+    --color-private-soft: rgb(242 184 75 / 0.13);
+    --color-private-ink: #f2c46b;
+    --color-private-line: #c9962f;
+    --color-private-mark: rgb(242 184 75 / 0.35);
+    --color-chip: rgb(242 184 75 / 0.16);
+    --color-ok: #4cc38a;
+    --color-ok-soft: rgb(76 195 138 / 0.14);
+    --color-danger: #f0645a;
+    --color-danger-soft: rgb(240 100 90 / 0.15);
+    --color-code: #08080b;
+    --color-code-ink: #e4e2ee;
+    --color-page-ink: #cfcdd8;
+  }
 }
 
 html,
@@ -41,6 +89,12 @@ body {
   user-select: none;
 }
 
+h1 {
+  font-family: var(--font-display);
+  font-weight: 300 !important;
+  letter-spacing: -0.02em;
+}
+
 input,
 textarea,
 [data-selectable] {
@@ -49,7 +103,7 @@ textarea,
 
 /* A Markdown document shown as a page (source preview). */
 .md-page > :first-child { margin-top: 0; }
-.md-page h1 { font-size: 17px; font-weight: 700; color: var(--color-ink); margin: 0 0 10px; }
+.md-page h1 { font-family: var(--font-sans); letter-spacing: 0; font-size: 17px; font-weight: 700 !important; color: var(--color-ink); margin: 0 0 10px; }
 .md-page h2 { font-size: 14.5px; font-weight: 700; color: var(--color-ink); margin: 18px 0 6px; }
 .md-page h3 { font-size: 13.5px; font-weight: 600; color: var(--color-ink); margin: 14px 0 4px; }
 .md-page p { margin: 0 0 10px; }
