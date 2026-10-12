@@ -13,6 +13,7 @@ function CloudCard() {
   const [draft, setDraft] = useState("");
   const [models, setModels] = useState<CloudModel[]>([]);
   const [model, setModel] = useState<string | null>(savedModel());
+
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +22,8 @@ function CloudCard() {
     listModels()
       .then((list) => {
         setModels(list);
-        if (!savedModel()) {
+        // A remembered model that no longer exists falls back to the default.
+        if (!list.some((m) => m.id === savedModel())) {
           const id = defaultModel(list);
           if (id) {
             setModel(id);

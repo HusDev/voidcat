@@ -9,13 +9,15 @@ import { streamText } from "ai";
 export type CloudModel = { id: string; name: string; created: number; promptPrice: number; completionPrice: number };
 
 const MODEL_KEY = "safebox.cloudModel";
+/** Used until the user picks another: strong at reading documents and reasoning about dates and rules. */
+export const DEFAULT_MODEL = "anthropic/claude-sonnet-5.5";
 
-export function savedModel(): string | null {
+export function savedModel(): string {
   try {
     const id = localStorage.getItem(MODEL_KEY);
-    return id && !id.endsWith(":batch") ? id : null;
+    return id && !id.endsWith(":batch") ? id : DEFAULT_MODEL;
   } catch {
-    return null;
+    return DEFAULT_MODEL;
   }
 }
 
@@ -49,7 +51,7 @@ export async function listModels(): Promise<CloudModel[]> {
 }
 
 /** A sensible default: the newest Claude Sonnet, else the newest model. */
-export const defaultModel = (models: CloudModel[]) => models.find((m) => m.id.startsWith("anthropic/claude-sonnet"))?.id ?? models[0]?.id ?? null;
+export const defaultModel = (models: CloudModel[]) => (models.some((m) => m.id === DEFAULT_MODEL) ? DEFAULT_MODEL : (models[0]?.id ?? null));
 
 export const SYSTEM = `You answer questions about the user's own documents and facts, which are given to you below.
 Personal details have been replaced with placeholders such as [PERSON_1], [ID_2] or [DATE_3]. Use the placeholders exactly as written when you refer to those details; they are turned back into the real values on the user's computer. Never try to guess what a placeholder stands for.
