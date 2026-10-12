@@ -13,6 +13,7 @@ import { Connections } from "./routes/Connections";
 import { Inbox } from "./routes/Inbox";
 import { Library } from "./routes/Library";
 import { Opportunities } from "./routes/Opportunities";
+import { Settings } from "./routes/Settings";
 
 export default function App() {
   const [pending, setPending] = useState(0);
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="opportunities" element={<Opportunities />} />
             <Route path="inbox" element={<Inbox />} />
             <Route path="connections" element={<Connections />} />
+            <Route path="settings" element={<Settings />} />
           </Routes>
         </main>
       </div>

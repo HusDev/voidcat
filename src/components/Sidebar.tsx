@@ -1,8 +1,7 @@
-import { CalendarDays, Eye, EyeOff, Folder as FolderIcon, Inbox, Library, Lightbulb, Link2, MessageSquareText, Monitor, Moon, Sun } from "lucide-react";
+import { CalendarDays, Eye, EyeOff, Folder as FolderIcon, Inbox, Library, Lightbulb, Link2, MessageSquareText, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useSearchParams } from "react-router";
 import { type Folder, LIBRARY_CHANGED, listFolders } from "../lib/library";
-import { type Theme, useTheme } from "../lib/theme";
 import { Private, useVeil } from "../lib/veil";
 import { Logo } from "./Logo";
 
@@ -53,35 +52,6 @@ function Folders() {
               </Link>
             ))}
         </div>
-      ))}
-    </div>
-  );
-}
-
-const THEMES: { id: Theme; label: string; Icon: typeof Sun }[] = [
-  { id: "system", label: "Same as Mac", Icon: Monitor },
-  { id: "light", label: "Light", Icon: Sun },
-  { id: "dark", label: "Dark", Icon: Moon },
-];
-
-/** System / Light / Dark, as one small segmented control. */
-function ThemeSwitch() {
-  const [theme, setTheme] = useTheme();
-  return (
-    <div role="radiogroup" aria-label="Theme" className="flex gap-1 rounded-lg bg-rail-3 p-1">
-      {THEMES.map(({ id, label, Icon }) => (
-        <button
-          key={id}
-          type="button"
-          role="radio"
-          aria-checked={theme === id}
-          title={label}
-          onClick={() => setTheme(id)}
-          className={`flex h-7 flex-1 items-center justify-center gap-1.5 rounded-md text-[12px] ${theme === id ? "bg-rail-2 font-semibold text-white" : "text-rail-mute hover:text-white"}`}
-        >
-          <Icon aria-hidden className="size-3.5" />
-          {id === "system" ? "Auto" : label}
-        </button>
       ))}
     </div>
   );
@@ -141,14 +111,16 @@ export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: nu
         onClick={veil.toggle}
         aria-pressed={veil.on}
         title="Hide private details (⌘⇧H)"
-        className={`mt-auto flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm ${veil.on ? "bg-private font-semibold text-[#0b0b0f]" : "text-rail-mute hover:bg-rail-2 hover:text-white"}`}
+        className={`mt-auto flex items-center gap-2.5 rounded-lg py-2.5 pl-6 pr-3 text-left text-sm ${veil.on ? "bg-private font-semibold text-[#0b0b0f]" : "text-rail-mute hover:bg-rail-2 hover:text-white"}`}
       >
         {veil.on ? <EyeOff aria-hidden className="size-4.5" /> : <Eye aria-hidden className="size-4.5" />}
-        <span className="flex-1">{veil.on ? "Private details hidden" : "Hide private details"}</span>
-        <kbd className={`font-sans text-[11px] ${veil.on ? "text-[#0b0b0f]/70" : "text-rail-faint"}`}>⌘⇧H</kbd>
+        <span className="flex-1 truncate whitespace-nowrap">{veil.on ? "Details hidden" : "Hide private details"}</span>
       </button>
 
-      <ThemeSwitch />
+      <NavLink to="/settings" className={link}>
+        <span aria-hidden className="size-1.5 shrink-0 rounded-full group-aria-[current=page]:bg-void group-aria-[current=page]:shadow-[0_0_8px_rgb(139_92_246/0.9)]" />
+        <Settings aria-hidden className="size-4.5" /> Settings
+      </NavLink>
 
       <div className="flex items-center gap-2 rounded-lg bg-rail-3 p-3 text-[12.5px] text-rail-mute">
         <Logo size={14} glow={false} />
