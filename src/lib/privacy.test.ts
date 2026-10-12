@@ -31,6 +31,11 @@ describe("privacy layer", () => {
     expect(m.mask("Deposit 2.300 euros, rent €1,150 / month, policy PL-889 2213.")).toBe("Deposit 2.300 euros, rent €1,150 / month, policy [PRIVATE_1].");
   });
 
+  it("keeps recurring date rules but masks real dates", () => {
+    const m = new Masker([{ label: "Rent payment dates", value: "del 1 al 5 de cada mes" }, { label: "Start date", value: "01/10/2026" }], today);
+    expect(m.mask("Pay del 1 al 5 de cada mes from 01/10/2026.")).toBe("Pay del 1 al 5 de cada mes from [DATE_1].");
+  });
+
   it("turns dates into placeholders with a relative note", () => {
     const m = new Masker([], today);
     const masked = m.mask("Valid until 16/03/2027. Signed 12 de octubre de 2026. Issued March 3, 2020.");

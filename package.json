@@ -8,14 +8,16 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint src",
-    "test": "vitest run"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p mcp",
+    "lint": "oxlint src mcp",
+    "test": "vitest run",
+    "build:mcp": "bun build mcp/server.ts --compile --minify --outfile src-tauri/binaries/safebox-mcp-$(rustc -vV | sed -n 's/host: //p')"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@headlessui/react": "^2.2.10",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@openrouter/ai-sdk-provider": "^3.1.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2",
@@ -35,6 +37,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@types/bun": "^1.4.3",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^6.0.2",

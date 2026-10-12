@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# MCP server binary, built by `bun run build:mcp`
+src-tauri/binaries/

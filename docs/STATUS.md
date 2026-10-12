@@ -1,6 +1,6 @@
 # SafeBox — status and next steps
 
-Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026 (phase 3 built).
+Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026 (MCP server built).
 
 ## The product
 **SafeBox** (working name): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
@@ -41,16 +41,19 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - a scan sends masked approved facts plus document titles/types (never page text) to OpenRouter with ZDR; you see what will be sent and a cost estimate first;
    - optional "check current rules on the web" (off by default; says plainly it's outside ZDR);
    - cards with Keep / Add to calendar / Done / Dismiss; later scans keep your decisions and never bring dismissed ideas back.
+11. **MCP server:**
+   - Claude Desktop, Cursor and Claude Code can list documents, read approved facts and see upcoming dates, all masked;
+   - searching and reading pages need the higher level; each app starts at "masked facts and dates" and you change it in Connected AIs;
+   - one click adds SafeBox to Claude Desktop or Cursor; Claude Code gets a command to copy. ChatGPT isn't supported (it needs an internet server).
 
 ## Next, in order
-1. **MCP server:** Claude Desktop, ChatGPT and Cursor search the library with masking; per-app access levels (Connected AIs).
-2. **GitLab hackathon work:**
+1. **GitLab hackathon work:**
    - repo public + MIT;
    - CI stages (verify exists in `.gitlab-ci.yml`) plus GitLab Duo agents and flows for review, security, tests and release;
    - demo video under 3 min. The project story draft is in the conversation history; ask Hussein.
-3. **OpenAI privacy-filter model** (Transformers.js/ONNX) to catch names the rules miss.
-4. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
-5. **Polish:**
+2. **OpenAI privacy-filter model** (Transformers.js/ONNX) to catch names the rules miss.
+3. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
+4. **Polish:**
    - a Rename-folder button in the folder view;
    - background reminders when the app is closed;
    - `docType` sometimes gets the folder name (seen once): tighten the schema description.
@@ -64,6 +67,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 
 ## Gotchas
 - **Restart the dev app** after `bun add` (a stale React copy causes "Invalid hook call") and after Rust changes: kill `target/debug/safebox`, `tauri dev`, and port 1420, then `bun run tauri dev` in the background.
+- Run `bun run build:mcp` before `cargo test` or a fresh `tauri dev` if `src-tauri/binaries/` is empty (Tauri checks the sidecar exists). After changing `mcp/server.ts` or `src/lib/mcp.ts`, rebuild it; apps pick it up the next time they start the server.
 - Rust toolchain lives in `~/.cargo/bin` (prepend it to PATH).
 - `useEffect(() => el.scrollIntoView(...))` returns a promise in new browsers and crashes React: always use braces.
 - Never `scrollIntoView` inside a scrolled page to highlight text; scroll the container instead (it made the inbox jump).

@@ -37,6 +37,7 @@ Every product, design and working decision Hussein made, with the date. When he 
   - every deadline and date becomes a reminder, including appointments such as the empadronamiento, with a "papers to bring" checklist;
   - dates are worked out too: renewal 60 days before expiry, monthly rent days;
   - Mac notifications and export to Apple/Google Calendar.
+- **Other apps through MCP** (built): Claude Desktop, Cursor and Claude Code can use the library, always masked. Each app starts with **masked facts and dates only**; searching and reading pages must be allowed per app in Connected AIs, and any app can be turned off. SafeBox adds itself to Claude Desktop or Cursor with one click. ChatGPT is left out for now because it only connects to internet servers and the library stays on the Mac.
 - **Opportunities tab** (his idea, from Hus): advantages and opportunities based on your situation, with Keep / Add to calendar / Done / Dismiss. Built as phase 3: the scan sends only masked facts and document names, shows what will be sent first, and web checking is optional and off by default because it falls outside zero data retention. Dismissed ideas never come back.
 
 ## Working with him
@@ -61,3 +62,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 12 Oct 2026 — Calendar with reminders, worked-out dates and papers checklists; Opportunities tab planned as phase 3.
 - 12 Oct 2026 — Decisions recorded in this file from now on.
 - 12 Oct 2026 — Phase 3 Opportunities built (started at his request); web checking optional, off by default. Approved amounts are no longer hidden, to match "amounts are kept".
+- 12 Oct 2026 — MCP server built (he said "go for it"); new apps start with masked facts and dates only; ChatGPT not supported yet. Recurring date rules ("del 1 al 5 de cada mes") are no longer hidden as dates.

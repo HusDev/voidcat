@@ -1,9 +1,10 @@
 import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
-import { Check, ChevronDown, Cpu, KeyRound, Plug, ShieldCheck } from "lucide-react";
+import { Check, ChevronDown, Copy, Cpu, KeyRound, Plug, Plus, Unplug, Workflow } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type CloudModel, defaultModel, listModels, saveModel, savedModel } from "../lib/cloud";
 import { LOCAL_MODEL, OLLAMA } from "../lib/extract";
-import { getSecret, hasLibrary, removeSecret, setSecret } from "../lib/library";
+import { type AiApp, type McpSetup, LIBRARY_CHANGED, connectApp, getSecret, hasLibrary, listAiApps, mcpSetup, removeAiApp, removeSecret, setAiAppLevel, setSecret } from "../lib/library";
+import { LEVELS, type Level, appName } from "../lib/mcp";
 
 const card = "flex flex-col gap-3 rounded-xl border border-line bg-card p-4.5";
 const price = (m: CloudModel) => (m.promptPrice ? `$${m.promptPrice.toFixed(2)} / $${m.completionPrice.toFixed(2)} per million tokens` : "Free");
@@ -158,6 +159,157 @@ function LocalCard() {
   );
 }
 
+const ago = (iso: string) => {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  if (mins < 48 * 60) return `${Math.round(mins / 60)} h ago`;
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+};
+
+const SETUP: { id: "claude-desktop" | "cursor"; name: string; key: "claudeDesktop" | "cursor"; restart: string }[] = [
+  { id: "claude-desktop", name: "Claude Desktop", key: "claudeDesktop", restart: "Quit and reopen Claude Desktop to use it." },
+  { id: "cursor", name: "Cursor", key: "cursor", restart: "Reload Cursor to use it." },
+];
+
+function McpCard() {
+  const [apps, setApps] = useState<AiApp[]>([]);
+  const [setup, setSetup] = useState<McpSetup | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const refresh = () => {
+    listAiApps().then(setApps);
+    mcpSetup().then(setSetup);
+  };
+  useEffect(() => {
+    refresh();
+    // Apps show up here the first time they call SafeBox, which happens outside the app.
+    window.addEventListener("focus", refresh);
+    window.addEventListener(LIBRARY_CHANGED, refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener(LIBRARY_CHANGED, refresh);
+    };
+  }, []);
+
+  const toggle = async (s: (typeof SETUP)[number], on: boolean) => {
+    try {
+      await connectApp(s.id, on);
+      setNotice(on ? `Added to ${s.name}. ${s.restart} It starts with masked facts and dates only.` : `Removed from ${s.name}.`);
+      refresh();
+    } catch (err) {
+      setNotice(String(err));
+    }
+  };
+
+  const command = setup?.server ? `claude mcp add --scope user safebox -- "${setup.server}"` : "";
+
+  return (
+    <article className={`${card} lg:col-span-2`}>
+      <div className="flex items-center gap-2">
+        <Workflow aria-hidden className="size-4.5 text-ink-2" />
+        <span className="font-semibold">Other apps · MCP</span>
+        <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${apps.some((a) => a.level !== "off") ? "bg-ok-soft text-ok" : "bg-ground text-ink-2"}`}>
+          {apps.filter((a) => a.level !== "off").length} {apps.filter((a) => a.level !== "off").length === 1 ? "app" : "apps"} allowed
+        </span>
+      </div>
+      <p className="m-0 text-[13px] text-ink-2">
+        Let Claude Desktop, Cursor, Claude Code and other apps use your library, with the same masking: they see placeholders, never your names, IDs, addresses or dates.
+        You choose what each app may see. Nothing is sent anywhere until you use SafeBox from that app.
+      </p>
+
+      <div className="flex flex-col divide-y divide-line rounded-lg border border-line">
+        {apps.length === 0 && <p className="m-0 px-3.5 py-3 text-[13px] text-ink-2">No app has used SafeBox yet. Add it to an app below, then ask that app about your documents.</p>}
+        {apps.map((a) => (
+          <div key={a.name} className="flex flex-wrap items-center gap-3 px-3.5 py-2.5">
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[14px] font-semibold">{appName(a.name)}</span>
+              <span className="text-[12px] text-ink-2">
+                {a.lastUsed ? `Last used ${ago(a.lastUsed)} · ${a.calls} ${a.calls === 1 ? "request" : "requests"}` : "Not used yet"}
+              </span>
+            </span>
+            <label htmlFor={`lvl-${a.name}`} className="sr-only">
+              What {appName(a.name)} may see
+            </label>
+            <select
+              id={`lvl-${a.name}`}
+              value={a.level}
+              onChange={async (e) => {
+                await setAiAppLevel(a.name, e.currentTarget.value as Level);
+                refresh();
+              }}
+              className={`h-8 rounded-md border px-2 text-[13px] ${a.level === "off" ? "border-[#d3d8dd] text-ink-2" : "border-ok/40 bg-ok-soft text-ok"}`}
+            >
+              {(Object.keys(LEVELS) as Level[]).map((l) => (
+                <option key={l} value={l}>
+                  {LEVELS[l]}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              aria-label={`Forget ${appName(a.name)}`}
+              title="Forget this app (it comes back, with the basic level, if it calls again)"
+              onClick={async () => {
+                await removeAiApp(a.name);
+                refresh();
+              }}
+              className="grid size-8 place-items-center rounded-md text-ink-2 hover:bg-ground hover:text-ink"
+            >
+              <Unplug aria-hidden className="size-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-semibold text-ink-2">Add SafeBox to</span>
+        <div className="flex flex-wrap gap-2">
+          {SETUP.map((s) =>
+            setup?.[s.key] ? (
+              <button key={s.id} type="button" onClick={() => toggle(s, false)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-ok/40 bg-ok-soft px-3 text-[13.5px] text-ok">
+                <Check aria-hidden className="size-4" /> In {s.name} · remove
+              </button>
+            ) : (
+              <button
+                key={s.id}
+                type="button"
+                disabled={!setup?.server}
+                onClick={() => toggle(s, true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d3d8dd] bg-card px-3 text-[13.5px] hover:border-ink-2 disabled:opacity-40"
+              >
+                <Plus aria-hidden className="size-4" /> {s.name}
+              </button>
+            ),
+          )}
+          {command && (
+            <button
+              type="button"
+              onClick={async () => {
+                await navigator.clipboard.writeText(command);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              title={command}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d3d8dd] bg-card px-3 text-[13.5px] hover:border-ink-2"
+            >
+              {copied ? <Check aria-hidden className="size-4 text-ok" /> : <Copy aria-hidden className="size-4" />} {copied ? "Copied, paste it in Terminal" : "Claude Code command"}
+            </button>
+          )}
+        </div>
+        {notice && (
+          <p role="status" className="m-0 text-[13px] text-ink-2">
+            {notice}
+          </p>
+        )}
+        {setup && !setup.server && hasLibrary && <p className="m-0 text-[13px] text-[#b42318]">The MCP server isn't built into this copy of SafeBox yet.</p>}
+        <p className="m-0 text-[12.5px] text-ink-2">ChatGPT only connects to servers on the internet, and your library stays on this Mac, so it isn't supported yet.</p>
+      </div>
+    </article>
+  );
+}
+
 export function Connections() {
   return (
     <div className="flex max-w-4xl flex-col gap-5">
@@ -168,10 +320,8 @@ export function Connections() {
       <div className="grid gap-3.5 lg:grid-cols-2">
         <CloudCard />
         <LocalCard />
+        <McpCard />
       </div>
-      <p className="m-0 flex items-center gap-2 text-[13px] text-ink-2">
-        <ShieldCheck aria-hidden className="size-4 text-private-ink" /> Coming next: connect Claude Desktop, ChatGPT and other apps to your library through MCP.
-      </p>
     </div>
   );
 }

@@ -108,6 +108,8 @@ const AMOUNT = /^(?:[€$£]\s?)?\d[\d.,\s]*(?:\s?(?:€|\$|£|euros?|eur|usd|do
 const worthMasking = (value: string, kind: Kind) => {
   const v = value.trim();
   if (v.length < 4) return false;
+  // "del 1 al 5 de cada mes", "monthly": a rule, not a date that identifies anyone.
+  if (kind === "DATE" && !/\d{4}/.test(v) && !parseDate(v)) return false;
   if (kind === "PRIVATE" && /[€$£]|euro|eur\b|usd|dollar|gbp|iqd|dinar/i.test(v) && AMOUNT.test(v)) return false;
   if (kind === "PRIVATE") return (v.match(/\d/g) ?? []).length >= 3;
   return true;

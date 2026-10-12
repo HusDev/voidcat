@@ -71,3 +71,12 @@ export const announceChange = () => window.dispatchEvent(new Event(LIBRARY_CHANG
 export const getSecret = (name: "openrouter") => invoke<string | null>("get_secret", { name });
 export const setSecret = (name: "openrouter", value: string) => invoke<void>("set_secret", { name, value });
 export const removeSecret = (name: "openrouter") => invoke<void>("remove_secret", { name });
+
+/** Apps using the library through the MCP server, and their access level (`src-tauri/src/apps.rs`). */
+export type AiApp = { name: string; level: "off" | "facts" | "search"; firstSeen: string; lastUsed: string | null; calls: number };
+export type McpSetup = { server: string | null; claudeDesktop: boolean; cursor: boolean };
+export const listAiApps = () => (hasLibrary ? invoke<AiApp[]>("list_ai_apps") : Promise.resolve([]));
+export const setAiAppLevel = (name: string, level: AiApp["level"]) => invoke<void>("set_ai_app_level", { name, level });
+export const removeAiApp = (name: string) => invoke<void>("remove_ai_app", { name });
+export const mcpSetup = () => (hasLibrary ? invoke<McpSetup>("mcp_setup") : Promise.resolve({ server: null, claudeDesktop: false, cursor: false }));
+export const connectApp = (app: "claude-desktop" | "cursor", on: boolean) => invoke<void>("connect_app", { app, on });

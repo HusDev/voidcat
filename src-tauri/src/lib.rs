@@ -1,3 +1,4 @@
+mod apps;
 mod calendar;
 mod ocr;
 mod opportunities;
@@ -121,6 +122,36 @@ fn save_opportunities(store: State<Store>, found: Vec<opportunities::Opportunity
 #[tauri::command]
 fn set_opportunity_status(store: State<Store>, key: String, status: String) -> Result<(), String> {
     opportunities::set_status(&store.db.lock().unwrap(), &key, &status)
+}
+
+#[tauri::command]
+fn list_ai_apps(store: State<Store>) -> Result<Vec<apps::App>, String> {
+    apps::list(&store.db.lock().unwrap())
+}
+
+#[tauri::command]
+fn set_ai_app_level(store: State<Store>, name: String, level: String) -> Result<(), String> {
+    apps::set_level(&store.db.lock().unwrap(), &name, &level)
+}
+
+#[tauri::command]
+fn remove_ai_app(store: State<Store>, name: String) -> Result<(), String> {
+    apps::remove(&store.db.lock().unwrap(), &name)
+}
+
+/// The MCP server's path, and which apps already start it.
+#[tauri::command]
+fn mcp_setup() -> serde_json::Value {
+    serde_json::json!({
+        "server": apps::server_path().map(|p| p.to_string_lossy().into_owned()).ok(),
+        "claudeDesktop": apps::is_connected("claude-desktop"),
+        "cursor": apps::is_connected("cursor"),
+    })
+}
+
+#[tauri::command]
+fn connect_app(app: String, on: bool) -> Result<(), String> {
+    apps::connect(&app, on)
 }
 
 /// Writes the calendar export where the user chose in the save dialog. Only .ics files.
@@ -250,7 +281,12 @@ pub fn run() {
             save_calendar_file,
             list_opportunities,
             save_opportunities,
-            set_opportunity_status
+            set_opportunity_status,
+            list_ai_apps,
+            set_ai_app_level,
+            remove_ai_app,
+            mcp_setup,
+            connect_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running SafeBox");
