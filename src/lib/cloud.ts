@@ -8,7 +8,7 @@ import { streamText } from "ai";
 
 export type CloudModel = { id: string; name: string; created: number; promptPrice: number; completionPrice: number };
 
-const MODEL_KEY = "safebox.cloudModel";
+const MODEL_KEY = "voidcat.cloudModel";
 /** Used until the user picks another: strong at reading documents and reasoning about dates and rules. */
 export const DEFAULT_MODEL = "anthropic/claude-sonnet-5.5";
 
@@ -62,7 +62,7 @@ export type Turn = { role: "user" | "assistant"; content: string };
 
 /** Streams an answer from the chosen model. Every message must already be masked. */
 export function askCloud({ apiKey, model, messages }: { apiKey: string; model: string; messages: Turn[] }) {
-  const openrouter = createOpenRouter({ apiKey, headers: { "X-Title": "SafeBox" } });
+  const openrouter = createOpenRouter({ apiKey, headers: { "X-Title": "Voidcat" } });
   return streamText({
     model: openrouter(model, { provider: { zdr: true, data_collection: "deny" } }),
     system: SYSTEM,

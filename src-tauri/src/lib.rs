@@ -1,5 +1,6 @@
 mod apps;
 mod calendar;
+mod legacy;
 mod ocr;
 mod opportunities;
 mod secrets;
@@ -244,6 +245,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
+            legacy::move_library(&dir)?;
+            // Other apps set up under the old name now start the renamed server.
+            for name in ["claude-desktop", "cursor"] {
+                apps::upgrade_legacy(name);
+            }
             let store = Store::open(&dir)
                 .map_err(|e| format!("Could not open the library in {}: {e}", dir.display()))?;
             app.manage(store);
@@ -289,5 +295,5 @@ pub fn run() {
             connect_app
         ])
         .run(tauri::generate_context!())
-        .expect("error while running SafeBox");
+        .expect("error while running Voidcat");
 }

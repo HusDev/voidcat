@@ -34,9 +34,9 @@ pub struct Document {
     folder_id: Option<String>,
     /// "Area › Folder" of the folder it's filed in.
     folder_name: Option<String>,
-    /// auto = filed by SafeBox · suggested = waiting for you · confirmed = you chose
+    /// auto = filed by Voidcat · suggested = waiting for you · confirmed = you chose
     filing: Option<String>,
-    /// The folder SafeBox suggests while `filing` is "suggested".
+    /// The folder Voidcat suggests while `filing` is "suggested".
     suggested_area: Option<String>,
     suggested_folder: Option<String>,
     /// True when the suggested folder doesn't exist yet.
@@ -254,11 +254,12 @@ impl Store {
     pub fn open(dir: &Path) -> Result<Self, String> {
         let files = dir.join("files");
         fs::create_dir_all(&files).map_err(|e| e.to_string())?;
-        let db = Connection::open(dir.join("safebox.db")).map_err(|e| e.to_string())?;
+        let db = Connection::open(dir.join(crate::legacy::DB)).map_err(|e| e.to_string())?;
         db.execute_batch("pragma journal_mode = wal; pragma foreign_keys = on;")
             .map_err(|e| e.to_string())?;
         db.execute_batch(SCHEMA).map_err(|e| e.to_string())?;
         migrate(&db).map_err(|e| e.to_string())?;
+        crate::legacy::fix_paths(&db, dir).map_err(|e| e.to_string())?;
         db.execute_batch(crate::calendar::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::opportunities::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::apps::SCHEMA).map_err(|e| e.to_string())?;
@@ -655,7 +656,7 @@ mod tests {
 
     #[test]
     fn imports_once_and_removes() {
-        let dir = std::env::temp_dir().join(format!("safebox-test-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
         let store = Store::open(&dir).unwrap();
         let src = dir.join("lease.pdf");
         fs::write(&src, b"%PDF-1.4 example").unwrap();

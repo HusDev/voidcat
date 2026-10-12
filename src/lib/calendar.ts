@@ -191,7 +191,7 @@ export function toIcs(events: CalEvent[], stamp = new Date()): string {
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Voidcat//Calendar//EN", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Voidcat"];
   const dtstamp = `${stamp.toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`;
   for (const e of events) {
-    lines.push("BEGIN:VEVENT", `UID:${e.key.replace(/[^\w:.-]/g, "-")}@safebox`, `DTSTAMP:${dtstamp}`, `SUMMARY:${icsText(e.title)}`);
+    lines.push("BEGIN:VEVENT", `UID:${e.key.replace(/[^\w:.-]/g, "-")}@voidcat`, `DTSTAMP:${dtstamp}`, `SUMMARY:${icsText(e.title)}`);
     if (e.time) {
       const end = new Date(startOf(e).getTime() + 60 * 60_000);
       lines.push(`DTSTART:${icsTime(e)}`, `DTEND:${icsDate(end)}T${String(end.getHours()).padStart(2, "0")}${String(end.getMinutes()).padStart(2, "0")}00`);

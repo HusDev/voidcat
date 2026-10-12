@@ -18,7 +18,7 @@ export type Document = {
   folderId: string | null;
   /** "Area › Folder" */
   folderName: string | null;
-  /** auto = filed by SafeBox · suggested = waiting for you · confirmed = you chose */
+  /** auto = filed by Voidcat · suggested = waiting for you · confirmed = you chose */
   filing: "auto" | "suggested" | "confirmed" | null;
   suggestedArea: string | null;
   suggestedFolder: string | null;
@@ -65,7 +65,7 @@ export const documentPages = (id: string) => invoke<Page[]>("document_pages", { 
 export const settleFact = (id: string, status: Fact["status"], value?: string) => invoke<void>("settle_fact", { id, status, value: value ?? null });
 
 /** Tells every screen that the library changed (a fact approved, a document filed…). */
-export const LIBRARY_CHANGED = "safebox:library-changed";
+export const LIBRARY_CHANGED = "voidcat:library-changed";
 export const announceChange = () => window.dispatchEvent(new Event(LIBRARY_CHANGED));
 
 export const getSecret = (name: "openrouter") => invoke<string | null>("get_secret", { name });

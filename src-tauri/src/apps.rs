@@ -1,6 +1,6 @@
-//! Other apps that use the library through SafeBox's MCP server (`mcp/server.ts`, shipped as the `safebox-mcp`
+//! Other apps that use the library through Voidcat's MCP server (`mcp/server.ts`, shipped as the `voidcat-mcp`
 //! binary). The server records each app the first time it calls, in `ai_apps`; here you set what each may see, and
-//! SafeBox adds itself to Claude Desktop's or Cursor's MCP settings when you ask.
+//! Voidcat adds itself to Claude Desktop's or Cursor's MCP settings when you ask.
 
 use rusqlite::{params, Connection};
 use serde::Serialize;
@@ -58,7 +58,7 @@ pub fn remove(db: &Connection, name: &str) -> Result<(), String> {
 /// The MCP server binary, next to the app's own executable (Tauri puts sidecars there, in dev and in the bundle).
 pub fn server_path() -> Result<PathBuf, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let path = exe.parent().ok_or("No app folder")?.join("safebox-mcp");
+    let path = exe.parent().ok_or("No app folder")?.join("voidcat-mcp");
     if path.exists() {
         Ok(path)
     } else {
@@ -72,20 +72,20 @@ fn config_path(app: &str) -> Result<PathBuf, String> {
     match app {
         "claude-desktop" => Ok(Path::new(&home).join("Library/Application Support/Claude/claude_desktop_config.json")),
         "cursor" => Ok(Path::new(&home).join(".cursor/mcp.json")),
-        _ => Err(format!("SafeBox can't set up {app} by itself.")),
+        _ => Err(format!("Voidcat can't set up {app} by itself.")),
     }
 }
 
-/// Whether the app's settings already start SafeBox's server.
+/// Whether the app's settings already start Voidcat's server.
 pub fn is_connected(app: &str) -> bool {
     config_path(app)
         .ok()
         .and_then(|p| std::fs::read_to_string(p).ok())
         .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-        .is_some_and(|v| v.pointer("/mcpServers/safebox").is_some())
+        .is_some_and(|v| v.pointer("/mcpServers/voidcat").is_some())
 }
 
-/// Adds (or removes) SafeBox in the app's MCP settings, keeping everything else in the file and a backup next to it.
+/// Adds (or removes) Voidcat in the app's MCP settings, keeping everything else in the file and a backup next to it.
 pub fn connect(app: &str, on: bool) -> Result<(), String> {
     let path = config_path(app)?;
     let mut config: Value = match std::fs::read_to_string(&path) {
@@ -94,7 +94,7 @@ pub fn connect(app: &str, on: bool) -> Result<(), String> {
     };
     set_server(&mut config, on.then(|| server_path()).transpose()?.as_deref())?;
     if path.exists() {
-        std::fs::copy(&path, path.with_extension("json.safebox-backup")).map_err(|e| e.to_string())?;
+        std::fs::copy(&path, path.with_extension("json.voidcat-backup")).map_err(|e| e.to_string())?;
     } else if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
@@ -108,13 +108,27 @@ fn set_server(config: &mut Value, server: Option<&Path>) -> Result<(), String> {
     let servers = servers.as_object_mut().ok_or("mcpServers isn't a JSON object.")?;
     match server {
         Some(p) => {
-            servers.insert("safebox".into(), json!({ "command": p.to_string_lossy() }));
+            servers.insert("voidcat".into(), json!({ "command": p.to_string_lossy() }));
         }
         None => {
-            servers.remove("safebox");
+            servers.remove("voidcat");
         }
     }
+    // The entry from the app's first name, SafeBox.
+    servers.remove("safebox");
     Ok(())
+}
+
+/// Replaces an app's old "safebox" MCP entry with the "voidcat" one. Does nothing when there is no old entry.
+pub fn upgrade_legacy(app: &str) {
+    let had_old = config_path(app)
+        .ok()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+        .is_some_and(|v| v.pointer("/mcpServers/safebox").is_some());
+    if had_old {
+        let _ = connect(app, true);
+    }
 }
 
 #[cfg(test)]
@@ -131,12 +145,13 @@ mod tests {
         assert!(set_level(&db, "claude-ai", "all").is_err());
         assert_eq!(list(&db).unwrap()[0].level, "search");
 
-        let mut config = json!({ "preferences": { "x": 1 }, "mcpServers": { "other": { "command": "o" } } });
-        set_server(&mut config, Some(Path::new("/Applications/SafeBox.app/Contents/MacOS/safebox-mcp"))).unwrap();
-        assert_eq!(config["mcpServers"]["safebox"]["command"], "/Applications/SafeBox.app/Contents/MacOS/safebox-mcp");
+        let mut config = json!({ "preferences": { "x": 1 }, "mcpServers": { "other": { "command": "o" }, "safebox": { "command": "old" } } });
+        set_server(&mut config, Some(Path::new("/Applications/Voidcat.app/Contents/MacOS/voidcat-mcp"))).unwrap();
+        assert_eq!(config["mcpServers"]["voidcat"]["command"], "/Applications/Voidcat.app/Contents/MacOS/voidcat-mcp");
         assert_eq!(config["mcpServers"]["other"]["command"], "o");
-        set_server(&mut config, None).unwrap();
         assert!(config["mcpServers"].get("safebox").is_none());
+        set_server(&mut config, None).unwrap();
+        assert!(config["mcpServers"].get("voidcat").is_none());
         assert_eq!(config["preferences"]["x"], 1);
     }
 }

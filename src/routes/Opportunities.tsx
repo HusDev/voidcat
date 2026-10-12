@@ -20,7 +20,7 @@ import {
 import { Masker } from "../lib/privacy";
 import { Placeholders, Private } from "../lib/veil";
 
-const WEB_KEY = "safebox.scanWeb";
+const WEB_KEY = "voidcat.scanWeb";
 const FIT: Record<Opportunity["fit"], [string, string]> = {
   yes: ["For you", "bg-ok-soft text-ok"],
   maybe: ["Check", "bg-private-soft text-private-ink"],

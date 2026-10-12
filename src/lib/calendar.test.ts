@@ -61,7 +61,7 @@ describe("calendar", () => {
 
   it("writes a calendar file with alarms", () => {
     const ics = toIcs([{ key: "fact:x", title: "Padrón, OAC", date: "2026-11-04", time: "10:20", place: "OAC", kind: "appointment", origin: "fact" }], new Date(Date.UTC(2026, 9, 12)));
-    expect(ics).toContain("UID:fact:x@safebox");
+    expect(ics).toContain("UID:fact:x@voidcat");
     expect(ics).toContain("DTSTART:20261104T102000");
     expect(ics).toContain("SUMMARY:Padrón\\, OAC");
     expect(ics.match(/BEGIN:VALARM/g)).toHaveLength(2);

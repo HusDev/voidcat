@@ -6,7 +6,7 @@ import { Private, useVeil } from "../lib/veil";
 import { Logo } from "./Logo";
 
 const link = ({ isActive }: { isActive: boolean }) =>
-  `group flex items-center gap-2.5 rounded-lg py-2.5 pl-2 pr-3 text-sm no-underline ${isActive ? "bg-rail-2 font-semibold text-white" : "text-rail-mute hover:text-white"}`;
+  `group flex items-center gap-2.5 whitespace-nowrap rounded-lg py-2.5 pl-2 pr-3 text-sm no-underline ${isActive ? "bg-rail-2 font-semibold text-white" : "text-rail-mute hover:text-white"}`;
 
 /** Folders grouped by area, as a two-level tree. */
 function Folders() {
@@ -60,7 +60,7 @@ function Folders() {
 export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: number; soon: number }) {
   const veil = useVeil();
   return (
-    <nav aria-label="Voidcat" className="flex w-58 shrink-0 flex-col gap-6 border-r border-white/5 bg-rail px-4 pb-5 pt-11 text-rail-ink">
+    <nav aria-label="Voidcat" className="flex w-62 shrink-0 flex-col gap-6 border-r border-white/5 bg-rail px-4 pb-5 pt-11 text-rail-ink">
       <div data-tauri-drag-region className="flex items-center gap-2.5 px-2">
         <Logo />
         <span className="font-display text-[21px] font-light tracking-tight">Voidcat</span>

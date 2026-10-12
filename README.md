@@ -1,6 +1,6 @@
-# SafeBox
+# Voidcat
 
-Smart storage for your life. Drop in any document: SafeBox reads it on your Mac, files it and pulls out the facts. Any AI can use your knowledge, but personal details are masked before anything leaves.
+Smart storage for your life. Drop in any document: Voidcat reads it on your Mac, files it and pulls out the facts. Any AI can use your knowledge, but personal details are masked before anything leaves.
 
 > Early work in progress. The screens use made-up example data.
 

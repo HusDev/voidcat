@@ -11,7 +11,7 @@ import { Masker } from "./privacy";
 type Veil = { on: boolean; toggle: () => void; mask: (text: string) => string };
 
 const VeilContext = createContext<Veil>({ on: false, toggle: () => {}, mask: (t) => t });
-const KEY = "safebox.veil";
+const KEY = "voidcat.veil";
 
 const read = () => {
   try {

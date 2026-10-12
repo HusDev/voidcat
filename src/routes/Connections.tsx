@@ -203,7 +203,7 @@ function McpCard() {
     }
   };
 
-  const command = setup?.server ? `claude mcp add --scope user safebox -- "${setup.server}"` : "";
+  const command = setup?.server ? `claude mcp add --scope user voidcat -- "${setup.server}"` : "";
 
   return (
     <article className={`${card} lg:col-span-2`}>

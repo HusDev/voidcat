@@ -1,9 +1,9 @@
-# SafeBox — status and next steps
+# Voidcat — status and next steps
 
 Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026 (Voidcat rebrand).
 
 ## The product
-**SafeBox** (working name): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
+**Voidcat** (first called SafeBox; name not final): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
 
 - **Tagline:** "Drop your life in. Any AI can use it. None of them can take it."
 - **First target users:** people whose paperwork spans countries (immigrants, expats, international workers).
@@ -14,7 +14,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 ## Built (all pushed to `main`)
 1. **Desktop app:** Tauri 2 + React + Tailwind; Library, Ask, Calendar, Facts to approve, Connected AIs.
 2. **Library:**
-   - drag-and-drop or file picker; SQLite and files in `~/Library/Application Support/dev.hus.safebox/`;
+   - drag-and-drop or file picker; SQLite and files in `~/Library/Application Support/dev.hus.voidcat/`;
    - duplicates detected by sha256; open, remove, move;
    - full-text search inside pages (accents ignored).
 3. **Reading:** PDF text (unpdf); photos and scanned PDFs read by **Apple Vision OCR** on the Mac (Spanish, English, Arabic).
@@ -44,8 +44,9 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 11. **MCP server:**
    - Claude Desktop, Cursor and Claude Code can list documents, read approved facts and see upcoming dates, all masked;
    - searching and reading pages need the higher level; each app starts at "masked facts and dates" and you change it in Connected AIs;
-   - one click adds SafeBox to Claude Desktop or Cursor; Claude Code gets a command to copy. ChatGPT isn't supported (it needs an internet server).
+   - one click adds Voidcat to Claude Desktop or Cursor; Claude Code gets a command to copy. ChatGPT isn't supported (it needs an internet server).
 12. **Voidcat rebrand:** line-cat logo and app icon, violet accent, Outfit headings, light and dark themes that follow the Mac (sidebar dark in both), name Voidcat in the window and the interface. Canvas: https://claude.ai/artifact/97fHrNDyKQs6Q6DQ7cmB1Z (dark and light rows).
+13. **Renamed to Voidcat everywhere in the app:** package, identifier `dev.hus.voidcat`, database `voidcat.db`, Keychain service, MCP server and its entry in other apps. The old library folder, key and MCP entry move over automatically on first start (`legacy.rs`; it also rewrites each document's saved file path). Backup taken before the rename: `~/Library/Application Support/dev.hus.safebox.backup-2026-10-12`. The GitLab repo and the local folder are still `safebox`.
 
 ## Next, in order
 1. **GitLab hackathon work:**
@@ -67,8 +68,9 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - Explain in plain words; no jargon in the UI.
 
 ## Gotchas
-- **Restart the dev app** after `bun add` (a stale React copy causes "Invalid hook call") and after Rust changes: kill `target/debug/safebox`, `tauri dev`, and port 1420, then `bun run tauri dev` in the background.
+- **Restart the dev app** after `bun add` (a stale React copy causes "Invalid hook call") and after Rust changes: kill `target/debug/voidcat`, `tauri dev`, and port 1420, then `bun run tauri dev` in the background.
 - Run `bun run build:mcp` before `cargo test` or a fresh `tauri dev` if `src-tauri/binaries/` is empty (Tauri checks the sidecar exists). After changing `mcp/server.ts` or `src/lib/mcp.ts`, rebuild it; apps pick it up the next time they start the server.
+- Documents store absolute file paths (`documents.stored_path`): any change to the data folder must rewrite them (see `legacy::fix_paths`).
 - Rust toolchain lives in `~/.cargo/bin` (prepend it to PATH).
 - `useEffect(() => el.scrollIntoView(...))` returns a promise in new browsers and crashes React: always use braces.
 - Never `scrollIntoView` inside a scrolled page to highlight text; scroll the container instead (it made the inbox jump).

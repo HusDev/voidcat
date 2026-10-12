@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Document, Fact } from "./library";
-import { SafeBoxTools } from "./mcp";
+import { VoidcatTools } from "./mcp";
 
 const today = new Date(2026, 9, 12);
 const doc = { id: "d1", title: "Rental contract, Omar Haddad", folderName: "Home › Lease", docType: "rental_contract", pageCount: 2 } as Document;
 const fact = (label: string, value: string): Fact => ({ id: label, documentId: "d1", documentTitle: doc.title, documentMime: null, label, value, page: 1, status: "approved" });
 const facts = [fact("Tenant name", "Omar Haddad"), fact("Tenant NIE", "X1234567L"), fact("Contract end date", "30/09/2027"), fact("Monthly rent", "1.150 €/mes"), fact("Tenant name", "Omar Haddad")];
 
-const tools = new SafeBoxTools(
+const tools = new VoidcatTools(
   {
     documents: () => [doc],
     approvedFacts: () => facts,

@@ -119,7 +119,7 @@ export function restore(found: Found, masker: Masker, number: Map<string, string
 
 /** Sends one scan. `web` lets the model check current rules on the web (OpenRouter's web plugin; not covered by ZDR). */
 export async function scanCloud({ apiKey, model, sent, web }: { apiKey: string; model: string; sent: string; web: boolean }) {
-  const openrouter = createOpenRouter({ apiKey, headers: { "X-Title": "SafeBox" } });
+  const openrouter = createOpenRouter({ apiKey, headers: { "X-Title": "Voidcat" } });
   const { output } = await generateText({
     model: openrouter(model, { provider: { zdr: true, data_collection: "deny" }, ...(web ? { plugins: [{ id: "web", max_results: 5 }] } : {}) }),
     system: SCAN_SYSTEM,

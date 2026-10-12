@@ -1,13 +1,13 @@
-# SafeBox — Hussein's decisions
+# Voidcat — Hussein's decisions
 
 Every product, design and working decision Hussein made, with the date. When he makes or changes a decision, edit the line here in place and add an entry to the change log at the bottom, in the same turn.
 
 ## Product
 - **What it is:** smart storage for your life's documents. Drop anything in; it's read on your Mac, filed, and its facts extracted. Any AI can use that knowledge without seeing your private data.
-- **Name:** "SafeBox" for now; a final name later. Other apps already use SafeBox (vaults, a Spanish signing tool), so pick a distinct name before launch. Considered: SafeDrop (taken by a secure file-sharing service), SafeX (antivirus apps), SafeXY (unclear to say), DocDrop (least taken), LifeBox (taken by a backup app). He likes "Safe + word" names.
+- **Name:** **Voidcat** (renamed from SafeBox on 12 Oct 2026, everywhere in the app); still not final. Earlier: "SafeBox" for now; a final name later. Other apps already use SafeBox (vaults, a Spanish signing tool), so pick a distinct name before launch. Considered: SafeDrop (taken by a secure file-sharing service), SafeX (antivirus apps), SafeXY (unclear to say), DocDrop (least taken), LifeBox (taken by a backup app). He likes "Safe + word" names.
 - **Tagline (200 characters):** "SafeBox is smart storage for your life: drop in any document, it organises it and extracts the facts, and any AI can use your knowledge without ever seeing your private data."
 - **Target users first:** people whose paperwork spans countries (immigrants, expats, international workers); later everyone.
-- **A separate project from Hus:** Hus stays his private second brain; SafeBox is the product. No Hus personal data in SafeBox's repo.
+- **A separate project from Hus:** Hus stays the private second brain; Voidcat is the product. No Hus personal data in its repo.
 - **Any AI can connect:** like opencode's many connectors. Models go in through OpenRouter, and other apps come in through an MCP server (planned).
 - **Amounts stay visible to the AI** ("amounts are kept"), including approved facts such as rent or a deposit, so it can reason about money.
 - **Privacy is the core promise:** the library stays on the Mac; personal details are masked before any AI sees them; OpenAI's privacy-filter model is planned on top of the rules.
@@ -28,7 +28,7 @@ Every product, design and working decision Hussein made, with the date. When he 
 - **Library:** drag and drop, search inside documents, document cards with their folder and key facts, open, move, remove (with a "remove for good" confirmation).
 - **Folders:**
   - two levels, Area › Folder;
-  - **file automatically when SafeBox is confident and the folder exists**, and ask for new or doubtful folders;
+  - **file automatically when Voidcat is confident and the folder exists**, and ask for new or doubtful folders;
   - a suggested new folder can be **renamed** before "Create and file";
   - specific folder names must come from the document itself.
 - **Facts to approve:** nothing becomes a fact until approved. The source page shows beside it, **sticky** while scrolling. Markdown documents render as formatted pages.
@@ -74,3 +74,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 12 Oct 2026 — Theme switch added in the sidebar: Auto / Light / Dark.
 - 12 Oct 2026 — Settings screen added (sidebar link at the bottom): Appearance (Auto / Light / Dark) and Privacy (Hide private details, ⌘⇧H). Sidebar theme switch removed; "Hide private details" fits on one line, shortcut in its tooltip.
 - 12 Oct 2026 — Private-details colour changed from amber to cyan (#5EEAD4; chips dark teal with cyan text).
+- 12 Oct 2026 — Renamed everything in the app from SafeBox to Voidcat ("rename all to voidcat"), including internal names; the library, Keychain key and Claude Desktop entry move over automatically.

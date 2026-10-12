@@ -1,7 +1,7 @@
 /**
- * SafeBox's MCP server. Apps such as Claude Desktop, Cursor and Claude Code start it (stdio) to use the library.
- * It reads the library the SafeBox app keeps on this Mac and answers through `SafeBoxTools`, which masks every
- * personal detail. Each app's access level is set in SafeBox (Connected AIs) and checked on every call.
+ * Voidcat's MCP server. Apps such as Claude Desktop, Cursor and Claude Code start it (stdio) to use the library.
+ * It reads the library the Voidcat app keeps on this Mac and answers through `VoidcatTools`, which masks every
+ * personal detail. Each app's access level is set in Voidcat (Connected AIs) and checked on every call.
  * Built into a single binary with `bun run build:mcp` and shipped inside the app.
  */
 import { Database } from "bun:sqlite";
@@ -13,14 +13,14 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import type { ManualEvent } from "../src/lib/calendar";
 import type { Document, Fact, Hit } from "../src/lib/library";
-import { DEFAULT_LEVEL, INSTRUCTIONS, type Level, type LibrarySource, SafeBoxTools } from "../src/lib/mcp";
+import { DEFAULT_LEVEL, INSTRUCTIONS, type Level, type LibrarySource, VoidcatTools } from "../src/lib/mcp";
 
-const dir = process.env.SAFEBOX_DIR ?? join(homedir(), "Library/Application Support/dev.hus.safebox");
-if (!existsSync(join(dir, "safebox.db"))) {
-  console.error(`No SafeBox library in ${dir}. Open SafeBox once to create it.`);
+const dir = process.env.VOIDCAT_DIR ?? join(homedir(), "Library/Application Support/dev.hus.voidcat");
+if (!existsSync(join(dir, "voidcat.db"))) {
+  console.error(`No Voidcat library in ${dir}. Open Voidcat once to create it.`);
   process.exit(1);
 }
-const db = new Database(join(dir, "safebox.db"), { readwrite: true, create: false });
+const db = new Database(join(dir, "voidcat.db"), { readwrite: true, create: false });
 db.exec("pragma busy_timeout = 3000");
 db.exec(`create table if not exists ai_apps (
   name text primary key,
@@ -64,10 +64,10 @@ const library: LibrarySource = {
   page: (documentId, page) => (db.query("select text from pages where document_id = ?1 and page = ?2").get(documentId, page) as { text: string } | null)?.text ?? null,
 };
 
-const tools = new SafeBoxTools(library);
-const server = new McpServer({ name: "safebox", version: "0.1.0" }, { instructions: INSTRUCTIONS });
+const tools = new VoidcatTools(library);
+const server = new McpServer({ name: "voidcat", version: "0.1.0" }, { instructions: INSTRUCTIONS });
 
-/** The calling app's level, read fresh so a change in SafeBox applies at once. Records that the app used SafeBox. */
+/** The calling app's level, read fresh so a change in Voidcat applies at once. Records that the app used Voidcat. */
 function levelOfCaller(): Level {
   const name = server.server.getClientVersion()?.name ?? "unknown";
   db.query("insert into ai_apps (name) values (?1) on conflict(name) do nothing").run(name);
@@ -76,8 +76,8 @@ function levelOfCaller(): Level {
 }
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
-const OFF = "This app is turned off in SafeBox. The user can allow it in SafeBox → Connected AIs.";
-const NEEDS_SEARCH = "This app may only see facts and dates. The user can allow searching pages in SafeBox → Connected AIs.";
+const OFF = "This app is turned off in Voidcat. The user can allow it in Voidcat → Connected AIs.";
+const NEEDS_SEARCH = "This app may only see facts and dates. The user can allow searching pages in Voidcat → Connected AIs.";
 
 function guarded(need: "facts" | "search", run: () => string) {
   try {
@@ -86,7 +86,7 @@ function guarded(need: "facts" | "search", run: () => string) {
     if (need === "search" && level !== "search") return text(NEEDS_SEARCH);
     return text(run());
   } catch (err) {
-    return { ...text(`SafeBox could not answer: ${err instanceof Error ? err.message : String(err)}`), isError: true };
+    return { ...text(`Voidcat could not answer: ${err instanceof Error ? err.message : String(err)}`), isError: true };
   }
 }
 
@@ -94,7 +94,7 @@ const readOnly = { readOnlyHint: true, openWorldHint: false };
 
 server.registerTool(
   "list_documents",
-  { title: "List documents", description: "Every document in the user's SafeBox library: id, title, folder, type and page count.", annotations: readOnly },
+  { title: "List documents", description: "Every document in the user's Voidcat library: id, title, folder, type and page count.", annotations: readOnly },
   () => guarded("facts", () => tools.listDocuments()),
 );
 server.registerTool(
