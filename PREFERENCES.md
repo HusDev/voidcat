@@ -22,7 +22,7 @@ Every product, design and working decision Hussein made, with the date. When he 
 
 ## Screens and behaviour
 - **Logo: the line cat** (chosen; the faceted cat is dropped): one open violet line with two slanted eyes, from the shirt. The app icon is the same line cat on Deep Space with a soft violet glow. Brand page: https://claude.ai/artifact/TQMtAgxsyRbgLCSn795Cum
-- **Brand colours (Voidcat direction, name not decided):** Void Purple #8B5CF6 (accent), Deep Space #0B0B0F (background), Moon Gray #A1A1AA, Starlight #F5F5F7; shirt embroidery #7F68C0. Amber #F2B84B stays only for private details. Not applied to the app yet.
+- **Brand colours (Voidcat direction, name not decided):** Void Purple #8B5CF6 (accent), Deep Space #0B0B0F (background), Moon Gray #A1A1AA, Starlight #F5F5F7; shirt embroidery #7F68C0. Amber #F2B84B stays only for private details. Not applied to the app yet. Sidebar selection: a quiet neutral fill with a small glowing violet dot, not a purple tint with a side bar (rejected as looking bad).
 - **Design first:** the screens live on the design canvas (https://claude.ai/artifact/97fHrNDyKQs6Q6DQ7cmB1Z), the reference for building. He liked the first mockup's look: dark sidebar, grey workspace, amber for anything private.
 - **Library:** drag and drop, search inside documents, document cards with their folder and key facts, open, move, remove (with a "remove for good" confirmation).
 - **Folders:**
@@ -67,3 +67,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 12 Oct 2026 — MCP server built (he said "go for it"); new apps start with masked facts and dates only; ChatGPT not supported yet. Recurring date rules ("del 1 al 5 de cada mes") are no longer hidden as dates.
 - 12 Oct 2026 — Brand exploration: liked the Voidcat moodboard, the shirt's line cat logo and the faceted purple cat; colours extracted (not adopted yet).
 - 12 Oct 2026 — Logo chosen: the line cat; the faceted cat and its colours are dropped.
+- 12 Oct 2026 — Sidebar highlight: neutral fill + violet dot instead of purple tint with a left bar.
