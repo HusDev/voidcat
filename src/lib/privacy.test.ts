@@ -26,6 +26,11 @@ describe("privacy layer", () => {
     expect(m.mask("Rent is 1.150 euros, deposit 2.300 euros, 3 rooms.")).toBe("Rent is 1.150 euros, deposit 2.300 euros, 3 rooms.");
   });
 
+  it("keeps approved amounts but masks other numbered details", () => {
+    const m = new Masker([{ label: "Deposit", value: "2.300 euros" }, { label: "Monthly rent", value: "€1,150 / month" }, { label: "Policy", value: "PL-889 2213" }], today);
+    expect(m.mask("Deposit 2.300 euros, rent €1,150 / month, policy PL-889 2213.")).toBe("Deposit 2.300 euros, rent €1,150 / month, policy [PRIVATE_1].");
+  });
+
   it("turns dates into placeholders with a relative note", () => {
     const m = new Masker([], today);
     const masked = m.mask("Valid until 16/03/2027. Signed 12 de octubre de 2026. Issued March 3, 2020.");

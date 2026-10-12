@@ -1,4 +1,4 @@
-import { CalendarDays, Eye, EyeOff, Folder as FolderIcon, Inbox, Library, Link2, MessageSquareText, ShieldCheck } from "lucide-react";
+import { CalendarDays, Eye, EyeOff, Folder as FolderIcon, Inbox, Library, Lightbulb, Link2, MessageSquareText, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useSearchParams } from "react-router";
 import { type Folder, LIBRARY_CHANGED, listFolders } from "../lib/library";
@@ -85,6 +85,9 @@ export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: nu
               {soon}
             </span>
           )}
+        </NavLink>
+        <NavLink to="/opportunities" className={link}>
+          <Lightbulb aria-hidden className="size-4.5" /> Opportunities
         </NavLink>
         <NavLink to="/inbox" className={link}>
           <Inbox aria-hidden className="size-4.5" /> Facts to approve

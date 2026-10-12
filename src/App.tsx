@@ -12,6 +12,7 @@ import { Calendar } from "./routes/Calendar";
 import { Connections } from "./routes/Connections";
 import { Inbox } from "./routes/Inbox";
 import { Library } from "./routes/Library";
+import { Opportunities } from "./routes/Opportunities";
 
 export default function App() {
   const [pending, setPending] = useState(0);
@@ -57,6 +58,7 @@ export default function App() {
             <Route index element={<Library />} />
             <Route path="ask" element={<Ask />} />
             <Route path="calendar" element={<Calendar />} />
+            <Route path="opportunities" element={<Opportunities />} />
             <Route path="inbox" element={<Inbox />} />
             <Route path="connections" element={<Connections />} />
           </Routes>

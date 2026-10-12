@@ -9,6 +9,7 @@ Every product, design and working decision Hussein made, with the date. When he 
 - **Target users first:** people whose paperwork spans countries (immigrants, expats, international workers); later everyone.
 - **A separate project from Hus:** Hus stays his private second brain; SafeBox is the product. No Hus personal data in SafeBox's repo.
 - **Any AI can connect:** like opencode's many connectors. Models go in through OpenRouter, and other apps come in through an MCP server (planned).
+- **Amounts stay visible to the AI** ("amounts are kept"), including approved facts such as rent or a deposit, so it can reason about money.
 - **Privacy is the core promise:** the library stays on the Mac; personal details are masked before any AI sees them; OpenAI's privacy-filter model is planned on top of the rules.
 
 ## Platform and stack
@@ -36,7 +37,7 @@ Every product, design and working decision Hussein made, with the date. When he 
   - every deadline and date becomes a reminder, including appointments such as the empadronamiento, with a "papers to bring" checklist;
   - dates are worked out too: renewal 60 days before expiry, monthly rent days;
   - Mac notifications and export to Apple/Google Calendar.
-- **Opportunities tab** (his idea, from Hus): advantages and opportunities based on your situation, with Keep / Add to calendar / Done / Dismiss. Planned as phase 3.
+- **Opportunities tab** (his idea, from Hus): advantages and opportunities based on your situation, with Keep / Add to calendar / Done / Dismiss. Built as phase 3: the scan sends only masked facts and document names, shows what will be sent first, and web checking is optional and off by default because it falls outside zero data retention. Dismissed ideas never come back.
 
 ## Working with him
 - **Short answers;** challenge with evidence rather than folding.
@@ -59,3 +60,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 12 Oct 2026 — Address short forms are masked too.
 - 12 Oct 2026 — Calendar with reminders, worked-out dates and papers checklists; Opportunities tab planned as phase 3.
 - 12 Oct 2026 — Decisions recorded in this file from now on.
+- 12 Oct 2026 — Phase 3 Opportunities built (started at his request); web checking optional, off by default. Approved amounts are no longer hidden, to match "amounts are kept".

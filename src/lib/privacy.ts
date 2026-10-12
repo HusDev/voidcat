@@ -102,9 +102,13 @@ export function variants(value: string, kind: Kind): RegExp[] {
 }
 
 /** Values too generic to be personal ("1 year", "Good"): masking them only hurts the answer. */
+/** "1.150 euros", "€2,300", "450 EUR/month": amounts are kept so an AI can reason about money. */
+const AMOUNT = /^(?:[€$£]\s?)?\d[\d.,\s]*(?:\s?(?:€|\$|£|euros?|eur|usd|dollars?|gbp|iqd|dinars?))?(?:\s*(?:\/|a|per|al|por)\s*\w+)?$/i;
+
 const worthMasking = (value: string, kind: Kind) => {
   const v = value.trim();
   if (v.length < 4) return false;
+  if (kind === "PRIVATE" && /[€$£]|euro|eur\b|usd|dollar|gbp|iqd|dinar/i.test(v) && AMOUNT.test(v)) return false;
   if (kind === "PRIVATE") return (v.match(/\d/g) ?? []).length >= 3;
   return true;
 };

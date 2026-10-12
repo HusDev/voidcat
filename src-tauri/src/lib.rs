@@ -1,5 +1,6 @@
 mod calendar;
 mod ocr;
+mod opportunities;
 mod secrets;
 mod store;
 
@@ -105,6 +106,21 @@ fn set_event_papers(store: State<Store>, key: String, papers: Vec<calendar::Pape
 #[tauri::command]
 fn claim_reminder(store: State<Store>, key: String) -> Result<bool, String> {
     calendar::claim_reminder(&store.db.lock().unwrap(), &key)
+}
+
+#[tauri::command]
+fn list_opportunities(store: State<Store>) -> Result<Vec<opportunities::Opportunity>, String> {
+    opportunities::list(&store.db.lock().unwrap())
+}
+
+#[tauri::command]
+fn save_opportunities(store: State<Store>, found: Vec<opportunities::Opportunity>) -> Result<(), String> {
+    opportunities::save_scan(&mut store.db.lock().unwrap(), found)
+}
+
+#[tauri::command]
+fn set_opportunity_status(store: State<Store>, key: String, status: String) -> Result<(), String> {
+    opportunities::set_status(&store.db.lock().unwrap(), &key, &status)
 }
 
 /// Writes the calendar export where the user chose in the save dialog. Only .ics files.
@@ -231,7 +247,10 @@ pub fn run() {
             event_papers,
             set_event_papers,
             claim_reminder,
-            save_calendar_file
+            save_calendar_file,
+            list_opportunities,
+            save_opportunities,
+            set_opportunity_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running SafeBox");

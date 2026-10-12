@@ -1,6 +1,6 @@
 # SafeBox — status and next steps
 
-Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026.
+Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026 (phase 3 built).
 
 ## The product
 **SafeBox** (working name): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
@@ -37,21 +37,20 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - dates come from approved facts, plus worked-out renewals (60 days before ID/permit expiry), monthly rent days ("del 1 al 5 de cada mes") and manual events;
    - papers-to-bring checklist via the local model;
    - Mac notifications while the app is open; `.ics` export.
+10. **Opportunities (phase 3):**
+   - a scan sends masked approved facts plus document titles/types (never page text) to OpenRouter with ZDR; you see what will be sent and a cost estimate first;
+   - optional "check current rules on the web" (off by default; says plainly it's outside ZDR);
+   - cards with Keep / Add to calendar / Done / Dismiss; later scans keep your decisions and never bring dismissed ideas back.
 
 ## Next, in order
-1. **Phase 3 — Opportunities** (designed on the canvas, screen 9):
-   - Rust table `opportunities` (key, area, title, why, value, effort, deadline, next_step, fit yes/maybe/no, sources, status new/kept/done/dismissed).
-   - Scan sends **masked** approved facts plus document titles/types to OpenRouter with ZDR, using `generateObject` + Zod. Show "what will be sent" first. The optional web-search toggle must say ZDR doesn't cover web search.
-   - Cards with Keep / Add to calendar (creates a manual event) / Done / Dismiss; dismissed ideas stay dismissed on later scans. Sidebar link + `/opportunities` route.
-   - Port the logic from Hus: `~/lab/hus/app/lib/ai.server.ts` `findOpportunities`, `~/lab/hus/app/routes/opportunities.tsx`.
-2. **MCP server:** Claude Desktop, ChatGPT and Cursor search the library with masking; per-app access levels (Connected AIs).
-3. **GitLab hackathon work:**
+1. **MCP server:** Claude Desktop, ChatGPT and Cursor search the library with masking; per-app access levels (Connected AIs).
+2. **GitLab hackathon work:**
    - repo public + MIT;
    - CI stages (verify exists in `.gitlab-ci.yml`) plus GitLab Duo agents and flows for review, security, tests and release;
    - demo video under 3 min. The project story draft is in the conversation history; ask Hussein.
-4. **OpenAI privacy-filter model** (Transformers.js/ONNX) to catch names the rules miss.
-5. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
-6. **Polish:**
+3. **OpenAI privacy-filter model** (Transformers.js/ONNX) to catch names the rules miss.
+4. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
+5. **Polish:**
    - a Rename-folder button in the folder view;
    - background reminders when the app is closed;
    - `docType` sometimes gets the folder name (seen once): tighten the schema description.
