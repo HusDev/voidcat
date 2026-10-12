@@ -74,6 +74,33 @@ export function relative(date: Date, today: Date): string {
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const STREET_TYPES = "calle|c/|c\\.|carrer|avenida|avinguda|av\\.|avda\\.|plaza|plaça|pl\\.|paseo|passeig|pg\\.|rambla|ronda|travessera|camino|cami";
+
+/**
+ * Shorter ways the same address or name shows up elsewhere: "Calle Llull 390, Entresuelo 2ª" is also written
+ * "C/ Llull 390", "Carrer Llull, 390" or just "Llull 390"; "Èric Lluch Alvarez" is also "Èric Lluch".
+ */
+export function variants(value: string, kind: Kind): RegExp[] {
+  const out: RegExp[] = [];
+  if (kind === "ADDRESS") {
+    // The street and number, wherever they are: "Barcelona, Calle Llull 390, 2ª" → "Llull" + "390".
+    const name = "([\\p{L}][\\p{L}'’·.-]*(?:\\s+[\\p{L}][\\p{L}'’·.-]*){0,3}?)";
+    const tail = "\\s*,?\\s*(?:n[º°o.]\\s*)?(\\d{1,4})\\b";
+    const m =
+      value.match(new RegExp(`(?:${STREET_TYPES})\\s*(?:de\\s+|del\\s+|d'|de la\\s+)?${name}${tail}`, "iu")) ??
+      value.match(new RegExp(`(?:^|,\\s*)${name}${tail}`, "u"));
+    if (m && m[1].length >= 3) {
+      const street = m[1].split(/\s+/).map(escape).join("\\s+");
+      out.push(new RegExp(`(?:(?:${STREET_TYPES})\\s*(?:de\\s+|del\\s+|d'|de la\\s+)?)?${street}${tail.replace("(\\d{1,4})", m[2])}`, "giu"));
+    }
+  }
+  if (kind === "PERSON") {
+    const words = value.trim().split(/\s+/);
+    if (words.length >= 3) out.push(new RegExp(`${escape(words[0])}\\s+${escape(words[1])}`, "giu"));
+  }
+  return out;
+}
+
 /** Values too generic to be personal ("1 year", "Good"): masking them only hurts the answer. */
 const worthMasking = (value: string, kind: Kind) => {
   const v = value.trim();
@@ -85,7 +112,8 @@ const worthMasking = (value: string, kind: Kind) => {
 export class Masker {
   private byOriginal = new Map<string, Masked>();
   private counts = new Map<Kind, number>();
-  private known: { value: string; kind: Kind }[];
+  /** `value` is the full approved value; short forms of it (variants) map to the same placeholder. */
+  private known: { value: string; kind: Kind; re: RegExp; variant: boolean }[];
 
   constructor(
     facts: KnownFact[],
@@ -102,14 +130,18 @@ export class Masker {
       const value = f.value.trim();
       const kind = kindOfLabel(f.label);
       if (worthMasking(value, kind) && !seen.has(value.toLowerCase())) {
-        this.known.push({ value, kind });
+        this.known.push({ value, kind, re: new RegExp(escape(value), "giu"), variant: false });
+        for (const re of variants(value, kind)) this.known.push({ value, kind, re, variant: true });
         seen.add(value.toLowerCase());
       }
     }
-    this.known.sort((a, b) => b.value.length - a.value.length);
+    // Full values first, longest first; short forms only where no full value matched.
+    this.known.sort((a, b) => Number(a.variant) - Number(b.variant) || b.value.length - a.value.length);
   }
 
-  private tokenFor(original: string, kind: Kind): string {
+  /** `canonical`: the full approved value this text is a form of, so every form shares one placeholder. */
+  private tokenFor(found: string, kind: Kind, canonical?: string): string {
+    const original = canonical ?? found;
     const key = original.trim().toLowerCase();
     const seen = this.byOriginal.get(key);
     if (seen) return seen.token;
@@ -126,24 +158,24 @@ export class Masker {
    * and placeholders are numbered in the order they appear. Known facts win over patterns when both match.
    */
   mask(text: string): string {
-    const spans: { start: number; end: number; kind: Kind }[] = [];
+    const spans: { start: number; end: number; kind: Kind; canonical?: string }[] = [];
     const free = (start: number, end: number) => spans.every((s) => end <= s.start || start >= s.end);
-    const take = (re: RegExp, kind: Kind) => {
+    const take = (re: RegExp, kind: Kind, canonical?: string) => {
       for (const m of text.matchAll(re)) {
         const start = m.index ?? 0;
         const end = start + m[0].length;
         if (kind === "PHONE" && m[0].replace(/\D/g, "").length < 9) continue;
-        if (free(start, end)) spans.push({ start, end, kind });
+        if (free(start, end)) spans.push({ start, end, kind, canonical });
       }
     };
-    for (const f of this.known) take(new RegExp(escape(f.value), "gi"), f.kind);
+    for (const f of this.known) take(f.re, f.kind, f.value);
     for (const [kind, re] of PATTERNS) take(re, kind);
 
     spans.sort((a, b) => a.start - b.start);
     let out = "";
     let at = 0;
     for (const s of spans) {
-      out += text.slice(at, s.start) + this.tokenFor(text.slice(s.start, s.end), s.kind);
+      out += text.slice(at, s.start) + this.tokenFor(text.slice(s.start, s.end), s.kind, s.canonical);
       at = s.end;
     }
     return out + text.slice(at);
