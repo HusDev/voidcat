@@ -4,7 +4,11 @@ import { Sidebar } from "./components/Sidebar";
 import { EyeOff } from "lucide-react";
 import { LIBRARY_CHANGED, libraryStats } from "./lib/library";
 import { useVeil } from "./lib/veil";
+import { fromIso } from "./lib/calendar";
+import { useReminders } from "./lib/reminders";
+import { useCalendar } from "./lib/useCalendar";
 import { Ask } from "./routes/Ask";
+import { Calendar } from "./routes/Calendar";
 import { Connections } from "./routes/Connections";
 import { Inbox } from "./routes/Inbox";
 import { Library } from "./routes/Library";
@@ -13,6 +17,13 @@ export default function App() {
   const [pending, setPending] = useState(0);
   const [toFile, setToFile] = useState(0);
   const veil = useVeil();
+  const calendar = useCalendar();
+  useReminders(calendar.events, calendar.done);
+  // Appointments, deadlines and expiries in the next 14 days.
+  const soon = calendar.events.filter((e) => {
+    const days = (fromIso(e.date).getTime() - new Date(new Date().toDateString()).getTime()) / 86_400_000;
+    return !calendar.done.has(e.key) && days >= 0 && days <= 14 && ["appointment", "deadline", "expires"].includes(e.kind);
+  }).length;
 
   useEffect(() => {
     const refresh = () =>
@@ -27,7 +38,7 @@ export default function App() {
 
   return (
     <div className="flex h-full">
-      <Sidebar pending={pending} toFile={toFile} />
+      <Sidebar pending={pending} toFile={toFile} soon={soon} />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* The window has no title bar; this strip lets you drag it. */}
         <div data-tauri-drag-region className="flex h-8 shrink-0 items-center justify-center">
@@ -45,6 +56,7 @@ export default function App() {
           <Routes>
             <Route index element={<Library />} />
             <Route path="ask" element={<Ask />} />
+            <Route path="calendar" element={<Calendar />} />
             <Route path="inbox" element={<Inbox />} />
             <Route path="connections" element={<Connections />} />
           </Routes>

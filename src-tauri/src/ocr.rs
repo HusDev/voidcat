@@ -2,14 +2,20 @@
 
 #[cfg(target_os = "macos")]
 pub fn read_image(bytes: &[u8]) -> Result<String, String> {
-    use objc2::rc::autoreleasepool;
     use objc2::AnyThread;
+    use objc2::rc::autoreleasepool;
     use objc2_foundation::{NSArray, NSData, NSDictionary};
-    use objc2_vision::{VNImageRequestHandler, VNRecognizeTextRequest, VNRequest, VNRequestTextRecognitionLevel};
+    use objc2_vision::{
+        VNImageRequestHandler, VNRecognizeTextRequest, VNRequest, VNRequestTextRecognitionLevel,
+    };
 
     autoreleasepool(|_| {
         let data = NSData::with_bytes(bytes);
-        let handler = VNImageRequestHandler::initWithData_options(VNImageRequestHandler::alloc(), &data, &NSDictionary::new());
+        let handler = VNImageRequestHandler::initWithData_options(
+            VNImageRequestHandler::alloc(),
+            &data,
+            &NSDictionary::new(),
+        );
 
         let request = VNRecognizeTextRequest::new();
         request.setRecognitionLevel(VNRequestTextRecognitionLevel::Accurate);
@@ -19,7 +25,9 @@ pub fn read_image(bytes: &[u8]) -> Result<String, String> {
 
         let as_request: &VNRequest = &request;
         let requests = NSArray::from_slice(&[as_request]);
-        handler.performRequests_error(&requests).map_err(|e| e.localizedDescription().to_string())?;
+        handler
+            .performRequests_error(&requests)
+            .map_err(|e| e.localizedDescription().to_string())?;
 
         let mut lines = Vec::new();
         if let Some(results) = request.results() {
@@ -43,7 +51,9 @@ mod tests {
     /// Set OCR_SAMPLE to an image path to run: OCR_SAMPLE=/path/to.png cargo test reads_sample -- --nocapture
     #[test]
     fn reads_sample() {
-        let Ok(path) = std::env::var("OCR_SAMPLE") else { return };
+        let Ok(path) = std::env::var("OCR_SAMPLE") else {
+            return;
+        };
         let text = super::read_image(&std::fs::read(path).unwrap()).unwrap();
         println!("{text}");
         assert!(!text.trim().is_empty());

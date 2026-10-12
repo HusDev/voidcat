@@ -1,3 +1,4 @@
+mod calendar;
 mod ocr;
 mod secrets;
 mod store;
@@ -24,7 +25,9 @@ fn library_stats(store: State<Store>) -> Result<Stats, String> {
 #[tauri::command]
 fn open_document(app: tauri::AppHandle, store: State<Store>, id: String) -> Result<(), String> {
     let path = store.path_of(&id)?;
-    app.opener().open_path(path, None::<&str>).map_err(|e| e.to_string())
+    app.opener()
+        .open_path(path, None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 /// The file's bytes, sent to the interface so it can read the text (PDF) without anything leaving the Mac.
@@ -65,7 +68,61 @@ fn remove_secret(name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn save_reading(store: State<Store>, id: String, pages: Vec<String>, method: String) -> Result<(), String> {
+fn list_events(store: State<Store>) -> Result<Vec<calendar::Event>, String> {
+    calendar::events(&store.db.lock().unwrap())
+}
+
+#[tauri::command]
+fn add_event(store: State<Store>, event: calendar::Event) -> Result<String, String> {
+    calendar::add_event(&store.db.lock().unwrap(), event)
+}
+
+#[tauri::command]
+fn remove_event(store: State<Store>, id: String) -> Result<(), String> {
+    calendar::remove_event(&store.db.lock().unwrap(), &id)
+}
+
+#[tauri::command]
+fn set_event_done(store: State<Store>, key: String, done: bool) -> Result<(), String> {
+    calendar::set_done(&store.db.lock().unwrap(), &key, done)
+}
+
+#[tauri::command]
+fn done_event_keys(store: State<Store>) -> Result<Vec<String>, String> {
+    calendar::done_keys(&store.db.lock().unwrap())
+}
+
+#[tauri::command]
+fn event_papers(store: State<Store>, key: String) -> Result<Vec<calendar::Paper>, String> {
+    calendar::papers(&store.db.lock().unwrap(), &key)
+}
+
+#[tauri::command]
+fn set_event_papers(store: State<Store>, key: String, papers: Vec<calendar::Paper>) -> Result<(), String> {
+    calendar::set_papers(&mut store.db.lock().unwrap(), &key, papers)
+}
+
+#[tauri::command]
+fn claim_reminder(store: State<Store>, key: String) -> Result<bool, String> {
+    calendar::claim_reminder(&store.db.lock().unwrap(), &key)
+}
+
+/// Writes the calendar export where the user chose in the save dialog. Only .ics files.
+#[tauri::command]
+fn save_calendar_file(path: String, content: String) -> Result<(), String> {
+    if !path.to_lowercase().ends_with(".ics") {
+        return Err("The calendar file must end in .ics.".into());
+    }
+    std::fs::write(path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn save_reading(
+    store: State<Store>,
+    id: String,
+    pages: Vec<String>,
+    method: String,
+) -> Result<(), String> {
     store.save_reading(&id, pages, &method)
 }
 
@@ -98,7 +155,12 @@ fn list_folders(store: State<Store>) -> Result<Vec<Folder>, String> {
 }
 
 #[tauri::command]
-fn file_document(store: State<Store>, id: String, area: String, name: String) -> Result<String, String> {
+fn file_document(
+    store: State<Store>,
+    id: String,
+    area: String,
+    name: String,
+) -> Result<String, String> {
     store.file_document(&id, &area, &name)
 }
 
@@ -113,7 +175,12 @@ fn list_facts(store: State<Store>, status: String) -> Result<Vec<Fact>, String> 
 }
 
 #[tauri::command]
-fn settle_fact(store: State<Store>, id: String, status: String, value: Option<String>) -> Result<(), String> {
+fn settle_fact(
+    store: State<Store>,
+    id: String,
+    status: String,
+    value: Option<String>,
+) -> Result<(), String> {
     store.settle_fact(&id, &status, value)
 }
 
@@ -125,11 +192,13 @@ fn remove_document(store: State<Store>, id: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
-            let store = Store::open(&dir).map_err(|e| format!("Could not open the library in {}: {e}", dir.display()))?;
+            let store = Store::open(&dir)
+                .map_err(|e| format!("Could not open the library in {}: {e}", dir.display()))?;
             app.manage(store);
             Ok(())
         })
@@ -153,7 +222,16 @@ pub fn run() {
             remove_secret,
             list_folders,
             file_document,
-            rename_folder
+            rename_folder,
+            list_events,
+            add_event,
+            remove_event,
+            set_event_done,
+            done_event_keys,
+            event_papers,
+            set_event_papers,
+            claim_reminder,
+            save_calendar_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running SafeBox");

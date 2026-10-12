@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Folder as FolderIcon, Inbox, Library, Link2, MessageSquareText, ShieldCheck } from "lucide-react";
+import { CalendarDays, Eye, EyeOff, Folder as FolderIcon, Inbox, Library, Link2, MessageSquareText, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useSearchParams } from "react-router";
 import { type Folder, LIBRARY_CHANGED, listFolders } from "../lib/library";
@@ -57,7 +57,7 @@ function Folders() {
   );
 }
 
-export function Sidebar({ pending, toFile }: { pending: number; toFile: number }) {
+export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: number; soon: number }) {
   const veil = useVeil();
   return (
     <nav aria-label="SafeBox" className="flex w-58 shrink-0 flex-col gap-6 bg-rail px-4 pb-5 pt-11 text-rail-ink">
@@ -77,6 +77,14 @@ export function Sidebar({ pending, toFile }: { pending: number; toFile: number }
         </NavLink>
         <NavLink to="/ask" className={link}>
           <MessageSquareText aria-hidden className="size-4.5" /> Ask
+        </NavLink>
+        <NavLink to="/calendar" className={link}>
+          <CalendarDays aria-hidden className="size-4.5" /> Calendar
+          {soon > 0 && (
+            <span title={`${soon} in the next 2 weeks`} className="ml-auto rounded-full bg-[#b42318] px-2 text-xs font-bold text-white">
+              {soon}
+            </span>
+          )}
         </NavLink>
         <NavLink to="/inbox" className={link}>
           <Inbox aria-hidden className="size-4.5" /> Facts to approve

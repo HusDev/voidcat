@@ -22,7 +22,9 @@ pub fn get(name: &str) -> Result<Option<String>, String> {
 }
 
 pub fn set(name: &str, value: &str) -> Result<(), String> {
-    entry(name)?.set_password(value.trim()).map_err(|e| e.to_string())
+    entry(name)?
+        .set_password(value.trim())
+        .map_err(|e| e.to_string())
 }
 
 pub fn remove(name: &str) -> Result<(), String> {
