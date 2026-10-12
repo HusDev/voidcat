@@ -1,6 +1,5 @@
 import { Inbox, Library, Link2, ShieldCheck } from "lucide-react";
 import { NavLink } from "react-router";
-import { areas } from "../lib/sample";
 import { Logo } from "./Logo";
 
 const link = ({ isActive }: { isActive: boolean }) =>
@@ -27,18 +26,9 @@ export function Sidebar({ pending }: { pending: number }) {
         </NavLink>
       </div>
 
-      <div className="flex flex-col gap-1.5 px-3">
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-[#7d8792]">Areas</span>
-        {areas.map((a) => (
-          <span key={a.name} className="text-sm text-[#d3d9df]">
-            {a.name} · {a.count}
-          </span>
-        ))}
-      </div>
-
       <div className="mt-auto flex items-center gap-2 rounded-lg bg-rail-3 p-3 text-[12.5px] text-rail-mute">
         <ShieldCheck aria-hidden className="size-4 text-private" />
-        Stored on this Mac · encrypted
+        Stored only on this Mac
       </div>
     </nav>
   );

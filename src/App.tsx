@@ -18,7 +18,7 @@ export default function App() {
         <div data-tauri-drag-region className="h-8 shrink-0" />
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8">
           <Routes>
-            <Route index element={<Library pending={pending.length} />} />
+            <Route index element={<Library />} />
             <Route path="inbox" element={<Inbox facts={pending} onSettle={settle} />} />
             <Route path="connections" element={<Connections />} />
           </Routes>

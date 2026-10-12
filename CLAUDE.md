@@ -9,8 +9,11 @@ Decisions:
 - The repo will be public (MIT) for the GitLab Transcend hackathon.
 
 Map:
+- Storage (Rust, `src-tauri/src/store.rs`): SQLite `safebox.db` + `files/` in the app data folder (`~/Library/Application Support/dev.hus.safebox/`). Tables `documents` (sha256 unique = no duplicates, status new/read/filed), `facts` (pending/approved/rejected), FTS5 `pages` (accent-insensitive). Commands in `lib.rs`: `import_files`, `list_documents`, `library_stats`, `open_document`, `remove_document`; TS wrappers in `src/lib/library.ts` (`hasLibrary` false in the browser preview). Drops come from Tauri's `onDragDropEvent` (gives paths); the picker is `@tauri-apps/plugin-dialog`. Rust tests: `cargo test` in `src-tauri`.
 - `src/App.tsx` routes (HashRouter): `/` Library, `/inbox` Facts to approve, `/connections` Connected AIs.
-- `src/components/Sidebar.tsx`, `Logo.tsx`; `src/routes/*`; `src/lib/sample.ts` example data.
+- `src/components/Sidebar.tsx`, `Logo.tsx`; `src/routes/*`; `src/lib/sample.ts` example data (Facts to approve, Connected AIs only).
 - `src-tauri/` Rust shell; window has an overlay title bar, drag regions use `data-tauri-drag-region` (permission `core:window:allow-start-dragging`).
+
+Not encrypted yet (plan: SQLCipher); don't claim encryption in the UI until it is.
 
 Commands: `bun run tauri dev`, `bun run typecheck`, `bun run lint`, `bun run test`, `bun run build`. Rust via `~/.cargo/bin`.
