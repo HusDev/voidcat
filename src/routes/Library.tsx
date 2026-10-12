@@ -1,11 +1,14 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Eye, FileText, LoaderCircle, Search, Sparkles, Trash2, Upload } from "lucide-react";
+import { Eye, FileText, FolderInput, LoaderCircle, Search, Sparkles, Trash2, Upload } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
+import { FolderPicker } from "../components/FolderPicker";
+import { ToFile } from "../components/ToFile";
 import {
   type Document,
   type Fact,
+  type Folder,
   type Hit,
   LIBRARY_CHANGED,
   announceChange,
@@ -15,7 +18,9 @@ import {
   hasLibrary,
   importFiles,
   listDocuments,
+  fileInFolder,
   listFacts,
+  listFolders,
   openDocument,
   removeDocument,
   searchLibrary,
@@ -54,12 +59,18 @@ export function Library() {
   const [dragging, setDragging] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [moving, setMoving] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const folderId = params.get("folder");
+  const folder = folders.find((f) => f.id === folderId);
   const progress = useProgress();
   const veil = useVeil();
 
   const refresh = useCallback(() => {
     listDocuments().then(setDocs);
     listFacts("approved").then(setFacts);
+    listFolders().then(setFolders);
   }, []);
 
   const add = useCallback(
@@ -114,14 +125,30 @@ export function Library() {
   };
 
   const factsOf = (id: string) => facts.filter((f) => f.documentId === id);
+  const toFile = docs.filter((d) => d.filing === "suggested");
+  const shown = folderId ? docs.filter((d) => d.folderId === folderId) : docs.filter((d) => d.filing !== "suggested");
+  // Read and filed before folders existed: offer to sort them.
+  const unsorted = docs.filter((d) => d.status === "filed" && !d.folderId && !d.filing);
   const busy = (s?: Step) => s && (s.stage === "queued" || s.stage === "reading" || s.stage === "filing");
 
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-wrap items-center gap-4">
-        <h1 className="m-0 text-[26px] font-bold tracking-tight">Library</h1>
+        <h1 className="m-0 text-[26px] font-bold tracking-tight">
+          {folder ? (
+            <>
+              <Link to="/" className="text-ink-2 no-underline hover:text-ink">
+                Library
+              </Link>{" "}
+              <span className="text-ink-2">›</span> {folder.area} › <Private>{folder.name}</Private>
+            </>
+          ) : (
+            "Library"
+          )}
+        </h1>
         <span className="text-sm tabular-nums text-ink-2">
-          {docs.length} {docs.length === 1 ? "document" : "documents"} · {facts.length} {facts.length === 1 ? "fact" : "facts"}
+          {shown.length} {shown.length === 1 ? "document" : "documents"}
+          {!folder && ` · ${facts.length} ${facts.length === 1 ? "fact" : "facts"}`}
         </span>
         <label htmlFor="lib-search" className="ml-auto flex h-10 w-80 items-center gap-2 rounded-lg border border-[#d3d8dd] bg-card px-3 text-sm text-ink-2">
           <Search aria-hidden className="size-4" />
@@ -185,6 +212,20 @@ export function Library() {
             </p>
           )}
 
+          {!folder && <ToFile docs={toFile} folders={folders} />}
+
+          {!folder && unsorted.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 text-sm">
+              <FolderInput aria-hidden className="size-4.5 text-link" />
+              <span className="flex-1">
+                {unsorted.length} {unsorted.length === 1 ? "document has" : "documents have"} no folder yet.
+              </span>
+              <button type="button" onClick={() => process(unsorted)} className="h-8 rounded-md bg-ink px-3 text-[13px] font-semibold text-white hover:bg-rail-2">
+                Suggest folders
+              </button>
+            </div>
+          )}
+
           {docs.length === 0 ? (
             <div className="grid place-items-center gap-2 rounded-xl border border-line bg-card px-6 py-12 text-center">
               <FileText aria-hidden className="size-8 text-ink-2" strokeWidth={1.5} />
@@ -193,14 +234,16 @@ export function Library() {
             </div>
           ) : (
             <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3.5 p-0">
-              {docs.map((d) => {
+              {shown.map((d) => {
                 const step = progress.get(d.id);
                 const [label, cls] = statusBadge[d.status];
                 const known = factsOf(d.id);
                 return (
                   <li key={d.id} className="flex flex-col gap-2.5 rounded-xl border border-line bg-card p-4">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-ink-2">{d.area ?? "Not filed yet"}</span>
+                      <span className="min-w-0 truncate text-xs font-semibold text-ink-2">
+                        {d.folderName ? <Private>{d.folderName}</Private> : (d.area ?? "Not filed yet")}
+                      </span>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>
                     </div>
                     <span className="text-[15px] font-semibold leading-snug">
@@ -237,6 +280,18 @@ export function Library() {
                       </Link>
                     )}
 
+                    {moving === d.id && (
+                      <FolderPicker
+                        folders={folders}
+                        area={d.area ?? "Other"}
+                        onPick={async (area, name) => {
+                          await fileInFolder(d.id, area, name);
+                          setMoving(null);
+                          announceChange();
+                        }}
+                        onCancel={() => setMoving(null)}
+                      />
+                    )}
                     <div className="mt-auto flex flex-wrap gap-2 pt-1">
                       <button
                         type="button"
@@ -244,6 +299,13 @@ export function Library() {
                         className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d3d8dd] px-2.5 text-[13px] hover:border-ink-2"
                       >
                         <Eye aria-hidden className="size-4" /> Open
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMoving(moving === d.id ? null : d.id)}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d3d8dd] px-2.5 text-[13px] hover:border-ink-2"
+                      >
+                        <FolderInput aria-hidden className="size-4" /> Move
                       </button>
                       {d.status !== "filed" && !busy(step) && (
                         <button

@@ -1,15 +1,61 @@
-import { Eye, EyeOff, Inbox, Library, Link2, MessageSquareText, ShieldCheck } from "lucide-react";
-import { NavLink } from "react-router";
-import { useVeil } from "../lib/veil";
+import { Eye, EyeOff, Folder as FolderIcon, Inbox, Library, Link2, MessageSquareText, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, NavLink, useLocation, useSearchParams } from "react-router";
+import { type Folder, LIBRARY_CHANGED, listFolders } from "../lib/library";
+import { Private, useVeil } from "../lib/veil";
 import { Logo } from "./Logo";
 
 const link = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm no-underline ${isActive ? "bg-rail-2 font-semibold text-white" : "text-rail-mute hover:text-white"}`;
 
-export function Sidebar({ pending }: { pending: number }) {
+/** Folders grouped by area, as a two-level tree. */
+function Folders() {
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [params] = useSearchParams();
+  const { pathname } = useLocation();
+  const current = pathname === "/" ? params.get("folder") : null;
+
+  useEffect(() => {
+    const refresh = () => listFolders().then(setFolders);
+    refresh();
+    window.addEventListener(LIBRARY_CHANGED, refresh);
+    return () => window.removeEventListener(LIBRARY_CHANGED, refresh);
+  }, []);
+
+  if (!folders.length) return null;
+  const areas = [...new Set(folders.map((f) => f.area))];
+  return (
+    <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
+      <span className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-[#7d8792]">Folders</span>
+      {areas.map((area) => (
+        <div key={area} className="flex flex-col">
+          <span className="px-3 pb-0.5 pt-1.5 text-[12px] font-semibold text-[#9aa3ad]">{area}</span>
+          {folders
+            .filter((f) => f.area === area)
+            .map((f) => (
+              <Link
+                key={f.id}
+                to={`/?folder=${f.id}`}
+                aria-current={current === f.id ? "page" : undefined}
+                className={`flex items-center gap-2 rounded-md py-1.5 pl-5 pr-2 text-[13.5px] no-underline ${current === f.id ? "bg-rail-2 text-white" : "text-[#d3d9df] hover:text-white"}`}
+              >
+                <FolderIcon aria-hidden className="size-3.5 shrink-0 opacity-70" />
+                <span className="min-w-0 flex-1 truncate">
+                  <Private>{f.name}</Private>
+                </span>
+                <span className="text-xs tabular-nums text-[#7d8792]">{f.documents}</span>
+              </Link>
+            ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function Sidebar({ pending, toFile }: { pending: number; toFile: number }) {
   const veil = useVeil();
   return (
-    <nav aria-label="SafeBox" className="flex w-58 shrink-0 flex-col gap-7 bg-rail px-4 pb-5 pt-11 text-rail-ink">
+    <nav aria-label="SafeBox" className="flex w-58 shrink-0 flex-col gap-6 bg-rail px-4 pb-5 pt-11 text-rail-ink">
       <div data-tauri-drag-region className="flex items-center gap-2.5 px-2">
         <Logo />
         <span className="text-lg font-bold tracking-tight">SafeBox</span>
@@ -18,6 +64,11 @@ export function Sidebar({ pending }: { pending: number }) {
       <div className="flex flex-col gap-1">
         <NavLink to="/" end className={link}>
           <Library aria-hidden className="size-4.5" /> Library
+          {toFile > 0 && (
+            <span title={`${toFile} to file`} className="ml-auto rounded-full bg-[#e3eef2] px-2 text-xs font-bold text-link">
+              {toFile}
+            </span>
+          )}
         </NavLink>
         <NavLink to="/ask" className={link}>
           <MessageSquareText aria-hidden className="size-4.5" /> Ask
@@ -30,6 +81,8 @@ export function Sidebar({ pending }: { pending: number }) {
           <Link2 aria-hidden className="size-4.5" /> Connected AIs
         </NavLink>
       </div>
+
+      <Folders />
 
       <button
         type="button"

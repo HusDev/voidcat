@@ -15,16 +15,32 @@ export type Document = {
   addedAt: string;
   textMethod: "pdf-text" | "text" | "ocr" | "pdf-ocr" | "unsupported" | null;
   pageCount: number | null;
+  folderId: string | null;
+  /** "Area › Folder" */
+  folderName: string | null;
+  /** auto = filed by SafeBox · suggested = waiting for you · confirmed = you chose */
+  filing: "auto" | "suggested" | "confirmed" | null;
+  suggestedArea: string | null;
+  suggestedFolder: string | null;
+  /** The suggested folder doesn't exist yet. */
+  suggestedNew: boolean;
+  suggestionReason: string | null;
 };
 
+export type Folder = { id: string; area: string; name: string; documents: number };
+
 export type Imported = { added: Document[]; duplicates: string[]; failed: [string, string][] };
-export type Stats = { documents: number; facts: number; pendingFacts: number };
+export type Stats = { documents: number; facts: number; pendingFacts: number; toFile: number };
 
 /** False when the interface runs in a plain browser (`bun run dev`), where there is no library. */
 export const hasLibrary = isTauri();
 
 export const listDocuments = () => (hasLibrary ? invoke<Document[]>("list_documents") : Promise.resolve([]));
-export const libraryStats = () => (hasLibrary ? invoke<Stats>("library_stats") : Promise.resolve({ documents: 0, facts: 0, pendingFacts: 0 }));
+export const libraryStats = () => (hasLibrary ? invoke<Stats>("library_stats") : Promise.resolve({ documents: 0, facts: 0, pendingFacts: 0, toFile: 0 }));
+export const listFolders = () => (hasLibrary ? invoke<Folder[]>("list_folders") : Promise.resolve([]));
+/** Puts a document in "area › name", creating the folder if needed. */
+export const fileInFolder = (id: string, area: string, name: string) => invoke<string>("file_document", { id, area, name });
+export const renameFolder = (id: string, name: string) => invoke<void>("rename_folder", { id, name });
 export const importFiles = (paths: string[]) => invoke<Imported>("import_files", { paths });
 export const openDocument = (id: string) => invoke<void>("open_document", { id });
 export const removeDocument = (id: string) => invoke<void>("remove_document", { id });

@@ -2,7 +2,7 @@ mod ocr;
 mod secrets;
 mod store;
 
-use store::{Document, Fact, Hit, Imported, NewFact, Page, Stats, Store};
+use store::{Document, Fact, Folder, Hit, Imported, NewFact, Page, Stats, Store, Suggestion};
 use tauri::{Manager, State};
 use tauri_plugin_opener::OpenerExt;
 
@@ -80,8 +80,31 @@ fn search(store: State<Store>, query: String, any: Option<bool>) -> Result<Vec<H
 }
 
 #[tauri::command]
-fn save_filing(store: State<Store>, id: String, title: String, area: String, doc_type: String, facts: Vec<NewFact>) -> Result<(), String> {
-    store.save_filing(&id, &title, &area, &doc_type, facts)
+fn save_filing(
+    store: State<Store>,
+    id: String,
+    title: String,
+    area: String,
+    doc_type: String,
+    facts: Vec<NewFact>,
+    suggestion: Option<Suggestion>,
+) -> Result<(), String> {
+    store.save_filing(&id, &title, &area, &doc_type, facts, suggestion)
+}
+
+#[tauri::command]
+fn list_folders(store: State<Store>) -> Result<Vec<Folder>, String> {
+    store.folders()
+}
+
+#[tauri::command]
+fn file_document(store: State<Store>, id: String, area: String, name: String) -> Result<String, String> {
+    store.file_document(&id, &area, &name)
+}
+
+#[tauri::command]
+fn rename_folder(store: State<Store>, id: String, name: String) -> Result<(), String> {
+    store.rename_folder(&id, &name)
 }
 
 #[tauri::command]
@@ -127,7 +150,10 @@ pub fn run() {
             ocr_image,
             get_secret,
             set_secret,
-            remove_secret
+            remove_secret,
+            list_folders,
+            file_document,
+            rename_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running SafeBox");

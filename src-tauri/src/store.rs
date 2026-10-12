@@ -27,6 +27,36 @@ pub struct Document {
     /// How the text was read: pdf-text, text, ocr (photo), pdf-ocr (scanned PDF) or unsupported.
     text_method: Option<String>,
     page_count: Option<i64>,
+    folder_id: Option<String>,
+    /// "Area › Folder" of the folder it's filed in.
+    folder_name: Option<String>,
+    /// auto = filed by SafeBox · suggested = waiting for you · confirmed = you chose
+    filing: Option<String>,
+    /// The folder SafeBox suggests while `filing` is "suggested".
+    suggested_area: Option<String>,
+    suggested_folder: Option<String>,
+    /// True when the suggested folder doesn't exist yet.
+    suggested_new: bool,
+    suggestion_reason: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Folder {
+    id: String,
+    area: String,
+    name: String,
+    documents: i64,
+}
+
+/// What the classifier proposes for a document.
+#[derive(serde::Deserialize)]
+pub struct Suggestion {
+    area: String,
+    folder: String,
+    /// high = file it without asking (only when the folder already exists)
+    confidence: String,
+    reason: String,
 }
 
 #[derive(Serialize)]
@@ -82,6 +112,8 @@ pub struct Stats {
     documents: i64,
     facts: i64,
     pending_facts: i64,
+    /// Documents waiting for you to confirm their folder.
+    to_file: i64,
 }
 
 const SCHEMA: &str = "
@@ -108,6 +140,14 @@ create table if not exists facts (
   created_at text not null default (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 create index if not exists facts_document on facts(document_id);
+-- Two levels: an area (Identity, Residency…) and a folder inside it.
+create table if not exists folders (
+  id text primary key,
+  area text not null,
+  name text not null,
+  created_at text not null default (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+  unique (area, name collate nocase)
+);
 -- Page text for search, filled when a document is read.
 create virtual table if not exists pages using fts5(document_id unindexed, page unindexed, text, tokenize = 'unicode61 remove_diacritics 2');
 ";
@@ -123,10 +163,19 @@ fn migrate(db: &Connection) -> rusqlite::Result<()> {
     if !has("page_count")? {
         db.execute_batch("alter table documents add column page_count integer;")?;
     }
+    for col in ["folder_id text references folders(id) on delete set null", "filing text", "suggested_area text", "suggested_folder text", "suggestion_reason text"] {
+        let name = col.split(' ').next().unwrap();
+        if !has(name)? {
+            db.execute_batch(&format!("alter table documents add column {col};"))?;
+        }
+    }
     Ok(())
 }
 
-const COLUMNS: &str = "id, title, file_name, mime, size_bytes, area, doc_type, status, added_at, text_method, page_count";
+const COLUMNS: &str = "id, title, file_name, mime, size_bytes, area, doc_type, status, added_at, text_method, page_count, folder_id,
+  (select f.area || ' › ' || f.name from folders f where f.id = documents.folder_id), filing, suggested_area, suggested_folder,
+  suggested_folder is not null and not exists (select 1 from folders f where f.area = documents.suggested_area collate nocase and f.name = documents.suggested_folder collate nocase),
+  suggestion_reason";
 
 fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
     Ok(Document {
@@ -141,6 +190,13 @@ fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
         added_at: r.get(8)?,
         text_method: r.get(9)?,
         page_count: r.get(10)?,
+        folder_id: r.get(11)?,
+        folder_name: r.get(12)?,
+        filing: r.get(13)?,
+        suggested_area: r.get(14)?,
+        suggested_folder: r.get(15)?,
+        suggested_new: r.get(16)?,
+        suggestion_reason: r.get(17)?,
     })
 }
 
@@ -243,6 +299,7 @@ impl Store {
             documents: count("select count(*) from documents")?,
             facts: count("select count(*) from facts where status = 'approved'")?,
             pending_facts: count("select count(*) from facts where status = 'pending'")?,
+            to_file: count("select count(*) from documents where filing = 'suggested'")?,
         })
     }
 
@@ -307,8 +364,9 @@ impl Store {
     }
 
     /// Files a document (title, area, type) and adds the facts found in it, waiting for approval.
-    /// Facts from an earlier filing that were never approved are replaced.
-    pub fn save_filing(&self, id: &str, title: &str, area: &str, doc_type: &str, facts: Vec<NewFact>) -> Result<(), String> {
+    /// Facts from an earlier filing that were never approved are replaced. The folder suggestion is applied at once
+    /// when the folder already exists and the classifier is confident; otherwise it waits for the user.
+    pub fn save_filing(&self, id: &str, title: &str, area: &str, doc_type: &str, facts: Vec<NewFact>, suggestion: Option<Suggestion>) -> Result<(), String> {
         let mut db = self.db.lock().unwrap();
         let tx = db.transaction().map_err(|e| e.to_string())?;
         tx.execute("update documents set title = ?2, area = ?3, doc_type = ?4, status = 'filed' where id = ?1", params![id, title, area, doc_type])
@@ -324,7 +382,77 @@ impl Store {
             )
             .map_err(|e| e.to_string())?;
         }
+        // A document the user already placed keeps its folder.
+        let placed: Option<String> = tx.query_row("select filing from documents where id = ?1", [id], |r| r.get(0)).map_err(|e| e.to_string())?;
+        if let (Some(s), false) = (suggestion, placed.as_deref() == Some("confirmed")) {
+            let (folder_area, folder_name) = (s.area.trim(), s.folder.trim());
+            let existing: Option<String> = tx
+                .query_row("select id from folders where area = ?1 collate nocase and name = ?2 collate nocase", params![folder_area, folder_name], |r| r.get(0))
+                .optional()
+                .map_err(|e| e.to_string())?;
+            match existing {
+                Some(folder) if s.confidence == "high" => tx.execute(
+                    "update documents set folder_id = ?2, area = ?3, filing = 'auto', suggested_area = null, suggested_folder = null, suggestion_reason = ?4 where id = ?1",
+                    params![id, folder, folder_area, s.reason],
+                ),
+                _ => tx.execute(
+                    "update documents set folder_id = null, filing = 'suggested', suggested_area = ?2, suggested_folder = ?3, suggestion_reason = ?4 where id = ?1",
+                    params![id, folder_area, folder_name, s.reason],
+                ),
+            }
+            .map_err(|e| e.to_string())?;
+        }
         tx.commit().map_err(|e| e.to_string())
+    }
+
+    /// All folders, with how many documents each holds (empty ones too).
+    pub fn folders(&self) -> Result<Vec<Folder>, String> {
+        let db = self.db.lock().unwrap();
+        let mut stmt = db
+            .prepare("select f.id, f.area, f.name, (select count(*) from documents d where d.folder_id = f.id) from folders f order by f.area, f.name collate nocase")
+            .map_err(|e| e.to_string())?;
+        let rows = stmt.query_map([], |r| Ok(Folder { id: r.get(0)?, area: r.get(1)?, name: r.get(2)?, documents: r.get(3)? })).map_err(|e| e.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    }
+
+    /// Puts a document in a folder, creating the folder when it doesn't exist yet. Returns the folder id.
+    pub fn file_document(&self, id: &str, area: &str, name: &str) -> Result<String, String> {
+        let (area, name) = (area.trim(), name.trim());
+        if area.is_empty() || name.is_empty() {
+            return Err("A folder needs an area and a name.".into());
+        }
+        let db = self.db.lock().unwrap();
+        let find = || -> rusqlite::Result<Option<(String, String)>> {
+            db.query_row("select id, area from folders where area = ?1 collate nocase and name = ?2 collate nocase", params![area, name], |r| Ok((r.get(0)?, r.get(1)?)))
+                .optional()
+        };
+        let (folder, folder_area) = match find().map_err(|e| e.to_string())? {
+            Some(found) => found,
+            None => {
+                let id = uuid::Uuid::new_v4().to_string();
+                db.execute("insert into folders (id, area, name) values (?1, ?2, ?3)", params![id, area, name]).map_err(|e| e.to_string())?;
+                (id, area.to_string())
+            }
+        };
+        db.execute(
+            "update documents set folder_id = ?2, area = ?3, filing = 'confirmed', suggested_area = null, suggested_folder = null where id = ?1",
+            params![id, folder, folder_area],
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(folder)
+    }
+
+    pub fn rename_folder(&self, id: &str, name: &str) -> Result<(), String> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err("Give the folder a name.".into());
+        }
+        let db = self.db.lock().unwrap();
+        db.execute("update folders set name = ?2 where id = ?1", params![id, name]).map_err(|e| match e {
+            rusqlite::Error::SqliteFailure(f, _) if f.code == rusqlite::ErrorCode::ConstraintViolation => "A folder with that name already exists.".to_string(),
+            e => e.to_string(),
+        })?;
+        Ok(())
     }
 
     pub fn facts(&self, status: &str) -> Result<Vec<Fact>, String> {
@@ -412,8 +540,30 @@ mod tests {
         assert_eq!(store.search("contrato", false).unwrap().len(), 1, "prefix and accent-insensitive");
         assert_eq!(store.search("cuanto es la renta mensual", true).unwrap().len(), 1, "any word, for questions");
 
+        let suggest = |confidence: &str| Some(Suggestion { area: "Home".into(), folder: "Leases".into(), confidence: confidence.into(), reason: "A rental contract".into() });
         store
-            .save_filing(&id, "Rental contract", "Home", "rental_contract", vec![NewFact { label: "Rent".into(), value: "€1,150 a month".into(), page: Some(1) }])
+            .save_filing(&id, "Rental contract", "Home", "rental_contract", vec![NewFact { label: "Rent".into(), value: "€1,150 a month".into(), page: Some(1) }], suggest("high"))
+            .unwrap();
+        // No "Home › Leases" folder yet: even a confident suggestion waits for the user.
+        let doc = &store.list().unwrap()[0];
+        assert_eq!(doc.filing.as_deref(), Some("suggested"));
+        assert!(doc.suggested_new);
+        assert_eq!(store.stats().unwrap().to_file, 1);
+
+        let folder = store.file_document(&id, "Home", "Leases").unwrap();
+        let doc = &store.list().unwrap()[0];
+        assert_eq!((doc.filing.as_deref(), doc.folder_name.as_deref()), (Some("confirmed"), Some("Home › Leases")));
+        assert_eq!(store.folders().unwrap()[0].documents, 1);
+        store.file_document(&id, "home", "leases").unwrap();
+        assert_eq!(store.folders().unwrap().len(), 1, "same folder whatever the case");
+
+        // A confirmed document keeps its folder when it's read again.
+        store.save_filing(&id, "Rental contract", "Home", "rental_contract", vec![], suggest("low")).unwrap();
+        assert_eq!(store.list().unwrap()[0].folder_id.as_deref(), Some(folder.as_str()));
+        store.rename_folder(&folder, "Lease Provença").unwrap();
+        assert_eq!(store.list().unwrap()[0].folder_name.as_deref(), Some("Home › Lease Provença"));
+        store
+            .save_filing(&id, "Rental contract", "Home", "rental_contract", vec![NewFact { label: "Rent".into(), value: "€1,150 a month".into(), page: Some(1) }], None)
             .unwrap();
         let pending = store.facts("pending").unwrap();
         assert_eq!(pending.len(), 1);

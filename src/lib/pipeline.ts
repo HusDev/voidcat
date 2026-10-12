@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { fileDocument, saveFiling } from "./extract";
-import { announceChange, type Document } from "./library";
+import { announceChange, type Document, listFolders } from "./library";
 import { readDocument, saveReading } from "./reader";
 
 /**
@@ -53,7 +53,7 @@ async function run() {
         continue;
       }
       set(doc.id, { stage: "filing" });
-      await saveFiling(doc.id, await fileDocument(reading.pages));
+      await saveFiling(doc.id, await fileDocument(reading.pages, await listFolders()));
       set(doc.id, { stage: "done" });
       announceChange();
     } catch (e) {
