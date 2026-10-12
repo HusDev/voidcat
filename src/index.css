@@ -1,0 +1,48 @@
+@import "tailwindcss";
+@import "@fontsource-variable/instrument-sans";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+/* SafeBox: dark rail, quiet grey workspace, amber marks anything private. */
+@theme {
+  --font-sans: "Instrument Sans Variable", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-ink: #15191e;
+  --color-ink-2: #5b6570;
+  --color-ground: #eef0f2;
+  --color-card: #ffffff;
+  --color-line: #dfe3e7;
+  --color-rail: #15191e;
+  --color-rail-2: #252b33;
+  --color-rail-3: #1d232a;
+  --color-rail-ink: #e9edf1;
+  --color-rail-mute: #b8c0c9;
+  --color-private: #f2b84b;
+  --color-private-soft: #fbefd5;
+  --color-private-ink: #8a5a00;
+  --color-ok: #276b45;
+  --color-ok-soft: #e2f2e8;
+  --color-link: #1f6f8b;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+input,
+textarea,
+[data-selectable] {
+  user-select: text;
+}
