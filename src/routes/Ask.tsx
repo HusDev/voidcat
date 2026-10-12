@@ -1,27 +1,37 @@
-import { ArrowUp, FileText, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowUp, ChevronRight, FileText, LoaderCircle, RotateCcw, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { Link } from "react-router";
 import remarkGfm from "remark-gfm";
-import { askCloud, savedModel } from "../lib/cloud";
+import { type Turn, askCloud, savedModel } from "../lib/cloud";
 import { type Fact, type Hit, documentPages, getSecret, hasLibrary, listFacts, openDocument, searchLibrary } from "../lib/library";
 import { Masker } from "../lib/privacy";
 
-type Prepared = { masker: Masker; prompt: string; sources: Hit[]; facts: number };
-
 const PAGE_CHARS = 1800;
 const MAX_PAGES = 5;
+const PLACEHOLDER = /(\[(?:PERSON|ID|DATE|ADDRESS|EMAIL|PHONE|IBAN|PRIVATE)_\d+\])/;
 
-/** Builds what the model will see: the user's approved facts and the best-matching pages, all masked. */
-async function prepare(question: string): Promise<Prepared> {
+const SUGGESTIONS = ["When does my residence card expire?", "What do I pay in rent, and when?", "Which of my documents expire this year?", "Summarise my rental contract"];
+
+type Exchange = {
+  id: number;
+  question: string;
+  /** Exactly what was (or will be) sent for this question, already masked. */
+  sent: string;
+  hidden: number;
+  sources: Hit[];
+  answer: string;
+  state: "review" | "sending" | "done" | "failed";
+  error?: string;
+};
+
+/** The user's approved facts and the pages that best match the question, as one masked message. */
+async function build(question: string, masker: Masker) {
   const [facts, hits] = await Promise.all([listFacts("approved"), searchLibrary(question, true)]);
-  const masker = new Masker(facts);
+  masker.learn(facts);
   const top = hits.slice(0, MAX_PAGES);
   const pages = await Promise.all(
-    top.map(async (h) => {
-      const text = (await documentPages(h.documentId)).find((p) => p.page === h.page)?.text ?? "";
-      return `### ${h.title}, page ${h.page}\n${text.slice(0, PAGE_CHARS)}`;
-    }),
+    top.map(async (h) => `### ${h.title}, page ${h.page}\n${((await documentPages(h.documentId)).find((p) => p.page === h.page)?.text ?? "").slice(0, PAGE_CHARS)}`),
   );
   const factLines = facts.map((f: Fact) => `- ${f.label}: ${f.value} (${f.documentTitle}${f.page ? `, p. ${f.page}` : ""})`);
   const body = [
@@ -33,14 +43,13 @@ async function prepare(question: string): Promise<Prepared> {
     .join("\n\n");
   const masked = masker.mask(body);
   const notes = masker.notes();
-  return { masker, prompt: notes.length ? `${masked}\n\nNotes on dates (today is the reference):\n${notes.join("\n")}` : masked, sources: top, facts: facts.length };
+  return { sent: notes.length ? `${masked}\n\nNotes on dates:\n${notes.join("\n")}` : masked, sources: top };
 }
 
-/** Shows masked text with each placeholder marked, so it's clear what was hidden. */
 function MaskedText({ text }: { text: string }) {
   return (
     <>
-      {text.split(/(\[(?:PERSON|ID|DATE|ADDRESS|EMAIL|PHONE|IBAN|PRIVATE)_\d+\])/).map((part, i) =>
+      {text.split(PLACEHOLDER).map((part, i) =>
         i % 2 ? (
           <span key={i} className="rounded bg-[#3a3220] px-1 text-private">
             {part}
@@ -53,80 +62,198 @@ function MaskedText({ text }: { text: string }) {
   );
 }
 
+function Sent({ e, open }: { e: Exchange; open?: boolean }) {
+  return (
+    <details open={open} className="group rounded-lg border border-line bg-ground/60">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-[12.5px] text-ink-2 hover:text-ink">
+        <ChevronRight aria-hidden className="size-3.5 transition-transform group-open:rotate-90" />
+        <ShieldCheck aria-hidden className="size-3.5 text-private-ink" />
+        {e.state === "review" ? "Will be sent" : "What was sent"} · {e.hidden ? `${e.hidden} private ${e.hidden === 1 ? "detail" : "details"} hidden` : "nothing private"} · zero data retention
+      </summary>
+      <pre data-selectable className="m-0 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-b-lg bg-ink p-3.5 font-mono text-[12px] leading-relaxed text-rail-ink">
+        <MaskedText text={e.sent} />
+      </pre>
+    </details>
+  );
+}
+
 export function Ask() {
-  const [question, setQuestion] = useState("");
-  const [prepared, setPrepared] = useState<Prepared | null>(null);
-  const [answer, setAnswer] = useState("");
-  const [state, setState] = useState<"idle" | "preparing" | "review" | "sending" | "done">("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [thread, setThread] = useState<Exchange[]>([]);
+  const [busy, setBusy] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
-  const model = savedModel();
+  const masker = useRef(new Masker([]));
+  const bottom = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const model = savedModel();
 
   useEffect(() => {
     if (hasLibrary) getSecret("openrouter").then((k) => setHasKey(!!k));
+    input.current?.focus();
   }, []);
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ block: "end" });
+  }, [thread]);
 
-  const review = async () => {
-    if (!question.trim()) return;
-    setError(null);
-    setAnswer("");
-    setState("preparing");
-    try {
-      setPrepared(await prepare(question.trim()));
-      setState("review");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setState("idle");
-    }
-  };
+  const update = (id: number, patch: Partial<Exchange>) => setThread((t) => t.map((e) => (e.id === id ? { ...e, ...patch } : e)));
 
-  const send = async () => {
-    if (!prepared || !model) return;
+  /** Sends one exchange with the earlier ones as context, and streams the answer in, unmasked on this Mac. */
+  const send = async (e: Exchange, earlier: Exchange[]) => {
     const apiKey = await getSecret("openrouter");
-    if (!apiKey) return setError("Add your OpenRouter key in Connected AIs first.");
-    setState("sending");
-    setError(null);
+    if (!apiKey) return update(e.id, { state: "failed", error: "Add your OpenRouter key in Connected AIs first." });
+    update(e.id, { state: "sending" });
+    const messages: Turn[] = [
+      ...earlier.filter((x) => x.state === "done").flatMap((x): Turn[] => [{ role: "user", content: x.sent }, { role: "assistant", content: masker.current.mask(x.answer) }]),
+      { role: "user", content: e.sent },
+    ];
     try {
-      const result = askCloud({ apiKey, model, prompt: prepared.prompt });
       let raw = "";
-      for await (const chunk of result.textStream) {
+      for await (const chunk of askCloud({ apiKey, model, messages }).textStream) {
         raw += chunk;
-        setAnswer(prepared.masker.unmask(raw));
+        update(e.id, { answer: masker.current.unmask(raw) });
       }
-      setState("done");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setState("review");
+      update(e.id, { state: "done" });
+    } catch (err) {
+      update(e.id, { state: "failed", error: err instanceof Error ? err.message : String(err) });
     }
   };
 
-  const hidden = prepared?.masker.entries().length ?? 0;
-  const ready = hasKey && model;
+  const ask = async (question: string) => {
+    const q = question.trim();
+    if (!q || busy) return;
+    setDraft("");
+    setBusy(true);
+    try {
+      const built = await build(q, masker.current);
+      const e: Exchange = { id: Date.now(), question: q, sent: built.sent, hidden: hiddenIn(built.sent), sources: built.sources, answer: "", state: "review" };
+      const earlier = thread;
+      setThread((t) => [...t, e]);
+      // Nothing private in it: no reason to make you confirm.
+      if (!PLACEHOLDER.test(e.sent)) await send(e, earlier);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restart = () => {
+    setThread([]);
+    masker.current = new Masker([]);
+    input.current?.focus();
+  };
+
+  const needsSetup = hasKey === false;
 
   return (
-    <div className="flex max-w-4xl flex-col gap-5">
-      <header className="flex flex-col gap-1">
+    <div className="mx-auto flex h-full w-full max-w-3xl min-h-0 flex-1 flex-col">
+      <header className="flex items-center gap-3 pb-4">
         <h1 className="m-0 text-[26px] font-bold tracking-tight">Ask</h1>
-        <span className="text-sm text-ink-2">Ask about your documents. You see exactly what leaves this Mac before it's sent.</span>
+        <span className="rounded-full bg-card px-2.5 py-1 font-mono text-[12px] text-ink-2">{model}</span>
+        {thread.length > 0 && (
+          <button type="button" onClick={restart} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-card hover:text-ink">
+            <RotateCcw aria-hidden className="size-3.5" /> New conversation
+          </button>
+        )}
       </header>
 
-      {hasKey === false || !model ? (
-        <p className="m-0 rounded-xl border border-line bg-private-soft px-4 py-3 text-sm text-private-ink">
-          To ask a cloud model, add your OpenRouter key and pick a model in{" "}
-          <Link to="/connections" className="font-semibold text-private-ink underline">
-            Connected AIs
-          </Link>
-          .
-        </p>
-      ) : null}
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-6">
+        {thread.length === 0 ? (
+          <div className="m-auto flex max-w-lg flex-col items-center gap-4 py-10 text-center">
+            <span className="grid size-12 place-items-center rounded-2xl bg-ink">
+              <ShieldCheck aria-hidden className="size-6 text-private" />
+            </span>
+            <div className="flex flex-col gap-1">
+              <p className="m-0 text-lg font-semibold">Ask about your documents</p>
+              <p className="m-0 text-sm text-ink-2">Names, IDs, addresses and dates are hidden on this Mac before anything is sent. If a question would send something private, you see it first.</p>
+            </div>
+            {needsSetup ? (
+              <Link to="/connections" className="rounded-lg bg-private-soft px-4 py-2.5 text-sm font-semibold text-private-ink hover:underline">
+                Add your OpenRouter key to start
+              </Link>
+            ) : (
+              <div className="flex flex-wrap justify-center gap-2">
+                {SUGGESTIONS.map((s) => (
+                  <button type="button" key={s} onClick={() => ask(s)} className="rounded-full border border-line bg-card px-3.5 py-2 text-[13.5px] hover:border-ink-2">
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          thread.map((e, i) => (
+            <article key={e.id} className="flex flex-col gap-3">
+              <p data-selectable className="m-0 max-w-[85%] self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-[15px] text-white">
+                {e.question}
+              </p>
+
+              {e.state === "review" ? (
+                <div className="flex flex-col gap-3 rounded-xl border border-private/60 bg-card p-4">
+                  <p className="m-0 text-sm">
+                    <b>{e.hidden} private {e.hidden === 1 ? "detail is" : "details are"} hidden.</b> Check what will leave this Mac, then send.
+                  </p>
+                  <Sent e={e} open />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => send(e, thread.slice(0, i))} className="h-10 rounded-lg bg-ink px-4 text-sm font-semibold text-white hover:bg-rail-2">
+                      Send
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setThread((t) => t.filter((x) => x.id !== e.id));
+                        setDraft(e.question);
+                        input.current?.focus();
+                      }}
+                      className="h-10 px-3 text-sm text-ink-2 hover:text-ink"
+                    >
+                      Edit question
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {e.answer ? (
+                    <div data-selectable className="md-page text-[15px] leading-relaxed text-ink">
+                      <Markdown remarkPlugins={[remarkGfm]}>{e.answer}</Markdown>
+                    </div>
+                  ) : e.state === "sending" ? (
+                    <span className="flex items-center gap-2 text-sm text-ink-2">
+                      <LoaderCircle aria-hidden className="size-4 animate-spin" /> Thinking…
+                    </span>
+                  ) : null}
+                  {e.error && (
+                    <p role="alert" className="m-0 text-sm text-[#b42318]">
+                      {e.error}
+                    </p>
+                  )}
+                  {e.sources.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {e.sources.map((s) => (
+                        <button
+                          type="button"
+                          key={`${s.documentId}-${s.page}`}
+                          onClick={() => openDocument(s.documentId)}
+                          className="inline-flex items-center gap-1 rounded-md bg-card px-2 py-1 text-[12.5px] text-link hover:underline"
+                        >
+                          <FileText aria-hidden className="size-3.5" /> {s.title}, p. {s.page}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <Sent e={e} />
+                </div>
+              )}
+            </article>
+          ))
+        )}
+        <div ref={bottom} />
+      </div>
 
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          review();
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          ask(draft);
         }}
-        className="flex items-end gap-2 rounded-xl border border-[#d3d8dd] bg-card p-2 focus-within:border-ink-2"
+        className="flex items-end gap-2 rounded-2xl border border-[#d3d8dd] bg-card p-2 shadow-sm focus-within:border-ink-2"
       >
         <label htmlFor="ask-question" className="sr-only">
           Your question
@@ -134,97 +261,31 @@ export function Ask() {
         <textarea
           id="ask-question"
           ref={input}
-          rows={2}
-          value={question}
-          onChange={(e) => {
-            setQuestion(e.currentTarget.value);
-            if (state !== "idle" && state !== "preparing") setState("idle");
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              review();
+          rows={1}
+          value={draft}
+          onChange={(ev) => setDraft(ev.currentTarget.value)}
+          onKeyDown={(ev) => {
+            if (ev.key === "Enter" && !ev.shiftKey) {
+              ev.preventDefault();
+              ask(draft);
             }
           }}
-          placeholder="When does my residence card expire, and what do I need to renew it?"
-          className="min-h-12 flex-1 resize-none bg-transparent px-2 py-1.5 text-[15px] outline-none"
+          placeholder={thread.length ? "Ask a follow-up…" : "Ask about your documents…"}
+          className="max-h-40 min-h-10 flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] outline-none [field-sizing:content]"
         />
         <button
           type="submit"
-          disabled={!question.trim() || state === "preparing" || state === "sending"}
-          aria-label="Prepare the question"
-          className="grid size-10 place-items-center rounded-lg bg-ink text-white hover:bg-rail-2 disabled:opacity-40"
+          disabled={!draft.trim() || busy}
+          aria-label="Ask"
+          className="grid size-10 place-items-center rounded-xl bg-ink text-white hover:bg-rail-2 disabled:opacity-30"
         >
-          {state === "preparing" ? <LoaderCircle aria-hidden className="size-5 animate-spin" /> : <ArrowUp aria-hidden className="size-5" />}
+          {busy ? <LoaderCircle aria-hidden className="size-5 animate-spin" /> : <ArrowUp aria-hidden className="size-5" />}
         </button>
       </form>
-
-      {error && (
-        <p role="alert" className="m-0 text-sm text-[#b42318]">
-          {error}
-        </p>
-      )}
-
-      {prepared && state !== "idle" && state !== "preparing" && (
-        <section aria-label="What will be sent" className="flex flex-col gap-2.5 rounded-xl border border-line bg-card p-4.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <ShieldCheck aria-hidden className="size-4.5 text-private-ink" />
-            <span className="text-sm font-semibold">
-              What {model ?? "the model"} will receive
-            </span>
-            <span className="text-[13px] text-ink-2">
-              · {hidden} private {hidden === 1 ? "detail" : "details"} hidden · {prepared.sources.length} {prepared.sources.length === 1 ? "page" : "pages"} · {prepared.facts} facts · zero data retention
-            </span>
-          </div>
-          <pre data-selectable className="m-0 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-lg bg-ink p-3.5 font-mono text-[12.5px] leading-relaxed text-rail-ink">
-            <MaskedText text={prepared.prompt} />
-          </pre>
-          {state === "review" && (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={send}
-                disabled={!ready}
-                className="h-10 rounded-lg bg-ink px-4 text-sm font-semibold text-white hover:bg-rail-2 disabled:opacity-40"
-              >
-                Send to {model?.split("/").pop() ?? "model"}
-              </button>
-              <button type="button" onClick={() => input.current?.focus()} className="h-10 px-2 text-sm text-ink-2 hover:text-ink">
-                Edit question
-              </button>
-            </div>
-          )}
-        </section>
-      )}
-
-      {(answer || state === "sending") && (
-        <section aria-label="Answer" className="flex flex-col gap-3 rounded-xl border border-line bg-card p-4.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-2">Answer · real details put back on this Mac</span>
-          {answer ? (
-            <div data-selectable className="md-page text-[14.5px] leading-relaxed text-ink">
-              <Markdown remarkPlugins={[remarkGfm]}>{answer}</Markdown>
-            </div>
-          ) : (
-            <span className="flex items-center gap-2 text-sm text-ink-2">
-              <LoaderCircle aria-hidden className="size-4 animate-spin" /> Waiting for the answer…
-            </span>
-          )}
-          {prepared && prepared.sources.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 border-t border-line pt-3">
-              {prepared.sources.map((s) => (
-                <button
-                  type="button"
-                  key={`${s.documentId}-${s.page}`}
-                  onClick={() => openDocument(s.documentId)}
-                  className="inline-flex items-center gap-1 rounded-md bg-ground px-2 py-1 text-[12.5px] text-link hover:underline"
-                >
-                  <FileText aria-hidden className="size-3.5" /> {s.title}, p. {s.page}
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+      <p className="m-0 pt-2 text-center text-[12px] text-ink-2">Answers can be wrong. Check them against the source pages.</p>
     </div>
   );
 }
+
+/** How many different private details a message hides. */
+const hiddenIn = (sent: string) => new Set(sent.match(new RegExp(PLACEHOLDER, "g"))).size;

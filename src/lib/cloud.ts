@@ -58,12 +58,14 @@ Personal details have been replaced with placeholders such as [PERSON_1], [ID_2]
 Notes tell you roughly how far each date is from today; use them to reason about deadlines.
 Answer from the documents. If they don't contain the answer, say so. Be concise and practical. Use Markdown: a one-line direct answer first, then short bullet points.`;
 
-/** Streams an answer from the chosen model. `prompt` must already be masked. */
-export function askCloud({ apiKey, model, prompt }: { apiKey: string; model: string; prompt: string }) {
+export type Turn = { role: "user" | "assistant"; content: string };
+
+/** Streams an answer from the chosen model. Every message must already be masked. */
+export function askCloud({ apiKey, model, messages }: { apiKey: string; model: string; messages: Turn[] }) {
   const openrouter = createOpenRouter({ apiKey, headers: { "X-Title": "SafeBox" } });
   return streamText({
     model: openrouter(model, { provider: { zdr: true, data_collection: "deny" } }),
     system: SYSTEM,
-    prompt,
+    messages,
   });
 }

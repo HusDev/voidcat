@@ -44,6 +44,13 @@ describe("privacy layer", () => {
     expect(m.mask("A 1 year contract, grade Good.")).toBe("A 1 year contract, grade Good.");
   });
 
+  it("keeps placeholders stable across a conversation", () => {
+    const m = new Masker([], today);
+    expect(m.mask("X1234567L")).toBe("[ID_1]");
+    m.learn([{ label: "Landlord", value: "Carla Ruiz" }]);
+    expect(m.mask("Carla Ruiz and X1234567L")).toBe("[PERSON_1] and [ID_1]");
+  });
+
   it("reads labels and dates", () => {
     expect(kindOfLabel("Landlord")).toBe("PERSON");
     expect(kindOfLabel("Valid to")).toBe("DATE");

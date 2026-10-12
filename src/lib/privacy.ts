@@ -91,10 +91,22 @@ export class Masker {
     facts: KnownFact[],
     private today = new Date(),
   ) {
-    this.known = facts
-      .map((f) => ({ value: f.value.trim(), kind: kindOfLabel(f.label) }))
-      .filter((f) => worthMasking(f.value, f.kind))
-      .sort((a, b) => b.value.length - a.value.length);
+    this.known = [];
+    this.learn(facts);
+  }
+
+  /** Adds facts to mask from now on (a conversation keeps one Masker, so placeholders stay the same). */
+  learn(facts: KnownFact[]) {
+    const seen = new Set(this.known.map((k) => k.value.toLowerCase()));
+    for (const f of facts) {
+      const value = f.value.trim();
+      const kind = kindOfLabel(f.label);
+      if (worthMasking(value, kind) && !seen.has(value.toLowerCase())) {
+        this.known.push({ value, kind });
+        seen.add(value.toLowerCase());
+      }
+    }
+    this.known.sort((a, b) => b.value.length - a.value.length);
   }
 
   private tokenFor(original: string, kind: Kind): string {
