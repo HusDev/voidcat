@@ -24,9 +24,9 @@ bun run test
 
 ## Stack
 
-Tauri 2 · React · React Router · Vite · Tailwind CSS v4 · Headless UI · Lucide · Zod · TypeScript · Bun
+Tauri 2 (Rust: SQLite via rusqlite with FTS5, Apple Vision OCR, macOS Keychain) · React · React Router · Vite · Tailwind CSS v4 · Headless UI · Lucide · Zod · TypeScript · Bun · unpdf · Ollama (local model) · Vercel AI SDK + OpenRouter (zero data retention) · Vitest
 
-Planned: SQLite (FTS5 + sqlite-vec) with Drizzle, unpdf and Tesseract.js for reading documents, Transformers.js with OpenAI's privacy-filter for masking, the Vercel AI SDK with OpenRouter (zero data retention) for any model, Ollama for a local model, and an MCP server so other AI apps can connect.
+See `docs/STATUS.md` for what's built and what's next.
 
 ## License
 
