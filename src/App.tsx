@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Route, Routes } from "react-router";
 import { Sidebar } from "./components/Sidebar";
 import { LIBRARY_CHANGED, libraryStats } from "./lib/library";
+import { Ask } from "./routes/Ask";
 import { Connections } from "./routes/Connections";
 import { Inbox } from "./routes/Inbox";
 import { Library } from "./routes/Library";
@@ -25,6 +26,7 @@ export default function App() {
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8">
           <Routes>
             <Route index element={<Library />} />
+            <Route path="ask" element={<Ask />} />
             <Route path="inbox" element={<Inbox />} />
             <Route path="connections" element={<Connections />} />
           </Routes>

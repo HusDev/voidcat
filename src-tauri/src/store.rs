@@ -281,11 +281,12 @@ impl Store {
         rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
     }
 
-    /// Full-text search inside every page. Each word must appear (as a prefix); accents don't matter.
-    pub fn search(&self, query: &str) -> Result<Vec<Hit>, String> {
+    /// Full-text search inside every page; accents don't matter. With `any`, a page matching some of the words is
+    /// enough (best matches first), which suits questions; otherwise every word must appear (as a prefix).
+    pub fn search(&self, query: &str, any: bool) -> Result<Vec<Hit>, String> {
         let words: Vec<String> = query
             .split(|c: char| !c.is_alphanumeric())
-            .filter(|w| !w.is_empty())
+            .filter(|w| !w.is_empty() && (!any || w.chars().count() > 3))
             .map(|w| format!("\"{}\"*", w.replace('"', "")))
             .collect();
         if words.is_empty() {
@@ -300,7 +301,7 @@ impl Store {
             )
             .map_err(|e| e.to_string())?;
         let rows = stmt
-            .query_map([words.join(" ")], |r| Ok(Hit { document_id: r.get(0)?, title: r.get(1)?, page: r.get(2)?, snippet: r.get(3)? }))
+            .query_map([words.join(if any { " OR " } else { " " })], |r| Ok(Hit { document_id: r.get(0)?, title: r.get(1)?, page: r.get(2)?, snippet: r.get(3)? }))
             .map_err(|e| e.to_string())?;
         rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
     }
@@ -405,10 +406,11 @@ mod tests {
         assert_eq!(docs[0].mime.as_deref(), Some("application/pdf"));
         let id = docs[0].id.clone();
         store.save_reading(&id, vec!["Contrato de arrendamiento. Renta mensual 1.150 euros.".into()], "pdf-text").unwrap();
-        let hits = store.search("arrendamiento renta").unwrap();
+        let hits = store.search("arrendamiento renta", false).unwrap();
         assert_eq!(hits.len(), 1);
         assert!(hits[0].snippet.contains("[[arrendamiento]]"));
-        assert_eq!(store.search("contrato").unwrap().len(), 1, "prefix and accent-insensitive");
+        assert_eq!(store.search("contrato", false).unwrap().len(), 1, "prefix and accent-insensitive");
+        assert_eq!(store.search("cuanto es la renta mensual", true).unwrap().len(), 1, "any word, for questions");
 
         store
             .save_filing(&id, "Rental contract", "Home", "rental_contract", vec![NewFact { label: "Rent".into(), value: "€1,150 a month".into(), page: Some(1) }])
@@ -420,7 +422,7 @@ mod tests {
         assert_eq!(store.stats().unwrap().facts, 1);
 
         store.remove(&id).unwrap();
-        assert!(store.search("renta").unwrap().is_empty());
+        assert!(store.search("renta", false).unwrap().is_empty());
         assert_eq!(store.stats().unwrap().documents, 0);
         let _ = fs::remove_dir_all(dir);
     }

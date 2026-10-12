@@ -1,4 +1,4 @@
-import { Inbox, Library, Link2, ShieldCheck } from "lucide-react";
+import { Inbox, Library, Link2, MessageSquareText, ShieldCheck } from "lucide-react";
 import { NavLink } from "react-router";
 import { Logo } from "./Logo";
 
@@ -16,6 +16,9 @@ export function Sidebar({ pending }: { pending: number }) {
       <div className="flex flex-col gap-1">
         <NavLink to="/" end className={link}>
           <Library aria-hidden className="size-4.5" /> Library
+        </NavLink>
+        <NavLink to="/ask" className={link}>
+          <MessageSquareText aria-hidden className="size-4.5" /> Ask
         </NavLink>
         <NavLink to="/inbox" className={link}>
           <Inbox aria-hidden className="size-4.5" /> Facts to approve

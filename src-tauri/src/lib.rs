@@ -1,4 +1,5 @@
 mod ocr;
+mod secrets;
 mod store;
 
 use store::{Document, Fact, Hit, Imported, NewFact, Page, Stats, Store};
@@ -49,6 +50,21 @@ async fn ocr_image(request: tauri::ipc::Request<'_>) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn get_secret(name: String) -> Result<Option<String>, String> {
+    secrets::get(&name)
+}
+
+#[tauri::command]
+fn set_secret(name: String, value: String) -> Result<(), String> {
+    secrets::set(&name, &value)
+}
+
+#[tauri::command]
+fn remove_secret(name: String) -> Result<(), String> {
+    secrets::remove(&name)
+}
+
+#[tauri::command]
 fn save_reading(store: State<Store>, id: String, pages: Vec<String>, method: String) -> Result<(), String> {
     store.save_reading(&id, pages, &method)
 }
@@ -59,8 +75,8 @@ fn document_pages(store: State<Store>, id: String) -> Result<Vec<Page>, String> 
 }
 
 #[tauri::command]
-fn search(store: State<Store>, query: String) -> Result<Vec<Hit>, String> {
-    store.search(&query)
+fn search(store: State<Store>, query: String, any: Option<bool>) -> Result<Vec<Hit>, String> {
+    store.search(&query, any.unwrap_or(false))
 }
 
 #[tauri::command]
@@ -108,7 +124,10 @@ pub fn run() {
             list_facts,
             settle_fact,
             ocr_document,
-            ocr_image
+            ocr_image,
+            get_secret,
+            set_secret,
+            remove_secret
         ])
         .run(tauri::generate_context!())
         .expect("error while running SafeBox");

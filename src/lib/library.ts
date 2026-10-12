@@ -43,7 +43,7 @@ export type Hit = { documentId: string; title: string; page: number; snippet: st
 export type Fact = { id: string; documentId: string; documentTitle: string; documentMime: string | null; label: string; value: string; page: number | null; status: "pending" | "approved" | "rejected" };
 export type Page = { page: number; text: string };
 
-export const searchLibrary = (query: string) => invoke<Hit[]>("search", { query });
+export const searchLibrary = (query: string, any = false) => invoke<Hit[]>("search", { query, any });
 export const listFacts = (status: Fact["status"]) => (hasLibrary ? invoke<Fact[]>("list_facts", { status }) : Promise.resolve([]));
 export const documentPages = (id: string) => invoke<Page[]>("document_pages", { id });
 export const settleFact = (id: string, status: Fact["status"], value?: string) => invoke<void>("settle_fact", { id, status, value: value ?? null });
@@ -51,3 +51,7 @@ export const settleFact = (id: string, status: Fact["status"], value?: string) =
 /** Tells every screen that the library changed (a fact approved, a document filed…). */
 export const LIBRARY_CHANGED = "safebox:library-changed";
 export const announceChange = () => window.dispatchEvent(new Event(LIBRARY_CHANGED));
+
+export const getSecret = (name: "openrouter") => invoke<string | null>("get_secret", { name });
+export const setSecret = (name: "openrouter", value: string) => invoke<void>("set_secret", { name, value });
+export const removeSecret = (name: "openrouter") => invoke<void>("remove_secret", { name });
