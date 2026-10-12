@@ -4,7 +4,7 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource-variable/outfit";
 
-/* Voidcat: Deep Space and Void Purple; amber marks anything private. Light by default, dark when the Mac is dark;
+/* Voidcat: Deep Space and Void Purple; cyan marks anything private. Light by default, dark when the Mac is dark;
    the sidebar stays dark in both. Every colour is a token so the two themes stay in step. */
 @theme {
   --font-sans: "Instrument Sans Variable", system-ui, sans-serif;
@@ -21,12 +21,12 @@
   --color-accent-strong: #6236d6;
   --color-accent-soft: #eee8fd;
   --color-link: #6a3fd9;
-  --color-private: #f2b84b;
-  --color-private-soft: #fbefd5;
-  --color-private-ink: #8a5a00;
-  --color-private-line: #d9a441;
-  --color-private-mark: #fbe3ae;
-  --color-chip: #3a3220;
+  --color-private: #5eead4;
+  --color-private-soft: #d5f5ef;
+  --color-private-ink: #0f766e;
+  --color-private-line: #14b8a6;
+  --color-private-mark: #a7f3e4;
+  --color-chip: #12332f;
   --color-ok: #276b45;
   --color-ok-soft: #e2f2e8;
   --color-danger: #b42318;
@@ -60,11 +60,11 @@
     --color-accent-strong: #a685fa;
     --color-accent-soft: rgb(139 92 246 / 0.16);
     --color-link: #b49bfb;
-    --color-private-soft: rgb(242 184 75 / 0.13);
-    --color-private-ink: #f2c46b;
-    --color-private-line: #c9962f;
-    --color-private-mark: rgb(242 184 75 / 0.35);
-    --color-chip: rgb(242 184 75 / 0.16);
+    --color-private-soft: rgb(94 234 212 / 0.12);
+    --color-private-ink: #5eead4;
+    --color-private-line: #2ba899;
+    --color-private-mark: rgb(94 234 212 / 0.3);
+    --color-chip: rgb(94 234 212 / 0.14);
     --color-ok: #4cc38a;
     --color-ok-soft: rgb(76 195 138 / 0.14);
     --color-danger: #f0645a;
@@ -87,11 +87,11 @@
   --color-accent-strong: #a685fa;
   --color-accent-soft: rgb(139 92 246 / 0.16);
   --color-link: #b49bfb;
-  --color-private-soft: rgb(242 184 75 / 0.13);
-  --color-private-ink: #f2c46b;
-  --color-private-line: #c9962f;
-  --color-private-mark: rgb(242 184 75 / 0.35);
-  --color-chip: rgb(242 184 75 / 0.16);
+  --color-private-soft: rgb(94 234 212 / 0.12);
+  --color-private-ink: #5eead4;
+  --color-private-line: #2ba899;
+  --color-private-mark: rgb(94 234 212 / 0.3);
+  --color-chip: rgb(94 234 212 / 0.14);
   --color-ok: #4cc38a;
   --color-ok-soft: rgb(76 195 138 / 0.14);
   --color-danger: #f0645a;

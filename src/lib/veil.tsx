@@ -63,7 +63,7 @@ export const useVeil = () => useContext(VeilContext);
 
 const PLACEHOLDER = /(\[(?:PERSON|ID|DATE|ADDRESS|EMAIL|PHONE|IBAN|PRIVATE)_\d+\])/;
 
-/** Text with placeholders drawn as amber chips. */
+/** Text with placeholders drawn as cyan chips. */
 export function Placeholders({ text }: { text: string }) {
   return (
     <>
