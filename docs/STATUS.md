@@ -1,6 +1,6 @@
 # SafeBox — status and next steps
 
-Read this with `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026.
+Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026.
 
 ## The product
 **SafeBox** (working name): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
@@ -58,6 +58,7 @@ Read this with `CLAUDE.md` (the code map) at the start of a session. Last update
 
 ## How Hussein likes to work
 - Short answers; challenge with evidence instead of folding.
+- Record every decision in `PREFERENCES.md` (dated change log).
 - Build one phase at a time. After each step: type check, lint, tests, then **commit and push** (he expects pushes) and restart the dev app so he can try it.
 - Show designs on the artifact canvas before building big screens.
 - Explain in plain words; no jargon in the UI.

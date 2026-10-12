@@ -1,6 +1,6 @@
 # SafeBox — project notes
 
-**Start here:** read `docs/STATUS.md` (what's built, what's next, how Hussein works, gotchas), then this map.
+**Start here:** read `PREFERENCES.md` (every decision Hussein made, with dates) and `docs/STATUS.md` (what's built, what's next, gotchas), then this map. Whenever he makes or changes a decision, update `PREFERENCES.md` in the same turn: edit the line and add a dated change-log entry.
 
 Desktop app (Tauri 2) for smart personal document storage: drop files in, they are read locally, filed, and facts are extracted into an approval inbox. Any AI can use the library through masked context (privacy filter + reversible placeholders) or an MCP server. Separate from Hus (Hussein's private app): never copy Hus's personal data into the repo (tests and designs use made-up data).
 
