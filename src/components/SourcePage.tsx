@@ -8,6 +8,7 @@ const isMarkdown = (mime: string | null) => mime === "text/markdown";
 function markFirst(root: HTMLElement, value: string) {
   root.querySelectorAll("mark[data-fact]").forEach((m) => m.replaceWith(...m.childNodes));
   root.normalize();
+  root.scrollTo({ top: 0 });
   const needle = value.trim().toLowerCase();
   if (!needle) return;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -21,7 +22,9 @@ function markFirst(root: HTMLElement, value: string) {
     mark.className = "bg-[#fbe3ae] px-0.5";
     hit.replaceWith(mark);
     mark.append(hit);
-    mark.scrollIntoView({ block: "center" });
+    // Scroll only this page's box (never the window) so the list beside it stays put.
+    const top = mark.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
+    root.scrollTo({ top: Math.max(0, top - root.clientHeight / 2) });
     return;
   }
 }
@@ -37,7 +40,7 @@ export function SourcePage({ text, mime, highlight }: { text: string; mime: stri
     <div
       ref={ref}
       data-selectable
-      className={`max-h-[560px] overflow-y-auto rounded-xl border border-line bg-card px-6 py-6 text-[#3c444d] ${isMarkdown(mime) ? "md-page text-[13px] leading-relaxed" : "whitespace-pre-wrap text-xs leading-relaxed"}`}
+      className={`max-h-[calc(100vh-11rem)] overflow-y-auto rounded-xl border border-line bg-card px-6 py-6 text-[#3c444d] ${isMarkdown(mime) ? "md-page text-[13px] leading-relaxed" : "whitespace-pre-wrap text-xs leading-relaxed"}`}
     >
       {isMarkdown(mime) ? <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown> : text}
     </div>

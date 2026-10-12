@@ -115,7 +115,7 @@ export function Inbox() {
       </section>
 
       {current && (
-        <aside aria-label="Source page" className="hidden w-90 shrink-0 flex-col gap-3 xl:flex">
+        <aside aria-label="Source page" className="sticky top-0 hidden w-90 shrink-0 flex-col gap-3 self-start xl:flex">
           <span className="text-[13px] font-semibold text-ink-2">
             <Private>{current.documentTitle}</Private>
             {page ? ` · page ${page.page}` : ""}
