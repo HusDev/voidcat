@@ -62,22 +62,22 @@ describe("privacy layer", () => {
   });
 
   it("catches shorter forms of an approved address", () => {
-    const m = new Masker([{ label: "Property address", value: "Calle Llull 390, Entresuelo segunda" }], today);
-    expect(m.mask("Folder: Lease Llull 390")).toBe("Folder: Lease [ADDRESS_1]");
-    expect(m.mask("C/ Llull, 390 and Carrer Llull nº 390")).toBe("[ADDRESS_1] and [ADDRESS_1]");
-    expect(m.unmask("[ADDRESS_1]")).toBe("Calle Llull 390, Entresuelo segunda");
-    expect(m.mask("Llull 39 and Llull 3900")).toBe("Llull 39 and Llull 3900");
+    const m = new Masker([{ label: "Property address", value: "Calle Robles 214, Bajo primera" }], today);
+    expect(m.mask("Folder: Lease Robles 214")).toBe("Folder: Lease [ADDRESS_1]");
+    expect(m.mask("C/ Robles, 214 and Carrer Robles nº 214")).toBe("[ADDRESS_1] and [ADDRESS_1]");
+    expect(m.unmask("[ADDRESS_1]")).toBe("Calle Robles 214, Bajo primera");
+    expect(m.mask("Robles 21 and Robles 2140")).toBe("Robles 21 and Robles 2140");
   });
 
   it("finds the street when the address starts with the city", () => {
-    const m = new Masker([{ label: "Property Address", value: "Barcelona, Calle Llull 390, entresuelo segunda" }], today);
-    expect(m.mask("Home › Lease Llull 390")).toBe("Home › Lease [ADDRESS_1]");
+    const m = new Masker([{ label: "Property Address", value: "Barcelona, Calle Robles 214, bajo primera" }], today);
+    expect(m.mask("Home › Lease Robles 214")).toBe("Home › Lease [ADDRESS_1]");
     expect(m.mask("ALEGRE DE DALT 26")).toBe("ALEGRE DE DALT 26");
   });
 
   it("catches a person's first name and surname", () => {
-    const m = new Masker([{ label: "Landlord", value: "Èric Lluch Alvarez" }], today);
-    expect(m.mask("Signed by Èric Lluch.")).toBe("Signed by [PERSON_1].");
+    const m = new Masker([{ label: "Landlord", value: "Pau Ferrer Vidal" }], today);
+    expect(m.mask("Signed by Pau Ferrer.")).toBe("Signed by [PERSON_1].");
   });
 
   it("reads labels and dates", () => {

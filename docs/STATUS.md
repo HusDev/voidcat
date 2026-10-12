@@ -47,6 +47,8 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - one click adds Voidcat to Claude Desktop or Cursor; Claude Code gets a command to copy. ChatGPT isn't supported (it needs an internet server).
 12. **Voidcat rebrand:** line-cat logo and app icon, violet accent, Outfit headings, light and dark themes that follow the Mac (sidebar dark in both), name Voidcat in the window and the interface. Canvas: https://claude.ai/artifact/97fHrNDyKQs6Q6DQ7cmB1Z (dark and light rows).
 13. **Renamed to Voidcat everywhere in the app:** package, identifier `dev.hus.voidcat`, database `voidcat.db`, Keychain service, MCP server and its entry in other apps. The old library folder, key and MCP entry move over automatically on first start (`legacy.rs`; it also rewrites each document's saved file path). Backup taken before the rename: `~/Library/Application Support/dev.hus.safebox.backup-2026-10-12`. The local folder is `~/lab/voidcat` and the GitLab project `hus.dev/voidcat` (renamed from safebox; GitLab redirects the old URL).
+14. **Contacts:** people and organisations found in each document by the local model (after filing, or "Find contacts" for older documents), merged across documents, with role, area, phone, email, address, ID and where they appear; edit, "This is me", hide. People's details are hidden from every AI like approved facts.
+15. **Me:** a profile built on this Mac from approved facts (identity, residency, home, work & money, education, health), each value with its source document; "Needs you" for conflicting values (your choice is remembered) and missing details; a timeline.
 
 ## Next, in order
 1. **GitLab hackathon work:**

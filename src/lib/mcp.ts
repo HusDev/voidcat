@@ -1,6 +1,6 @@
 import { type ManualEvent, eventsFromFacts, fromManual } from "./calendar";
 import type { Document, Fact, Hit } from "./library";
-import { Masker } from "./privacy";
+import { type KnownFact, Masker } from "./privacy";
 
 /**
  * What other apps (Claude Desktop, Cursor, Claude Code…) get through Voidcat's MCP server (`mcp/server.ts`).
@@ -37,6 +37,8 @@ export interface LibrarySource {
   manualEvents(): ManualEvent[];
   search(query: string): Hit[];
   page(documentId: string, page: number): string | null;
+  /** Other private values to hide (contacts' names, phones, emails). */
+  privateValues?(): KnownFact[];
 }
 
 const PAGE_CHARS = 6000;
@@ -56,7 +58,7 @@ export class VoidcatTools {
 
   /** Masks `text` and adds the date notes for the placeholders it contains. */
   private out(text: string): string {
-    this.masker.learn(this.lib.approvedFacts());
+    this.masker.learn([...this.lib.approvedFacts(), ...(this.lib.privateValues?.() ?? [])]);
     const masked = this.masker.mask(text);
     const used = new Set(masked.match(PLACEHOLDER));
     const notes = this.masker.notes().filter((n) => used.has(n.slice(0, n.indexOf("]") + 1)));

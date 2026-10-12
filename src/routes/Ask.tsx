@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import remarkGfm from "remark-gfm";
 import { type Turn, askCloud, savedModel } from "../lib/cloud";
 import { type Fact, type Hit, documentPages, getSecret, hasLibrary, listFacts, openDocument, searchLibrary } from "../lib/library";
+import { contactFacts, listContacts } from "../lib/people";
 import { Masker } from "../lib/privacy";
 import { Private, useVeil } from "../lib/veil";
 
@@ -31,7 +32,7 @@ type Exchange = {
 /** The user's approved facts and the pages that best match the question, as one masked message. */
 async function build(question: string, masker: Masker) {
   const [facts, hits] = await Promise.all([listFacts("approved"), searchLibrary(question, true)]);
-  masker.learn(facts);
+  masker.learn([...facts, ...contactFacts(await listContacts())]);
   const top = hits.slice(0, MAX_PAGES);
   const pages = await Promise.all(
     top.map(async (h) => `### ${h.title}, page ${h.page}\n${((await documentPages(h.documentId)).find((p) => p.page === h.page)?.text ?? "").slice(0, PAGE_CHARS)}`),

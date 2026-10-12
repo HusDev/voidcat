@@ -35,17 +35,18 @@ Every product, design and working decision Hussein made, with the date. When he 
 - **Ask:**
   - a conversation (redesigned at his request), with example questions, follow-ups and the input pinned at the bottom;
   - shows **what will be sent** and asks to review only when something private would leave; every answer keeps "What was sent" and its sources.
-- **Hide private details** (his idea, for screen recording): one switch, ⌘⇧H, that shows the AI's placeholders instead of real values everywhere and blurs source pages. Short forms of an address ("Llull 390") must be hidden too.
+- **Hide private details** (his idea, for screen recording): one switch, ⌘⇧H, that shows the AI's placeholders instead of real values everywhere and blurs source pages. Short forms of an address ("Robles 214") must be hidden too.
 - **Calendar** (his idea):
   - every deadline and date becomes a reminder, including appointments such as the empadronamiento, with a "papers to bring" checklist;
   - dates are worked out too: renewal 60 days before expiry, monthly rent days;
   - Mac notifications and export to Apple/Google Calendar.
 - **Other apps through MCP** (built): Claude Desktop, Cursor and Claude Code can use the library, always masked. Each app starts with **masked facts and dates only**; searching and reading pages must be allowed per app in Connected AIs, and any app can be turned off. SafeBox adds itself to Claude Desktop or Cursor with one click. ChatGPT is left out for now because it only connects to internet servers and the library stays on the Mac.
-- **Contacts tab** (requested, designed 12 Oct 2026, to build): every person and organisation in the documents (landlord, employer, lawyer, offices, bank, doctor) with role, phone, email, address and the documents they appear in; found by the local model; merged by name/email; masked as [PERSON_n] for AIs.
-- **"Me" tab** (requested; name "Me" picked by Claude when asked to choose; designed, to build): a profile built from all documents (identity and IDs, residency, home, work and money, education, health), each value with its source; a "Needs you" box for conflicts and missing details; a life timeline.
+- **Contacts tab** (requested, built 12 Oct 2026): every person and organisation in the documents (landlord, employer, lawyer, offices, bank, doctor) with role, phone, email, address and the documents they appear in; found by the local model; merged by name/email; masked as [PERSON_n] for AIs.
+- **"Me" tab** (requested; name "Me" picked by Claude when asked to choose; built 12 Oct 2026): a profile built from all documents (identity and IDs, residency, home, work and money, education, health), each value with its source; a "Needs you" box for conflicts and missing details; a life timeline.
 - **Opportunities tab** (his idea, from Hus): advantages and opportunities based on your situation, with Keep / Add to calendar / Done / Dismiss. Built as phase 3: the scan sends only masked facts and document names, shows what will be sent first, and web checking is optional and off by default because it falls outside zero data retention. Dismissed ideas never come back.
 
 ## Working with him
+- **Never real personal data in the code** (tests, comments, prompts, docs, designs): always invented values. The repo will be public.
 - **Short answers;** challenge with evidence rather than folding.
 - **Plan, then build one phase at a time.** After each step: checks, commit, **push**, restart the app so he can try it.
 - **Record every decision** in this file, with the date.
@@ -79,3 +80,5 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 12 Oct 2026 — Renamed everything in the app from SafeBox to Voidcat ("rename all to voidcat"), including internal names; the library, Keychain key and Claude Desktop entry move over automatically.
 - 12 Oct 2026 — Local folder renamed to ~/lab/voidcat and the GitLab project to hus.dev/voidcat.
 - 12 Oct 2026 — Asked for a Contacts tab and a personal profile tab (named "Me"); both drawn on the canvas (row "New · Me and Contacts") for approval. Canvas private colour updated to cyan.
+- 12 Oct 2026 — Real address (and a landlord name, rent and lease date) removed from tests, code comments and the canvas; replaced by invented values. Rule added: never real personal data in code.
+- 12 Oct 2026 — Contacts and Me built ("go for it, build both").

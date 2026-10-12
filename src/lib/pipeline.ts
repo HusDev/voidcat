@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { fileDocument, saveFiling } from "./extract";
+import { scanContacts } from "./people";
 import { announceChange, type Document, listFolders } from "./library";
 import { readDocument, saveReading } from "./reader";
 
@@ -53,7 +54,10 @@ async function run() {
         continue;
       }
       set(doc.id, { stage: "filing" });
-      await saveFiling(doc.id, await fileDocument(reading.pages, await listFolders()));
+      const filing = await fileDocument(reading.pages, await listFolders());
+      await saveFiling(doc.id, filing);
+      // Contacts come second: a document is filed even if this step fails (it can be retried from Contacts).
+      await scanContacts({ id: doc.id, title: filing.title }).catch(() => {});
       set(doc.id, { stage: "done" });
       announceChange();
     } catch (e) {

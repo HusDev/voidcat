@@ -17,6 +17,7 @@ import {
   scanCloud,
   setOpportunityStatus,
 } from "../lib/opportunities";
+import { contactFacts, listContacts } from "../lib/people";
 import { Masker } from "../lib/privacy";
 import { Placeholders, Private } from "../lib/veil";
 
@@ -220,7 +221,7 @@ export function Opportunities() {
     setState("building");
     try {
       const [facts, docs] = await Promise.all([listFacts("approved"), listDocuments()]);
-      const masker = new Masker([]);
+      const masker = new Masker(contactFacts(await listContacts()));
       const { sent, number } = buildScan(facts, docs, items, masker);
       const hidden = new Set(sent.match(/\[(?:PERSON|ID|DATE|ADDRESS|EMAIL|PHONE|IBAN|PRIVATE)_\d+\]/g)).size;
       setReview({ sent, number, masker, hidden, cost: await estimate(model, sent, web) });

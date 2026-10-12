@@ -3,6 +3,7 @@ mod calendar;
 mod legacy;
 mod ocr;
 mod opportunities;
+mod people;
 mod secrets;
 mod store;
 
@@ -155,6 +156,57 @@ fn connect_app(app: String, on: bool) -> Result<(), String> {
     apps::connect(&app, on)
 }
 
+#[tauri::command]
+fn save_contacts(store: State<Store>, document_id: String, found: Vec<people::Found>) -> Result<(), String> {
+    people::save_found(&mut store.db.lock().unwrap(), &document_id, found)
+}
+
+#[tauri::command]
+fn list_contacts(store: State<Store>) -> Result<Vec<people::Contact>, String> {
+    people::list(&store.db.lock().unwrap())
+}
+
+#[tauri::command]
+fn edit_contact(store: State<Store>, id: String, contact: people::Edit) -> Result<(), String> {
+    people::edit(&store.db.lock().unwrap(), &id, contact)
+}
+
+#[tauri::command]
+fn flag_contact(store: State<Store>, id: String, flag: String) -> Result<(), String> {
+    people::set_flag(&store.db.lock().unwrap(), &id, &flag)
+}
+
+#[tauri::command]
+fn owner_names(store: State<Store>) -> Result<Vec<String>, String> {
+    people::owner_names(&store.db.lock().unwrap())
+}
+
+#[tauri::command]
+fn unscanned_for_contacts(store: State<Store>) -> Result<Vec<String>, String> {
+    people::unscanned(&store.db.lock().unwrap())
+}
+
+/// The saved profile as JSON with when it was built, or null.
+#[tauri::command]
+fn get_profile(store: State<Store>) -> Result<Option<(String, String)>, String> {
+    people::profile(&store.db.lock().unwrap())
+}
+
+#[tauri::command]
+fn save_profile(store: State<Store>, json: String) -> Result<(), String> {
+    people::save_profile(&store.db.lock().unwrap(), &json)
+}
+
+#[tauri::command]
+fn profile_choices(store: State<Store>) -> Result<Vec<(String, String)>, String> {
+    people::choices(&store.db.lock().unwrap())
+}
+
+#[tauri::command]
+fn choose_profile_value(store: State<Store>, key: String, fact_id: String) -> Result<(), String> {
+    people::choose(&store.db.lock().unwrap(), &key, &fact_id)
+}
+
 /// Writes the calendar export where the user chose in the save dialog. Only .ics files.
 #[tauri::command]
 fn save_calendar_file(path: String, content: String) -> Result<(), String> {
@@ -292,7 +344,17 @@ pub fn run() {
             set_ai_app_level,
             remove_ai_app,
             mcp_setup,
-            connect_app
+            connect_app,
+            save_contacts,
+            list_contacts,
+            edit_contact,
+            flag_contact,
+            owner_names,
+            unscanned_for_contacts,
+            get_profile,
+            save_profile,
+            profile_choices,
+            choose_profile_value
         ])
         .run(tauri::generate_context!())
         .expect("error while running Voidcat");

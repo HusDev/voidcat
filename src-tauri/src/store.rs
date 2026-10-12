@@ -263,6 +263,7 @@ impl Store {
         db.execute_batch(crate::calendar::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::opportunities::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::apps::SCHEMA).map_err(|e| e.to_string())?;
+        db.execute_batch(crate::people::SCHEMA).map_err(|e| e.to_string())?;
         Ok(Store {
             db: Mutex::new(db),
             files,

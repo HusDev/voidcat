@@ -77,13 +77,13 @@ const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const STREET_TYPES = "calle|c/|c\\.|carrer|avenida|avinguda|av\\.|avda\\.|plaza|plaça|pl\\.|paseo|passeig|pg\\.|rambla|ronda|travessera|camino|cami";
 
 /**
- * Shorter ways the same address or name shows up elsewhere: "Calle Llull 390, Entresuelo 2ª" is also written
- * "C/ Llull 390", "Carrer Llull, 390" or just "Llull 390"; "Èric Lluch Alvarez" is also "Èric Lluch".
+ * Shorter ways the same address or name shows up elsewhere: "Calle Robles 214, Bajo 1ª" is also written
+ * "C/ Robles 214", "Carrer Robles, 214" or just "Robles 214"; "Pau Ferrer Vidal" is also "Pau Ferrer".
  */
 export function variants(value: string, kind: Kind): RegExp[] {
   const out: RegExp[] = [];
   if (kind === "ADDRESS") {
-    // The street and number, wherever they are: "Barcelona, Calle Llull 390, 2ª" → "Llull" + "390".
+    // The street and number, wherever they are: "Barcelona, Calle Robles 214, 1ª" → "Robles" + "214".
     const name = "([\\p{L}][\\p{L}'’·.-]*(?:\\s+[\\p{L}][\\p{L}'’·.-]*){0,3}?)";
     const tail = "\\s*,?\\s*(?:n[º°o.]\\s*)?(\\d{1,4})\\b";
     const m =

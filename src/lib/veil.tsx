@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { LIBRARY_CHANGED, listFacts } from "./library";
+import { contactFacts, listContacts } from "./people";
 import { Masker } from "./privacy";
 
 /**
@@ -27,7 +28,8 @@ export function VeilProvider({ children }: { children: ReactNode }) {
 
   // One masker for the whole app, built from the approved facts, so a value has the same placeholder on every screen.
   useEffect(() => {
-    const refresh = () => listFacts("approved").then((facts) => setMasker(new Masker(facts)));
+    const refresh = () =>
+      Promise.all([listFacts("approved"), listContacts()]).then(([facts, contacts]) => setMasker(new Masker([...facts, ...contactFacts(contacts)])));
     refresh();
     window.addEventListener(LIBRARY_CHANGED, refresh);
     return () => window.removeEventListener(LIBRARY_CHANGED, refresh);

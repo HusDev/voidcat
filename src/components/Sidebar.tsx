@@ -1,4 +1,4 @@
-import { CalendarDays, Eye, EyeOff, Folder as FolderIcon, Inbox, Library, Lightbulb, Link2, MessageSquareText, Settings } from "lucide-react";
+import { CalendarDays, Eye, EyeOff, Folder as FolderIcon, Inbox, Library, Lightbulb, Link2, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useSearchParams } from "react-router";
 import { type Folder, LIBRARY_CHANGED, listFolders } from "../lib/library";
@@ -75,6 +75,14 @@ export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: nu
               {toFile}
             </span>
           )}
+        </NavLink>
+        <NavLink to="/me" className={link}>
+          <span aria-hidden className="size-1.5 shrink-0 rounded-full group-aria-[current=page]:bg-void group-aria-[current=page]:shadow-[0_0_8px_rgb(139_92_246/0.9)]" />
+          <UserRound aria-hidden className="size-4.5" /> Me
+        </NavLink>
+        <NavLink to="/contacts" className={link}>
+          <span aria-hidden className="size-1.5 shrink-0 rounded-full group-aria-[current=page]:bg-void group-aria-[current=page]:shadow-[0_0_8px_rgb(139_92_246/0.9)]" />
+          <Contact aria-hidden className="size-4.5" /> Contacts
         </NavLink>
         <NavLink to="/ask" className={link}>
           <span aria-hidden className="size-1.5 shrink-0 rounded-full group-aria-[current=page]:bg-void group-aria-[current=page]:shadow-[0_0_8px_rgb(139_92_246/0.9)]" />

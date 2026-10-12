@@ -8,14 +8,14 @@ const doc = (id: string, title: string, docType: string, folderName: string | nu
   ({ id, title, docType, folderName, fileName: `${id}.pdf`, mime: "application/pdf", sizeBytes: 1, area: null, status: "filed", addedAt: "", textMethod: null, pageCount: 1, folderId: null, filing: null, suggestedArea: null, suggestedFolder: null, suggestedNew: false, suggestionReason: null }) as Document;
 const fact = (id: string, documentId: string, documentTitle: string, label: string, value: string): Fact => ({ id, documentId, documentTitle, documentMime: null, label, value, page: 1, status: "approved" });
 
-const docs = [doc("tie", "Residence card (TIE)", "residence_card"), doc("lease", "Rental contract, Llull 390", "rental_contract"), doc("cita", "Cita previa padrón", "appointment")];
+const docs = [doc("tie", "Residence card (TIE)", "residence_card"), doc("lease", "Rental contract, Robles 214", "rental_contract"), doc("cita", "Cita previa padrón", "appointment")];
 
 describe("calendar", () => {
   it("reads monthly due days in Spanish and English", () => {
     expect(monthlyDueDay("del 1 al 5 de cada mes")).toBe(5);
     expect(monthlyDueDay("dentro de los siete primeros días de cada mes")).toBe(7);
     expect(monthlyDueDay("within the first 7 days")).toBe(7);
-    expect(monthlyDueDay("1.127 €/mes")).toBeNull();
+    expect(monthlyDueDay("1.150 €/mes")).toBeNull();
   });
 
   it("knows which dates are history", () => {
@@ -30,12 +30,12 @@ describe("calendar", () => {
     const facts = [
       fact("f1", "tie", "Residence card (TIE)", "Valid to", "16/03/2027"),
       fact("f2", "tie", "Residence card (TIE)", "Date Issued", "26/01/2026"),
-      fact("f3", "lease", "Rental contract, Llull 390", "Rent Payment Dates", "del 1 al 5 de cada mes"),
-      fact("f4", "lease", "Rental contract, Llull 390", "Monthly Rent", "1.127 €/mes"),
+      fact("f3", "lease", "Rental contract, Robles 214", "Rent Payment Dates", "del 1 al 5 de cada mes"),
+      fact("f4", "lease", "Rental contract, Robles 214", "Monthly Rent", "1.150 €/mes"),
       fact("f5", "cita", "Cita previa padrón", "Fecha de la cita", "04/11/2026"),
       fact("f6", "cita", "Cita previa padrón", "Hora", "10:20"),
       fact("f7", "cita", "Cita previa padrón", "Oficina", "OAC Sant Martí"),
-      fact("f8", "lease", "Rental contract, Llull 390", "Start date", "1 de noviembre de 2025"),
+      fact("f8", "lease", "Rental contract, Robles 214", "Start date", "1 de marzo de 2026"),
     ];
     const events = eventsFromFacts(facts, docs, today);
     const by = (key: string) => events.find((e) => e.key === key);
@@ -47,7 +47,7 @@ describe("calendar", () => {
     expect(by("fact:f5")).toMatchObject({ kind: "appointment", time: "10:20", place: "OAC Sant Martí" });
     const rent = events.filter((e) => e.kind === "payment");
     expect(rent.map((e) => e.date)).toEqual(["2026-11-05", "2026-12-05"]);
-    expect(rent[0].title).toBe("Pay rent · 1.127 €/mes");
+    expect(rent[0].title).toBe("Pay rent · 1.150 €/mes");
   });
 
   it("shows only the latest reminder that has passed, once per event", () => {

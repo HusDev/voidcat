@@ -10,8 +10,10 @@ import { useCalendar } from "./lib/useCalendar";
 import { Ask } from "./routes/Ask";
 import { Calendar } from "./routes/Calendar";
 import { Connections } from "./routes/Connections";
+import { Contacts } from "./routes/Contacts";
 import { Inbox } from "./routes/Inbox";
 import { Library } from "./routes/Library";
+import { Me } from "./routes/Me";
 import { Opportunities } from "./routes/Opportunities";
 import { Settings } from "./routes/Settings";
 
@@ -57,6 +59,8 @@ export default function App() {
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8">
           <Routes>
             <Route index element={<Library />} />
+            <Route path="me" element={<Me />} />
+            <Route path="contacts" element={<Contacts />} />
             <Route path="ask" element={<Ask />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="opportunities" element={<Opportunities />} />

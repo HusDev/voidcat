@@ -61,6 +61,20 @@ const library: LibrarySource = {
       )
       .all(words.join(" OR ")) as Hit[];
   },
+  privateValues: () => {
+    const has = db.query("select 1 from sqlite_master where name = 'contacts'").get();
+    if (!has) return [];
+    const rows = db
+      .query("select name, phone, email, address, id_number as idNumber from contacts where kind = 'person' and hidden = 0")
+      .all() as { name: string; phone: string | null; email: string | null; address: string | null; idNumber: string | null }[];
+    return rows.flatMap((c) => [
+      { label: "Name", value: c.name },
+      ...(c.phone ? [{ label: "Phone", value: c.phone }] : []),
+      ...(c.email ? [{ label: "Email", value: c.email }] : []),
+      ...(c.address ? [{ label: "Address", value: c.address }] : []),
+      ...(c.idNumber ? [{ label: "ID number", value: c.idNumber }] : []),
+    ]);
+  },
   page: (documentId, page) => (db.query("select text from pages where document_id = ?1 and page = ?2").get(documentId, page) as { text: string } | null)?.text ?? null,
 };
 
