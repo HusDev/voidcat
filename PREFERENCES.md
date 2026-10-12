@@ -41,6 +41,8 @@ Every product, design and working decision Hussein made, with the date. When he 
   - dates are worked out too: renewal 60 days before expiry, monthly rent days;
   - Mac notifications and export to Apple/Google Calendar.
 - **Other apps through MCP** (built): Claude Desktop, Cursor and Claude Code can use the library, always masked. Each app starts with **masked facts and dates only**; searching and reading pages must be allowed per app in Connected AIs, and any app can be turned off. SafeBox adds itself to Claude Desktop or Cursor with one click. ChatGPT is left out for now because it only connects to internet servers and the library stays on the Mac.
+- **Contacts tab** (his idea, designed 12 Oct 2026, to build): every person and organisation in the documents (landlord, employer, lawyer, offices, bank, doctor) with role, phone, email, address and the documents they appear in; found by the local model; merged by name/email; masked as [PERSON_n] for AIs.
+- **"Me" tab** (his idea; name "Me" chosen by Claude when he said to pick one; designed, to build): a profile built from all documents (identity and IDs, residency, home, work and money, education, health), each value with its source; a "Needs you" box for conflicts and missing details; a life timeline.
 - **Opportunities tab** (his idea, from Hus): advantages and opportunities based on your situation, with Keep / Add to calendar / Done / Dismiss. Built as phase 3: the scan sends only masked facts and document names, shows what will be sent first, and web checking is optional and off by default because it falls outside zero data retention. Dismissed ideas never come back.
 
 ## Working with him
@@ -76,3 +78,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 12 Oct 2026 — Private-details colour changed from amber to cyan (#5EEAD4; chips dark teal with cyan text).
 - 12 Oct 2026 — Renamed everything in the app from SafeBox to Voidcat ("rename all to voidcat"), including internal names; the library, Keychain key and Claude Desktop entry move over automatically.
 - 12 Oct 2026 — Local folder renamed to ~/lab/voidcat and the GitLab project to hus.dev/voidcat.
+- 12 Oct 2026 — Asked for a Contacts tab and a personal profile tab (named "Me"); both drawn on the canvas (row "New · Me and Contacts") for approval. Canvas private colour updated to cyan.
