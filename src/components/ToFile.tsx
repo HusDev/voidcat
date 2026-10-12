@@ -1,5 +1,6 @@
-import { Folder as FolderIcon, FolderPlus } from "lucide-react";
+import { Folder as FolderIcon, FolderPlus, Pencil } from "lucide-react";
 import { useState } from "react";
+import { AREAS } from "../lib/extract";
 import { type Document, type Folder, announceChange, fileInFolder } from "../lib/library";
 import { Private } from "../lib/veil";
 import { FolderPicker } from "./FolderPicker";
@@ -9,12 +10,14 @@ const ext = (name: string) => name.split(".").pop()?.toUpperCase().slice(0, 4) ?
 /** Documents waiting for a folder: SafeBox's suggestion, and the choice to accept it or pick another. */
 export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] }) {
   const [picking, setPicking] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; area: string; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
   if (!docs.length) return null;
 
   const file = async (d: Document, area: string, name: string) => {
     await fileInFolder(d.id, area, name);
     setPicking(null);
+    setRenaming(null);
     announceChange();
   };
   const fileAll = async () => {
@@ -63,7 +66,50 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
                 </span>
                 <span className="text-xs">{isNew ? "will be created" : ""}</span>
               </div>
-              {picking === d.id ? (
+              {renaming?.id === d.id ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (renaming.name.trim()) file(d, renaming.area, renaming.name);
+                  }}
+                  className="flex flex-col gap-2 rounded-lg border border-line bg-ground/60 p-2.5"
+                >
+                  <div className="flex gap-2">
+                    <label htmlFor={`area-${d.id}`} className="sr-only">
+                      Area
+                    </label>
+                    <select
+                      id={`area-${d.id}`}
+                      value={renaming.area}
+                      onChange={(e) => setRenaming({ ...renaming, area: e.currentTarget.value })}
+                      className="h-9 rounded-md border border-[#d3d8dd] bg-card px-1.5 text-[13px]"
+                    >
+                      {AREAS.map((a) => (
+                        <option key={a}>{a}</option>
+                      ))}
+                    </select>
+                    <label htmlFor={`name-${d.id}`} className="sr-only">
+                      Folder name
+                    </label>
+                    <input
+                      id={`name-${d.id}`}
+                      autoFocus
+                      value={renaming.name}
+                      onChange={(e) => setRenaming({ ...renaming, name: e.currentTarget.value })}
+                      onKeyDown={(e) => e.key === "Escape" && setRenaming(null)}
+                      className="h-9 min-w-0 flex-1 rounded-md border border-[#d3d8dd] bg-card px-2.5 text-[13.5px] outline-none focus:border-ink-2"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={!renaming.name.trim()} className="h-8 rounded-md bg-ink px-3 text-[13px] font-semibold text-white hover:bg-rail-2 disabled:opacity-40">
+                      {folders.some((f) => f.area === renaming.area && f.name.toLowerCase() === renaming.name.trim().toLowerCase()) ? "File here" : "Create and file"}
+                    </button>
+                    <button type="button" onClick={() => setRenaming(null)} className="h-8 px-2 text-[13px] text-ink-2 hover:text-ink">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : picking === d.id ? (
                 <FolderPicker folders={folders} area={d.suggestedArea ?? d.area ?? "Other"} onPick={(area, name) => file(d, area, name)} onCancel={() => setPicking(null)} />
               ) : (
                 <div className="flex gap-2">
@@ -74,6 +120,15 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
                   >
                     {isNew ? "Create and file" : "File here"}
                   </button>
+                  {isNew && (
+                    <button
+                      type="button"
+                      onClick={() => setRenaming({ id: d.id, area: d.suggestedArea ?? "Other", name: d.suggestedFolder ?? "" })}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d3d8dd] bg-card px-3 text-[13px] hover:border-ink-2"
+                    >
+                      <Pencil aria-hidden className="size-3.5" /> Rename
+                    </button>
+                  )}
                   <button type="button" onClick={() => setPicking(d.id)} className="h-8 rounded-md border border-[#d3d8dd] bg-card px-3 text-[13px] hover:border-ink-2">
                     Other folder…
                   </button>
