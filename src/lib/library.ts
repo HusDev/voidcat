@@ -13,6 +13,8 @@ export type Document = {
   /** new = stored, not read yet · read = text extracted · filed = classified and facts extracted */
   status: "new" | "read" | "filed";
   addedAt: string;
+  textMethod: "pdf-text" | "text" | "needs-ocr" | "unsupported" | null;
+  pageCount: number | null;
 };
 
 export type Imported = { added: Document[]; duplicates: string[]; failed: [string, string][] };
@@ -36,3 +38,16 @@ export function formatSize(bytes: number) {
 }
 
 export const formatDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+export type Hit = { documentId: string; title: string; page: number; snippet: string };
+export type Fact = { id: string; documentId: string; documentTitle: string; label: string; value: string; page: number | null; status: "pending" | "approved" | "rejected" };
+export type Page = { page: number; text: string };
+
+export const searchLibrary = (query: string) => invoke<Hit[]>("search", { query });
+export const listFacts = (status: Fact["status"]) => (hasLibrary ? invoke<Fact[]>("list_facts", { status }) : Promise.resolve([]));
+export const documentPages = (id: string) => invoke<Page[]>("document_pages", { id });
+export const settleFact = (id: string, status: Fact["status"], value?: string) => invoke<void>("settle_fact", { id, status, value: value ?? null });
+
+/** Tells every screen that the library changed (a fact approved, a document filed…). */
+export const LIBRARY_CHANGED = "safebox:library-changed";
+export const announceChange = () => window.dispatchEvent(new Event(LIBRARY_CHANGED));

@@ -1,13 +1,4 @@
-// Example data for screens not yet wired to the library (Facts to approve, Connected AIs). Every name and number here is made up.
-
-export type PendingFact = { id: string; label: string; value: string; source: string };
-
-export const pendingFacts: PendingFact[] = [
-  { id: "rent", label: "Rent", value: "€1,150 a month", source: "Rental contract, p. 1" },
-  { id: "start", label: "Lease starts", value: "1 Nov 2026", source: "Rental contract, p. 1" },
-  { id: "deposit", label: "Deposit", value: "€2,300", source: "Rental contract, p. 1" },
-  { id: "landlord", label: "Landlord", value: "Carla Ruiz", source: "Rental contract, p. 8" },
-];
+// Example data for screens not yet wired to the library (Connected AIs). Every name and number here is made up.
 
 export type Access = "masked-search" | "masked-facts" | "everything" | "off";
 

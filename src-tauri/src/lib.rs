@@ -1,6 +1,6 @@
 mod store;
 
-use store::{Document, Imported, Stats, Store};
+use store::{Document, Fact, Hit, Imported, NewFact, Page, Stats, Store};
 use tauri::{Manager, State};
 use tauri_plugin_opener::OpenerExt;
 
@@ -25,6 +25,42 @@ fn open_document(app: tauri::AppHandle, store: State<Store>, id: String) -> Resu
     app.opener().open_path(path, None::<&str>).map_err(|e| e.to_string())
 }
 
+/// The file's bytes, sent to the interface so it can read the text (PDF) without anything leaving the Mac.
+#[tauri::command]
+fn document_bytes(store: State<Store>, id: String) -> Result<tauri::ipc::Response, String> {
+    store.bytes_of(&id).map(tauri::ipc::Response::new)
+}
+
+#[tauri::command]
+fn save_reading(store: State<Store>, id: String, pages: Vec<String>, method: String) -> Result<(), String> {
+    store.save_reading(&id, pages, &method)
+}
+
+#[tauri::command]
+fn document_pages(store: State<Store>, id: String) -> Result<Vec<Page>, String> {
+    store.pages(&id)
+}
+
+#[tauri::command]
+fn search(store: State<Store>, query: String) -> Result<Vec<Hit>, String> {
+    store.search(&query)
+}
+
+#[tauri::command]
+fn save_filing(store: State<Store>, id: String, title: String, area: String, doc_type: String, facts: Vec<NewFact>) -> Result<(), String> {
+    store.save_filing(&id, &title, &area, &doc_type, facts)
+}
+
+#[tauri::command]
+fn list_facts(store: State<Store>, status: String) -> Result<Vec<Fact>, String> {
+    store.facts(&status)
+}
+
+#[tauri::command]
+fn settle_fact(store: State<Store>, id: String, status: String, value: Option<String>) -> Result<(), String> {
+    store.settle_fact(&id, &status, value)
+}
+
 #[tauri::command]
 fn remove_document(store: State<Store>, id: String) -> Result<(), String> {
     store.remove(&id)
@@ -41,7 +77,20 @@ pub fn run() {
             app.manage(store);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![import_files, list_documents, library_stats, open_document, remove_document])
+        .invoke_handler(tauri::generate_handler![
+            import_files,
+            list_documents,
+            library_stats,
+            open_document,
+            remove_document,
+            document_bytes,
+            save_reading,
+            document_pages,
+            search,
+            save_filing,
+            list_facts,
+            settle_fact
+        ])
         .run(tauri::generate_context!())
         .expect("error while running SafeBox");
 }
