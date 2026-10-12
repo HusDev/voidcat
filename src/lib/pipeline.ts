@@ -44,8 +44,8 @@ async function run() {
       set(doc.id, { stage: "reading" });
       const reading = await readDocument(doc);
       await saveReading(doc.id, reading);
-      if (reading.method === "needs-ocr") {
-        set(doc.id, { stage: "failed", message: "This is a scan with no text. Reading scans is coming next." });
+      if (reading.method !== "unsupported" && !reading.pages.some((p) => p.trim())) {
+        set(doc.id, { stage: "failed", message: "No text found in this document." });
         continue;
       }
       if (reading.method === "unsupported") {

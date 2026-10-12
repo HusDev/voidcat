@@ -24,7 +24,7 @@ pub struct Document {
     /// new = stored, not read yet · read = text extracted · filed = classified and facts extracted
     status: String,
     added_at: String,
-    /// How the text was read: pdf-text, text, or needs-ocr when there was none to read.
+    /// How the text was read: pdf-text, text, ocr (photo), pdf-ocr (scanned PDF) or unsupported.
     text_method: Option<String>,
     page_count: Option<i64>,
 }

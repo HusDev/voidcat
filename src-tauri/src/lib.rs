@@ -1,3 +1,4 @@
+mod ocr;
 mod store;
 
 use store::{Document, Fact, Hit, Imported, NewFact, Page, Stats, Store};
@@ -29,6 +30,22 @@ fn open_document(app: tauri::AppHandle, store: State<Store>, id: String) -> Resu
 #[tauri::command]
 fn document_bytes(store: State<Store>, id: String) -> Result<tauri::ipc::Response, String> {
     store.bytes_of(&id).map(tauri::ipc::Response::new)
+}
+
+/// Reads the text of a stored image document.
+#[tauri::command]
+async fn ocr_document(store: State<'_, Store>, id: String) -> Result<String, String> {
+    let bytes = store.bytes_of(&id)?;
+    ocr::read_image(&bytes)
+}
+
+/// Reads the text of an image sent as the request body (a scanned PDF page rendered by the interface).
+#[tauri::command]
+async fn ocr_image(request: tauri::ipc::Request<'_>) -> Result<String, String> {
+    match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => ocr::read_image(bytes),
+        _ => Err("Send the image as raw bytes.".into()),
+    }
 }
 
 #[tauri::command]
@@ -89,7 +106,9 @@ pub fn run() {
             search,
             save_filing,
             list_facts,
-            settle_fact
+            settle_fact,
+            ocr_document,
+            ocr_image
         ])
         .run(tauri::generate_context!())
         .expect("error while running SafeBox");

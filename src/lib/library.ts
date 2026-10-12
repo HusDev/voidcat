@@ -13,7 +13,7 @@ export type Document = {
   /** new = stored, not read yet · read = text extracted · filed = classified and facts extracted */
   status: "new" | "read" | "filed";
   addedAt: string;
-  textMethod: "pdf-text" | "text" | "needs-ocr" | "unsupported" | null;
+  textMethod: "pdf-text" | "text" | "ocr" | "pdf-ocr" | "unsupported" | null;
   pageCount: number | null;
 };
 
