@@ -21,6 +21,7 @@ import {
   searchLibrary,
 } from "../lib/library";
 import { type Step, process, useProgress } from "../lib/pipeline";
+import { Private, useVeil } from "../lib/veil";
 
 const statusBadge: Record<Document["status"], [string, string]> = {
   new: ["Not read yet", "bg-private-soft text-private-ink"],
@@ -54,6 +55,7 @@ export function Library() {
   const [notice, setNotice] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const progress = useProgress();
+  const veil = useVeil();
 
   const refresh = useCallback(() => {
     listDocuments().then(setDocs);
@@ -147,10 +149,10 @@ export function Library() {
               className="flex flex-col gap-1 rounded-xl border border-line bg-card px-4 py-3 text-left hover:border-ink-2"
             >
               <span className="text-sm font-semibold">
-                {h.title} <span className="font-normal text-ink-2">· page {h.page}</span>
+                <Private>{h.title}</Private> <span className="font-normal text-ink-2">· page {h.page}</span>
               </span>
               <span data-selectable className="text-[13px] leading-relaxed text-ink-2">
-                <Snippet text={h.snippet} />
+                {veil.on ? <Private>{h.snippet.replace(/\[\[|\]\]/g, "")}</Private> : <Snippet text={h.snippet} />}
               </span>
             </button>
           ))}
@@ -201,7 +203,9 @@ export function Library() {
                       <span className="text-xs font-semibold uppercase tracking-wider text-ink-2">{d.area ?? "Not filed yet"}</span>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>
                     </div>
-                    <span className="text-[15px] font-semibold leading-snug">{d.title}</span>
+                    <span className="text-[15px] font-semibold leading-snug">
+                      <Private>{d.title}</Private>
+                    </span>
 
                     {known.length > 0 && (
                       <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
@@ -209,15 +213,15 @@ export function Library() {
                           <div key={f.id} className="contents">
                             <dt className="text-ink-2">{f.label}</dt>
                             <dd data-selectable className="m-0 min-w-0 truncate">
-                              {f.value}
+                              <Private>{f.value}</Private>
                             </dd>
                           </div>
                         ))}
                       </dl>
                     )}
 
-                    <span className="truncate text-[12.5px] text-ink-2" title={d.fileName}>
-                      {d.fileName} · {formatSize(d.sizeBytes)}
+                    <span className="truncate text-[12.5px] text-ink-2" title={veil.on ? undefined : d.fileName}>
+                      <Private>{d.fileName}</Private> · {formatSize(d.sizeBytes)}
                       {d.pageCount ? ` · ${d.pageCount} ${d.pageCount === 1 ? "page" : "pages"}` : ""} · added {formatDay(d.addedAt)}
                     </span>
 

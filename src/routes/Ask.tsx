@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { type Turn, askCloud, savedModel } from "../lib/cloud";
 import { type Fact, type Hit, documentPages, getSecret, hasLibrary, listFacts, openDocument, searchLibrary } from "../lib/library";
 import { Masker } from "../lib/privacy";
+import { Private, useVeil } from "../lib/veil";
 
 const PAGE_CHARS = 1800;
 const MAX_PAGES = 5;
@@ -21,6 +22,8 @@ type Exchange = {
   hidden: number;
   sources: Hit[];
   answer: string;
+  /** The answer as the model wrote it, with placeholders (shown while private details are hidden). */
+  raw: string;
   state: "review" | "sending" | "done" | "failed";
   error?: string;
 };
@@ -86,6 +89,7 @@ export function Ask() {
   const bottom = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const model = savedModel();
+  const veil = useVeil();
 
   useEffect(() => {
     if (hasLibrary) getSecret("openrouter").then((k) => setHasKey(!!k));
@@ -110,7 +114,7 @@ export function Ask() {
       let raw = "";
       for await (const chunk of askCloud({ apiKey, model, messages }).textStream) {
         raw += chunk;
-        update(e.id, { answer: masker.current.unmask(raw) });
+        update(e.id, { answer: masker.current.unmask(raw), raw });
       }
       update(e.id, { state: "done" });
     } catch (err) {
@@ -125,7 +129,7 @@ export function Ask() {
     setBusy(true);
     try {
       const built = await build(q, masker.current);
-      const e: Exchange = { id: Date.now(), question: q, sent: built.sent, hidden: hiddenIn(built.sent), sources: built.sources, answer: "", state: "review" };
+      const e: Exchange = { id: Date.now(), question: q, sent: built.sent, hidden: hiddenIn(built.sent), sources: built.sources, answer: "", raw: "", state: "review" };
       const earlier = thread;
       setThread((t) => [...t, e]);
       // Nothing private in it: no reason to make you confirm.
@@ -183,7 +187,7 @@ export function Ask() {
           thread.map((e, i) => (
             <article key={e.id} className="flex flex-col gap-3">
               <p data-selectable className="m-0 max-w-[85%] self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-[15px] text-white">
-                {e.question}
+                <Private>{e.question}</Private>
               </p>
 
               {e.state === "review" ? (
@@ -213,7 +217,7 @@ export function Ask() {
                 <div className="flex flex-col gap-3">
                   {e.answer ? (
                     <div data-selectable className="md-page text-[15px] leading-relaxed text-ink">
-                      <Markdown remarkPlugins={[remarkGfm]}>{e.answer}</Markdown>
+                      <Markdown remarkPlugins={[remarkGfm]}>{veil.on ? e.raw : e.answer}</Markdown>
                     </div>
                   ) : e.state === "sending" ? (
                     <span className="flex items-center gap-2 text-sm text-ink-2">
@@ -234,7 +238,7 @@ export function Ask() {
                           onClick={() => openDocument(s.documentId)}
                           className="inline-flex items-center gap-1 rounded-md bg-card px-2 py-1 text-[12.5px] text-link hover:underline"
                         >
-                          <FileText aria-hidden className="size-3.5" /> {s.title}, p. {s.page}
+                          <FileText aria-hidden className="size-3.5" /> <Private>{s.title}</Private>, p. {s.page}
                         </button>
                       ))}
                     </div>

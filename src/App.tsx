@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Route, Routes } from "react-router";
 import { Sidebar } from "./components/Sidebar";
+import { EyeOff } from "lucide-react";
 import { LIBRARY_CHANGED, libraryStats } from "./lib/library";
+import { useVeil } from "./lib/veil";
 import { Ask } from "./routes/Ask";
 import { Connections } from "./routes/Connections";
 import { Inbox } from "./routes/Inbox";
@@ -9,6 +11,7 @@ import { Library } from "./routes/Library";
 
 export default function App() {
   const [pending, setPending] = useState(0);
+  const veil = useVeil();
 
   useEffect(() => {
     const refresh = () => libraryStats().then((s) => setPending(s.pendingFacts));
@@ -22,7 +25,17 @@ export default function App() {
       <Sidebar pending={pending} />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* The window has no title bar; this strip lets you drag it. */}
-        <div data-tauri-drag-region className="h-8 shrink-0" />
+        <div data-tauri-drag-region className="flex h-8 shrink-0 items-center justify-center">
+          {veil.on && (
+            <button
+              type="button"
+              onClick={veil.toggle}
+              className="inline-flex items-center gap-1.5 rounded-full bg-private px-3 py-0.5 text-[12px] font-semibold text-ink"
+            >
+              <EyeOff aria-hidden className="size-3.5" /> Private details hidden · ⌘⇧H to show
+            </button>
+          )}
+        </div>
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8">
           <Routes>
             <Route index element={<Library />} />

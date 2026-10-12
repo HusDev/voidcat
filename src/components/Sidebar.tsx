@@ -1,11 +1,13 @@
-import { Inbox, Library, Link2, MessageSquareText, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Inbox, Library, Link2, MessageSquareText, ShieldCheck } from "lucide-react";
 import { NavLink } from "react-router";
+import { useVeil } from "../lib/veil";
 import { Logo } from "./Logo";
 
 const link = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm no-underline ${isActive ? "bg-rail-2 font-semibold text-white" : "text-rail-mute hover:text-white"}`;
 
 export function Sidebar({ pending }: { pending: number }) {
+  const veil = useVeil();
   return (
     <nav aria-label="SafeBox" className="flex w-58 shrink-0 flex-col gap-7 bg-rail px-4 pb-5 pt-11 text-rail-ink">
       <div data-tauri-drag-region className="flex items-center gap-2.5 px-2">
@@ -29,7 +31,19 @@ export function Sidebar({ pending }: { pending: number }) {
         </NavLink>
       </div>
 
-      <div className="mt-auto flex items-center gap-2 rounded-lg bg-rail-3 p-3 text-[12.5px] text-rail-mute">
+      <button
+        type="button"
+        onClick={veil.toggle}
+        aria-pressed={veil.on}
+        title="Hide private details (⌘⇧H)"
+        className={`mt-auto flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm ${veil.on ? "bg-private font-semibold text-ink" : "text-rail-mute hover:bg-rail-2 hover:text-white"}`}
+      >
+        {veil.on ? <EyeOff aria-hidden className="size-4.5" /> : <Eye aria-hidden className="size-4.5" />}
+        <span className="flex-1">{veil.on ? "Private details hidden" : "Hide private details"}</span>
+        <kbd className={`font-sans text-[11px] ${veil.on ? "text-ink/70" : "text-[#7d8792]"}`}>⌘⇧H</kbd>
+      </button>
+
+      <div className="flex items-center gap-2 rounded-lg bg-rail-3 p-3 text-[12.5px] text-rail-mute">
         <ShieldCheck aria-hidden className="size-4 text-private" />
         Stored only on this Mac
       </div>

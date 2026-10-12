@@ -1,6 +1,7 @@
 import { CheckCheck } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { SourcePage } from "../components/SourcePage";
+import { Blurred, Private } from "../lib/veil";
 import { type Fact, type Page, LIBRARY_CHANGED, announceChange, documentPages, listFacts, settleFact } from "../lib/library";
 
 const quiet = "h-10 rounded-lg border border-[#d3d8dd] bg-card px-3.5 text-sm text-ink hover:border-ink-2";
@@ -49,7 +50,9 @@ export function Inbox() {
 
         {facts.map((f, i) => (
           <Fragment key={f.id}>
-            {(i === 0 || facts[i - 1].documentId !== f.documentId) && <h2 className="m-0 mt-2 text-sm font-semibold text-ink-2">{f.documentTitle}</h2>}
+            {(i === 0 || facts[i - 1].documentId !== f.documentId) && <h2 className="m-0 mt-2 text-sm font-semibold text-ink-2">
+                <Private>{f.documentTitle}</Private>
+              </h2>}
             <article
               onFocus={() => setSelected(f.id)}
               onMouseEnter={() => setSelected(f.id)}
@@ -72,7 +75,7 @@ export function Inbox() {
                   />
                 ) : (
                   <span data-selectable className="text-[17px] font-semibold">
-                    {f.value}
+                    <Private>{f.value}</Private>
                   </span>
                 )}
                 <span className="text-[13px] text-ink-2">{f.page ? `Page ${f.page} · ` : ""}read on this Mac</span>
@@ -114,11 +117,13 @@ export function Inbox() {
       {current && (
         <aside aria-label="Source page" className="hidden w-90 shrink-0 flex-col gap-3 xl:flex">
           <span className="text-[13px] font-semibold text-ink-2">
-            {current.documentTitle}
+            <Private>{current.documentTitle}</Private>
             {page ? ` · page ${page.page}` : ""}
           </span>
           {page ? (
-            <SourcePage text={page.text} mime={current.documentMime} highlight={current.value} />
+            <Blurred>
+              <SourcePage text={page.text} mime={current.documentMime} highlight={current.value} />
+            </Blurred>
           ) : (
             <p className="m-0 rounded-xl border border-line bg-card px-6 py-6 text-xs text-ink-2">No text for this page.</p>
           )}
