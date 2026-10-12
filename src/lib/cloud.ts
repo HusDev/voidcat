@@ -12,7 +12,8 @@ const MODEL_KEY = "safebox.cloudModel";
 
 export function savedModel(): string | null {
   try {
-    return localStorage.getItem(MODEL_KEY);
+    const id = localStorage.getItem(MODEL_KEY);
+    return id && !id.endsWith(":batch") ? id : null;
   } catch {
     return null;
   }
@@ -35,6 +36,8 @@ export async function listModels(): Promise<CloudModel[]> {
   };
   return body.data
     .filter((m) => (m.architecture?.output_modalities ?? ["text"]).includes("text"))
+    // ":batch" variants answer hours later through a queue; they can't answer a question live.
+    .filter((m) => !m.id.endsWith(":batch"))
     .map((m) => ({
       id: m.id,
       name: m.name,
