@@ -15,12 +15,17 @@ function Folders() {
   const { pathname } = useLocation();
   const current = pathname === "/" ? params.get("folder") : null;
 
+  // Reload on any change in the app, on every screen change, and when the window comes back to the front.
   useEffect(() => {
     const refresh = () => listFolders().then(setFolders);
     refresh();
     window.addEventListener(LIBRARY_CHANGED, refresh);
-    return () => window.removeEventListener(LIBRARY_CHANGED, refresh);
-  }, []);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener(LIBRARY_CHANGED, refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [pathname, params]);
 
   if (!folders.length) return null;
   const areas = [...new Set(folders.map((f) => f.area))];
