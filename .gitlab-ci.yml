@@ -21,6 +21,10 @@ include:
 default:
   image: oven/bun:1.3
 
+variables:
+  # Run SAST and secret detection in merge request pipelines too, not only on branches.
+  AST_ENABLE_MR_PIPELINES: "true"
+
 # ——— verify ———
 
 verify:
