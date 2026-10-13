@@ -8,7 +8,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - **Tagline:** "Drop your life in. Any AI can use it. None of them can take it."
 - **First target users:** people whose paperwork spans countries (immigrants, expats, international workers).
 - **Design canvas (all screens, private artifact):** https://claude.ai/artifact/97fHrNDyKQs6Q6DQ7cmB1Z (local copy in the Claude scratchpad; the published version is the reference)
-- **Repo:** https://gitlab.com/hus.dev/voidcat (private for now; must be public + MIT for the GitLab Transcend hackathon)
+- **Repo:** https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase (remote `showcase`, where work happens; must be public + MIT for the hackathon). Private copy: https://gitlab.com/hus.dev/voidcat (remote `origin`), pushed to later.
 - **Owner:** Hussein (husdev). Separate from Hus, his private app in `~/lab/hus`. Never copy Hus's personal data into this repo.
 
 ## Built (all pushed to `main`)
