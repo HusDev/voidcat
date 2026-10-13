@@ -20,7 +20,7 @@ const Filing = z.object({
     .array(
       z.object({
         label: z.string().describe("What the fact is, e.g. 'Passport number', 'Valid to', 'Monthly rent', 'Employer'"),
-        value: z.string().describe("The value copied exactly as written in the document, e.g. 'P4821907', '23/02/2034', '1.150 euros'"),
+        value: z.string().describe("The value copied exactly as written in the document, e.g. 'P1234567', '23/02/2034', '1.150 euros'"),
         page: z.number().int().min(1).nullable(),
       }),
     )

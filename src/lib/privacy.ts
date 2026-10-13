@@ -23,7 +23,7 @@ const MONTHS: Record<string, number> = {
 const MONTH_NAMES = Object.keys(MONTHS).sort((a, b) => b.length - a.length).join("|");
 
 /** Patterns, most specific first, so an IBAN isn't read as a phone number. */
-const PATTERNS: [Kind, RegExp][] = [
+export const PATTERNS: [Kind, RegExp][] = [
   ["EMAIL", /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g],
   ["IBAN", /\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){3,7}(?:[ ]?[A-Z0-9]{1,3})?\b/g],
   ["ID", /\b[XYZ]-?\d{7}-?[A-Z]\b/g], // NIE

@@ -51,10 +51,12 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 15. **Me:** a profile built on this Mac from approved facts (identity, residency, home, work & money, education, health), each value with its source document; "Needs you" for conflicting values (your choice is remembered) and missing details; a timeline.
 
 ## Next, in order
-1. **GitLab hackathon work:**
-   - repo public + MIT;
-   - CI stages (verify exists in `.gitlab-ci.yml`) plus GitLab Duo agents and flows for review, security, tests and release;
-   - demo video under 3 min. The project story draft is in the conversation history; ask Hussein.
+1. **GitLab hackathon work** (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):
+   - Phase 1, pipeline stages: verify (+ Rust tests), secure (SAST, secret detection, dependency scanning), govern (`scripts/privacy-guard.ts`), package (MCP binaries for Apple silicon and Intel), release (on `v*` tags: generic packages + GitLab release from `CHANGELOG.md`);
+   - Phase 2, Duo groundwork: `.gitlab/duo/agent-config.yml`, `AGENTS.md`, `.gitlab/duo/mr-review-instructions.yaml`;
+   - Phase 3, foundational flows on (Code Review, Developer, Fix CI/CD Pipeline, Security Review, SAST flows);
+   - Phase 4, custom flows in the AI Catalog (sources in `.gitlab/duo/flows/`): Triage, Privacy Guard, Pipeline Doctor, Health Reporter, Release;
+   - Phase 5, Observability, README automation section, a full run for the demo video (under 3 min, invented data only).
 2. **OpenAI privacy-filter model** (Transformers.js/ONNX) to catch names the rules miss.
 3. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
 4. **Polish:**

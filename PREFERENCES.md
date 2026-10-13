@@ -50,7 +50,7 @@ Every product, design and working decision Hussein made, with the date. When he 
 - **Short answers;** challenge with evidence rather than folding.
 - **Plan, then build one phase at a time.** After each step: checks, commit, **push**, restart the app so he can try it.
 - **Record every decision** in this file, with the date.
-- **GitLab:** work happens in the hackathon workspace project gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase (git remote `showcase`; pipelines and Duo agents run there; public + MIT for the GitLab Transcend hackathon). gitlab.com/hus.dev/voidcat (remote `origin`) stays his private copy; he pushes to it later with a normal `git push origin main`. Full history kept as is, no squash or rewrite (his choice). The hackathon judges DevSecOps automation, so a lifecycle-automation angle is still to be added.
+- **GitLab:** work happens in the hackathon workspace project gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase (git remote `showcase`; pipelines and Duo agents run there; public + MIT for the GitLab Transcend hackathon). gitlab.com/hus.dev/voidcat (remote `origin`) stays his private copy; he pushes to it later with a normal `git push origin main`. Full history kept as is, no squash or rewrite (his choice). Hackathon automation: **Supervised** autonomy (agents do the multi-step work; he approves outcomes: assigning an issue to the developer flow, merging, tagging a release), covering all nine lifecycle stages; plan in docs/STATUS.md.
 
 ## Change log
 - 12 Oct 2026 — Idea: smart storage that any AI can use, with a privacy filter and a library of facts; a new project separate from Hus.
@@ -83,3 +83,5 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 12 Oct 2026 — Real address (and a landlord name, rent and lease date) removed from tests, code comments and the canvas; replaced by invented values. Rule added: never real personal data in code.
 - 12 Oct 2026 — Contacts and Me built ("go for it, build both").
 - 13 Oct 2026 — Work moves to the hackathon Showcase project with the full history (template README merged in, no force push); hus.dev/voidcat kept private and synced later. Old history not rewritten.
+- 13 Oct 2026 — Hackathon autonomy level: Supervised. Plan approved to cover all nine stages (pipeline stages first, then Duo flows).
+- 13 Oct 2026 — Privacy guard in CI: real personal words are checked by hash from a CI variable, so the real values never enter the repo.

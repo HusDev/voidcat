@@ -1,0 +1,13 @@
+# Invented values used in tests and examples. The privacy guard (scripts/privacy-guard.ts) lets these through.
+# Only add values you made up, never real ones.
+X1234567L
+Y1234567X
+12345678Z
+AB1234567
+P1234567
+ES12 3456 7890 1234 5678 9012
+carla@mail.com
+ana.ruiz@mail.com
+lucia.prat@mail.com
+Z7654321K
+ES98 7654 3210 9876 5432 1098
