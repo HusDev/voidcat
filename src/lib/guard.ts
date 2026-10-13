@@ -45,7 +45,8 @@ export async function findLeaks(line: string, allow: Set<string>, watch: Set<str
   const leaks: Leak[] = [];
   for (const [kind, re] of PATTERNS) {
     if (!KINDS.has(kind)) continue;
-    for (const m of line.matchAll(new RegExp(re.source, re.flags))) {  // nosemgrep: eslint.detect-non-literal-regexp -- copies a fixed pattern from privacy.ts
+    // matchAll works on its own copy of the pattern, so the shared one is never changed.
+    for (const m of line.matchAll(re)) {
       const value = m[0];
       if (allow.has(value)) continue;
       if (kind === "EMAIL" && (SAFE_EMAIL.test(value) || FILE_NAME.test(value))) continue;

@@ -37,6 +37,9 @@
     ],
     "externalBin": [
       "binaries/voidcat-mcp"
-    ]
+    ],
+    "macOS": {
+      "minimumSystemVersion": "15.2"
+    }
   }
 }

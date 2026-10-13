@@ -61,7 +61,21 @@ The GitLab pipeline runs typecheck, lint, tests and build on every push and merg
 
 ## GitLab automation
 
-Work in progress for the hackathon: GitLab Duo agents and flows across the lifecycle (plan, create, verify, secure, package, release, configure, monitor, govern), including a privacy guard that checks every merge request for real personal data. This section will list each agent and flow as it lands.
+Supervised autonomy: agents do the steps, a person approves the outcomes (assigning an issue, merging, tagging).
+
+| Stage | What runs |
+|---|---|
+| plan | **Triage** flow labels new issues and comments a plan |
+| create | GitLab's **Developer** flow turns an approved issue into a merge request |
+| verify | `verify` and `rust-test` jobs; **Pipeline Doctor** flow explains failures and pushes small fixes |
+| secure | SAST, secret detection and dependency scanning |
+| govern | `privacy-guard` job blocks personal data; **Privacy Guard** flow reviews masking and privacy rules |
+| package | `mcp-server` job builds the MCP server for Apple silicon and Intel Macs |
+| release | **Release** flow prepares the changelog merge request; on a `v*` tag the pipeline publishes packages and a GitLab release |
+| configure | Agent runtime, review rules and flow sources versioned in `.gitlab/duo/` |
+| monitor | **Health Reporter** flow posts each `main` pipeline's numbers to a "Pipeline health" issue |
+
+Flow sources are in `.gitlab/duo/flows/`; the rules agents follow are in `AGENTS.md`.
 
 ## Stack
 

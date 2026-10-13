@@ -87,4 +87,30 @@ describe("privacy layer", () => {
     expect(parseDate("23 Feb 2034")?.getFullYear()).toBe(2034);
     expect(relative(new Date(2026, 9, 20), today)).toBe("about 8 days from now");
   });
+
+  it("treats approved values as plain text, never as regex syntax", () => {
+    // A value that would hang a backtracking engine if it were read as a pattern.
+    const evil = "(a+)+$";
+    const m = new Masker([{ label: "Holder name", value: `${evil} ${evil} ${evil}` }, { label: "Street address", value: "Calle (x+)+ 12" }], today);
+    const start = performance.now();
+    const out = m.mask(`${"a".repeat(40_000)}! then ${evil} ${evil} ${evil}`);
+    expect(performance.now() - start).toBeLessThan(500);
+    expect(out).toContain("[PERSON_1]");
+    expect(out.startsWith("a".repeat(100))).toBe(true);
+  });
+
+  it("finds dates with any month name, longest name first", () => {
+    const m = new Masker([], today);
+    expect(m.mask("Cita el 3 de septiembre de 2027 y el 4 sep 2027.")).toBe("Cita el [DATE_1] y el [DATE_2].");
+  });
+
+  it("stays fast on long text with no matches (no slow patterns)", () => {
+    const m = new Masker([], today);
+    for (const chunk of ["a", "1", "a.", "1 ", "A1", "a@"]) {
+      const start = performance.now();
+      m.mask(chunk.repeat(20_000));
+      expect(performance.now() - start, chunk).toBeLessThan(200);
+    }
+    expect(m.mask("write to lucia.prat@mail.com")).toBe("write to [EMAIL_1]");
+  });
 });

@@ -20,17 +20,18 @@ const MONTHS: Record<string, number> = {
   may: 4, mayo: 4, jun: 5, june: 5, junio: 5, jul: 6, july: 6, julio: 6, aug: 7, august: 7, ago: 7, agosto: 7, sep: 8, sept: 8, september: 8,
   septiembre: 8, oct: 9, october: 9, octubre: 9, nov: 10, november: 10, noviembre: 10, dec: 11, december: 11, dic: 11, diciembre: 11,
 };
-const MONTH_NAMES = Object.keys(MONTHS).sort((a, b) => b.length - a.length).join("|");
-
 /** Patterns, most specific first, so an IBAN isn't read as a phone number. */
 export const PATTERNS: [Kind, RegExp][] = [
-  ["EMAIL", /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g],
+  // Starts only where a word starts, and the name part is at most 64 characters (RFC 5321), so long runs of
+  // letters without an @ are scanned once, not once per letter.
+  ["EMAIL", /(?<![\w.+-])[\w.+-]{1,64}@[\w-]+(?:\.[\w-]+)+/g],
   ["IBAN", /\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){3,7}(?:[ ]?[A-Z0-9]{1,3})?\b/g],
   ["ID", /\b[XYZ]-?\d{7}-?[A-Z]\b/g], // NIE
   ["ID", /\b\d{8}-?[A-Z]\b/g], // DNI
   ["ID", /\b[A-Z]{1,2}\d{6,9}\b/g], // passport, TIE card and similar
-  ["DATE", new RegExp(`\\b\\d{1,2}(?:\\s+de)?\\s+(?:${MONTH_NAMES})\\.?(?:\\s+de)?\\s+\\d{4}\\b`, "gi")],  // nosemgrep: eslint.detect-non-literal-regexp -- built from the fixed month list
-  ["DATE", new RegExp(`\\b(?:${MONTH_NAMES})\\.?\\s+\\d{1,2},?\\s+\\d{4}\\b`, "gi")],  // nosemgrep: eslint.detect-non-literal-regexp -- built from the fixed month list
+  // Month names longest first ("septiembre" before "sep"), the same words as MONTHS.
+  ["DATE", /\b\d{1,2}(?:\s+de)?\s+(?:septiembre|september|noviembre|diciembre|february|november|december|january|febrero|october|octubre|august|agosto|enero|march|marzo|april|abril|junio|julio|mayo|june|july|sept|jan|ene|feb|mar|apr|abr|may|jun|jul|aug|ago|sep|oct|nov|dec|dic)\.?(?:\s+de)?\s+\d{4}\b/gi],
+  ["DATE", /\b(?:septiembre|september|noviembre|diciembre|february|november|december|january|febrero|october|octubre|august|agosto|enero|march|marzo|april|abril|junio|julio|mayo|june|july|sept|jan|ene|feb|mar|apr|abr|may|jun|jul|aug|ago|sep|oct|nov|dec|dic)\.?\s+\d{1,2},?\s+\d{4}\b/gi],
   ["DATE", /\b\d{4}-\d{2}-\d{2}\b/g],
   ["DATE", /\b\d{1,2}[/.-]\d{1,2}[/.-]\d{4}\b/g],
   ["PHONE", /(?:\+\d{1,3}[ .-]?)?\(?\d{2,4}\)?(?:[ .-]?\d{2,4}){2,4}\b/g],
@@ -72,7 +73,8 @@ export function relative(date: Date, today: Date): string {
   return days > 0 ? `about ${amount} from now` : `about ${amount} ago`;
 }
 
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** Text as a literal inside a regex (the standard `RegExp.escape`, ES2025). */
+const escape = (s: string) => RegExp.escape(s);
 
 const STREET_TYPES = "calle|c/|c\\.|carrer|avenida|avinguda|av\\.|avda\\.|plaza|plaça|pl\\.|paseo|passeig|pg\\.|rambla|ronda|travessera|camino|cami";
 
