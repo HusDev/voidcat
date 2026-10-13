@@ -30,4 +30,6 @@ Not encrypted yet (plan: SQLCipher); don't claim encryption in the UI until it i
 
 - CI (`.gitlab-ci.yml`): stages verify (`verify`, `rust-test` on Linux with Tauri's packages), secure (SAST, secret detection, dependency scanning templates), govern (`privacy-guard`), package (`mcp-server`: darwin arm64 + x64 binaries), release (`v*` tags: `publish-packages` to the generic registry, `release` with notes from that version's `CHANGELOG.md` section). Privacy guard: logic in `src/lib/guard.ts` (tested), command `scripts/privacy-guard.ts` (`bun run privacy`, `--all`, `--hash "value"`); invented test values go in `.privacy-allow`; real private words only as SHA-256 hashes in the `PRIVACY_WATCH` CI variable. It prints values redacted because job logs are public.
 
+- GitLab Duo (`.gitlab/duo/`): `agent-config.yml` (where flows run: Bun image, cached `node_modules`), `mr-review-instructions.yaml` (Voidcat rules for Duo Code Review), `flows/*.yml` = source copies of the five custom flows (Triage, Privacy Guard, Pipeline Doctor, Health Reporter, Release); the copies that run live in the AI Catalog, so edit both. `AGENTS.md` = rules every agent reads.
+
 Commands: `bun run tauri dev`, `bun run build:mcp`, `bun run typecheck`, `bun run lint`, `bun run test`, `bun run build`, `bun run privacy`. Rust via `~/.cargo/bin`.

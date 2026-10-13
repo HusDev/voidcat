@@ -2,6 +2,8 @@
 
 Each version's section becomes its GitLab release notes.
 
+## Unreleased
+
 ## 0.1.0
 
 First version, built for the GitLab Transcend Hackathon.
