@@ -1,8 +1,31 @@
-# Checks the interface on every push and merge request.
-stages: [verify]
+# Voidcat's pipeline: verify → secure → govern → package → release.
+# Runs on merge requests, on branches without an open merge request, and on version tags.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+stages: [verify, secure, govern, package, release]
+
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+  - template: Jobs/Dependency-Scanning.v2.gitlab-ci.yml
+    inputs:
+      stage: secure
 
 default:
   image: oven/bun:1.3
+
+variables:
+  # Run SAST and secret detection in merge request pipelines too, not only on branches.
+  AST_ENABLE_MR_PIPELINES: "true"
+
+# ——— verify ———
 
 verify:
   stage: verify
@@ -10,8 +33,105 @@ verify:
     - bun install --frozen-lockfile
     - bun run typecheck
     - bun run lint
-    - bun run test --passWithNoTests
+    - bun run test
     - bun run build
+  artifacts:
+    paths: [dist/]
+    expire_in: 1 week
+
+rust-test:
+  stage: verify
+  image: rust:1-bookworm
+  needs: [verify]
+  variables:
+    CARGO_HOME: $CI_PROJECT_DIR/.cargo
+  cache:
+    key:
+      files: [src-tauri/Cargo.lock]
+    paths: [.cargo/registry, src-tauri/target]
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y -qq libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev unzip > /dev/null
+    - curl -fsSL https://bun.sh/install | bash
+    - export PATH="$HOME/.bun/bin:$PATH"
+  script:
+    - bun install --frozen-lockfile
+    - bun run build:mcp
+    - cd src-tauri && cargo test --locked
+
+# ——— secure ———
+# SAST and secret detection come from the templates above, which default to a "test" stage; these move them to "secure".
+
+sast:
+  stage: secure
+
+secret_detection:
+  stage: secure
+
+# ——— govern ———
+
+privacy-guard:
+  stage: govern
+  needs: []
+  variables:
+    GIT_DEPTH: "100"
+  before_script:
+    - command -v git > /dev/null || (apt-get update -qq && apt-get install -y -qq git > /dev/null)
+  script:
+    - bun scripts/privacy-guard.ts
+
+# ——— package ———
+
+mcp-server:
+  stage: package
+  needs: [verify]
+  script:
+    - bun install --frozen-lockfile
+    - mkdir -p out
+    - bun build mcp/server.ts --compile --minify --target=bun-darwin-arm64 --outfile out/voidcat-mcp-aarch64-apple-darwin
+    - bun build mcp/server.ts --compile --minify --target=bun-darwin-x64 --outfile out/voidcat-mcp-x86_64-apple-darwin
+    - ls -lh out
+  artifacts:
+    paths: [out/]
+    expire_in: 1 month
+
+# ——— release (version tags only) ———
+
+publish-packages:
+  stage: release
+  image: curlimages/curl:latest
+  needs: [mcp-server]
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  script:
+    - |
+      for f in out/*; do
+        curl --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file "$f" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/voidcat/$CI_COMMIT_TAG/$(basename "$f")"
+      done
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  needs: [publish-packages]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  environment:
+    name: releases
+    url: $CI_PROJECT_URL/-/releases/$CI_COMMIT_TAG
+  script:
+    # The tag's section of CHANGELOG.md becomes the release notes.
+    - awk -v v="${CI_COMMIT_TAG#v}" '/^## /{p = index($0, "## " v) == 1; next} p' CHANGELOG.md > notes.md
+    - test -s notes.md || echo "See CHANGELOG.md." > notes.md
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: Voidcat $CI_COMMIT_TAG
+    description: notes.md
+    assets:
+      links:
+        - name: MCP server for Apple silicon Macs
+          url: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/voidcat/$CI_COMMIT_TAG/voidcat-mcp-aarch64-apple-darwin
+          link_type: package
+        - name: MCP server for Intel Macs
+          url: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/voidcat/$CI_COMMIT_TAG/voidcat-mcp-x86_64-apple-darwin
+          link_type: package

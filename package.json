@@ -8,10 +8,11 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p mcp",
-    "lint": "oxlint src mcp",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p mcp && tsc --noEmit -p scripts",
+    "lint": "oxlint src mcp scripts",
     "test": "vitest run",
-    "build:mcp": "bun build mcp/server.ts --compile --minify --outfile src-tauri/binaries/voidcat-mcp-$(rustc -vV | sed -n 's/host: //p')"
+    "build:mcp": "bun build mcp/server.ts --compile --minify --outfile src-tauri/binaries/voidcat-mcp-$(rustc -vV | sed -n 's/host: //p')",
+    "privacy": "bun scripts/privacy-guard.ts"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",

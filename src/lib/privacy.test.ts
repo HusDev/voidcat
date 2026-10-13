@@ -13,8 +13,8 @@ describe("privacy layer", () => {
 
   it("masks IDs, IBANs, emails and phones by pattern", () => {
     const m = new Masker([], today);
-    const masked = m.mask("NIE X1234567L, DNI 12345678Z, passport B47307758, IBAN ES12 3456 7890 1234 5678 9012, mail ana.ruiz@mail.com, call +34 612 345 678.");
-    expect(masked).not.toMatch(/X1234567L|12345678Z|B47307758|ES12|ana\.ruiz|612/);
+    const masked = m.mask("NIE X1234567L, DNI 12345678Z, passport AB1234567, IBAN ES12 3456 7890 1234 5678 9012, mail ana.ruiz@mail.com, call +34 612 345 678.");
+    expect(masked).not.toMatch(/X1234567L|12345678Z|AB1234567|ES12|ana\.ruiz|612/);
     expect(masked).toContain("[IBAN_1]");
     expect(masked).toContain("[EMAIL_1]");
     expect(masked).toContain("[PHONE_1]");
@@ -44,9 +44,9 @@ describe("privacy layer", () => {
   });
 
   it("unmasks placeholders written without brackets", () => {
-    const m = new Masker([{ label: "Passport number", value: "P4821907" }], today);
-    m.mask("P4821907");
-    expect(m.unmask("Your passport ID_1 is fine.")).toBe("Your passport P4821907 is fine.");
+    const m = new Masker([{ label: "Passport number", value: "P1234567" }], today);
+    m.mask("P1234567");
+    expect(m.unmask("Your passport ID_1 is fine.")).toBe("Your passport P1234567 is fine.");
   });
 
   it("skips generic fact values", () => {

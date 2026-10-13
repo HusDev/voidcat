@@ -51,10 +51,12 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 15. **Me:** a profile built on this Mac from approved facts (identity, residency, home, work & money, education, health), each value with its source document; "Needs you" for conflicting values (your choice is remembered) and missing details; a timeline.
 
 ## Next, in order
-1. **GitLab hackathon work:**
-   - repo public + MIT;
-   - CI stages (verify exists in `.gitlab-ci.yml`) plus GitLab Duo agents and flows for review, security, tests and release;
-   - demo video under 3 min. The project story draft is in the conversation history; ask Hussein.
+1. **GitLab hackathon work** (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):
+   - Phase 1, pipeline stages: verify (+ Rust tests), secure (SAST, secret detection, dependency scanning), govern (`scripts/privacy-guard.ts`), package (MCP binaries for Apple silicon and Intel), release (on `v*` tags: generic packages + GitLab release from `CHANGELOG.md`);
+   - Phase 2, Duo groundwork: `.gitlab/duo/agent-config.yml`, `AGENTS.md`, `.gitlab/duo/mr-review-instructions.yaml`;
+   - Phase 3, foundational flows on (Code Review, Developer, Fix CI/CD Pipeline, Security Review, SAST flows);
+   - Phase 4, custom flows in the AI Catalog (sources in `.gitlab/duo/flows/`): Triage, Privacy Guard, Pipeline Doctor, Health Reporter, Release;
+   - Phase 5, Observability, README automation section, a full run for the demo video (under 3 min, invented data only).
 2. **OpenAI privacy-filter model** (Transformers.js/ONNX) to catch names the rules miss.
 3. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
 4. **Polish:**
@@ -80,3 +82,9 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - `keyring` must be v3 with `apple-native` (v4 has a different API).
 - The browser preview (`bun run dev`, http://localhost:1420) has no library (`hasLibrary` false); use it only for layout checks (puppeteer scripts in the Claude scratchpad).
 - The library DB is real user data: never reset it. Migrations add columns in `store.rs` `migrate()`; new tables use `create table if not exists`.
+
+## Security findings reviewed (13 Oct 2026, MR !1)
+- **Zod 4.6.6, CVE-2023-54404 (high):** the advisory covers "through 4.6.5", so 4.6.6 is outside it; the scanner's data lags. Not upgraded to 4.6.7 because it was one day old (supply-chain caution). Recheck later and bump.
+- **glib 0.18.5, RUSTSEC-2024-0429 (medium):** comes from Tauri's Linux (GTK) dependencies; the macOS app doesn't build it, and Tauri pins this version. Not applicable.
+- **6 × "regular expression with non-literal value" (SAST, medium):** false positives. Patterns come from fixed lists or from values passed through `escape()`. Marked with `nosemgrep` comments that give the reason.
+- **Licenses:** 301 npm packages and 502 crates, all permissive or weak copyleft (MPL-2.0 files used unmodified, OFL fonts, an LGPL option where MIT is also offered). Nothing conflicts with MIT. `src-tauri/Cargo.toml` now declares `license = "MIT"`.

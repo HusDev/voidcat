@@ -23,14 +23,14 @@ const MONTHS: Record<string, number> = {
 const MONTH_NAMES = Object.keys(MONTHS).sort((a, b) => b.length - a.length).join("|");
 
 /** Patterns, most specific first, so an IBAN isn't read as a phone number. */
-const PATTERNS: [Kind, RegExp][] = [
+export const PATTERNS: [Kind, RegExp][] = [
   ["EMAIL", /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g],
   ["IBAN", /\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){3,7}(?:[ ]?[A-Z0-9]{1,3})?\b/g],
   ["ID", /\b[XYZ]-?\d{7}-?[A-Z]\b/g], // NIE
   ["ID", /\b\d{8}-?[A-Z]\b/g], // DNI
   ["ID", /\b[A-Z]{1,2}\d{6,9}\b/g], // passport, TIE card and similar
-  ["DATE", new RegExp(`\\b\\d{1,2}(?:\\s+de)?\\s+(?:${MONTH_NAMES})\\.?(?:\\s+de)?\\s+\\d{4}\\b`, "gi")],
-  ["DATE", new RegExp(`\\b(?:${MONTH_NAMES})\\.?\\s+\\d{1,2},?\\s+\\d{4}\\b`, "gi")],
+  ["DATE", new RegExp(`\\b\\d{1,2}(?:\\s+de)?\\s+(?:${MONTH_NAMES})\\.?(?:\\s+de)?\\s+\\d{4}\\b`, "gi")],  // nosemgrep: eslint.detect-non-literal-regexp -- built from the fixed month list
+  ["DATE", new RegExp(`\\b(?:${MONTH_NAMES})\\.?\\s+\\d{1,2},?\\s+\\d{4}\\b`, "gi")],  // nosemgrep: eslint.detect-non-literal-regexp -- built from the fixed month list
   ["DATE", /\b\d{4}-\d{2}-\d{2}\b/g],
   ["DATE", /\b\d{1,2}[/.-]\d{1,2}[/.-]\d{4}\b/g],
   ["PHONE", /(?:\+\d{1,3}[ .-]?)?\(?\d{2,4}\)?(?:[ .-]?\d{2,4}){2,4}\b/g],
@@ -91,12 +91,12 @@ export function variants(value: string, kind: Kind): RegExp[] {
       value.match(new RegExp(`(?:^|,\\s*)${name}${tail}`, "u"));
     if (m && m[1].length >= 3) {
       const street = m[1].split(/\s+/).map(escape).join("\\s+");
-      out.push(new RegExp(`(?:(?:${STREET_TYPES})\\s*(?:de\\s+|del\\s+|d'|de la\\s+)?)?${street}${tail.replace("(\\d{1,4})", m[2])}`, "giu"));
+      out.push(new RegExp(`(?:(?:${STREET_TYPES})\\s*(?:de\\s+|del\\s+|d'|de la\\s+)?)?${street}${tail.replace("(\\d{1,4})", m[2])}`, "giu"));  // nosemgrep: eslint.detect-non-literal-regexp -- street words are escaped
     }
   }
   if (kind === "PERSON") {
     const words = value.trim().split(/\s+/);
-    if (words.length >= 3) out.push(new RegExp(`${escape(words[0])}\\s+${escape(words[1])}`, "giu"));
+    if (words.length >= 3) out.push(new RegExp(`${escape(words[0])}\\s+${escape(words[1])}`, "giu"));  // nosemgrep: eslint.detect-non-literal-regexp -- name words are escaped
   }
   return out;
 }
@@ -136,7 +136,7 @@ export class Masker {
       const value = f.value.trim();
       const kind = kindOfLabel(f.label);
       if (worthMasking(value, kind) && !seen.has(value.toLowerCase())) {
-        this.known.push({ value, kind, re: new RegExp(escape(value), "giu"), variant: false });
+        this.known.push({ value, kind, re: new RegExp(escape(value), "giu"), variant: false });  // nosemgrep: eslint.detect-non-literal-regexp -- value is escaped
         for (const re of variants(value, kind)) this.known.push({ value, kind, re, variant: true });
         seen.add(value.toLowerCase());
       }
