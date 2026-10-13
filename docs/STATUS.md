@@ -82,3 +82,9 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - `keyring` must be v3 with `apple-native` (v4 has a different API).
 - The browser preview (`bun run dev`, http://localhost:1420) has no library (`hasLibrary` false); use it only for layout checks (puppeteer scripts in the Claude scratchpad).
 - The library DB is real user data: never reset it. Migrations add columns in `store.rs` `migrate()`; new tables use `create table if not exists`.
+
+## Security findings reviewed (13 Oct 2026, MR !1)
+- **Zod 4.6.6, CVE-2023-54404 (high):** the advisory covers "through 4.6.5", so 4.6.6 is outside it; the scanner's data lags. Not upgraded to 4.6.7 because it was one day old (supply-chain caution). Recheck later and bump.
+- **glib 0.18.5, RUSTSEC-2024-0429 (medium):** comes from Tauri's Linux (GTK) dependencies; the macOS app doesn't build it, and Tauri pins this version. Not applicable.
+- **6 × "regular expression with non-literal value" (SAST, medium):** false positives. Patterns come from fixed lists or from values passed through `escape()`. Marked with `nosemgrep` comments that give the reason.
+- **Licenses:** 301 npm packages and 502 crates, all permissive or weak copyleft (MPL-2.0 files used unmodified, OFL fonts, an LGPL option where MIT is also offered). Nothing conflicts with MIT. `src-tauri/Cargo.toml` now declares `license = "MIT"`.
