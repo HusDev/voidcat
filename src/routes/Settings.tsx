@@ -1,7 +1,7 @@
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { BellRing, Check, EyeOff, Monitor, Moon, ScanFace, Sun } from "lucide-react";
+import { Archive, BellRing, Check, Copy, EyeOff, KeyRound, LoaderCircle, Monitor, Moon, ScanFace, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { hasLibrary } from "../lib/library";
+import { exportEverything, hasLibrary, recoveryCode } from "../lib/library";
 import { MODEL_SIZE, setNameCheck, useNameCheck } from "../lib/nameCheck";
 import { type Theme, useTheme } from "../lib/theme";
 import { useVeil } from "../lib/veil";
@@ -51,6 +51,97 @@ function useOpenAtLogin() {
     setOn(await isEnabled());
   };
   return [on, toggle] as const;
+}
+
+/** Your data: one zip of every document, and the recovery key that opens the library without the Keychain. */
+function YourData() {
+  const [exporting, setExporting] = useState(false);
+  const [exported, setExported] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const exportAll = async () => {
+    setExporting(true);
+    setExported(null);
+    try {
+      const n = await exportEverything();
+      if (n !== null) setExported(`Saved ${n} document${n === 1 ? "" : "s"}. The zip isn't encrypted: keep it somewhere safe.`);
+    } catch (e) {
+      setExported(`Couldn't export: ${String(e)}`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <section aria-labelledby="your-data" className="flex flex-col gap-3">
+      <h2 id="your-data" className="m-0 text-[15px] font-semibold">
+        Your data
+      </h2>
+      <div className="flex flex-col gap-3 rounded-xl border border-line bg-card px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <Archive aria-hidden className="size-4.5 shrink-0 text-ink-2" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-[14px] font-semibold">Export everything</span>
+            <span className="text-[12.5px] text-ink-2">All your documents as one zip, sorted into their folders. A backup you control.</span>
+          </span>
+          <button
+            type="button"
+            disabled={!hasLibrary || exporting}
+            onClick={exportAll}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-[13px] font-semibold hover:border-ink-2 disabled:opacity-40"
+          >
+            {exporting && <LoaderCircle aria-hidden className="size-3.5 animate-spin" />}
+            Export…
+          </button>
+        </div>
+        {exported && <p className="m-0 pl-7.5 text-[12.5px] text-ink-2">{exported}</p>}
+      </div>
+      <div className="flex flex-col gap-3 rounded-xl border border-line bg-card px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <KeyRound aria-hidden className="size-4.5 shrink-0 text-ink-2" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-[14px] font-semibold">Recovery key</span>
+            <span className="text-[12.5px] text-ink-2">
+              Your library is encrypted with a key in this Mac's Keychain. If that's ever lost (a new Mac, a reset Keychain), this key is the only way back in.
+            </span>
+          </span>
+          <button
+            type="button"
+            disabled={!hasLibrary}
+            onClick={async () => setCode(code ? null : await recoveryCode())}
+            className="shrink-0 rounded-lg border border-line-strong px-3 py-1.5 text-[13px] font-semibold hover:border-ink-2 disabled:opacity-40"
+          >
+            {code ? "Hide" : "Show"}
+          </button>
+        </div>
+        {code && (
+          <div className="flex flex-col gap-2 pl-7.5">
+            <p className="m-0 select-all break-all rounded-lg bg-ground px-3 py-2.5 font-mono text-[14px] leading-relaxed tracking-wide">{code}</p>
+            <div className="flex flex-wrap items-center gap-3 text-[12.5px] text-ink-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(code);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  } catch {
+                    /* the key is selectable */
+                  }
+                }}
+                className="flex items-center gap-1.5 font-semibold text-ink hover:underline"
+              >
+                {copied ? <Check aria-hidden className="size-3.5" /> : <Copy aria-hidden className="size-3.5" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+              <span>Write it down or keep it in your password manager. Anyone with it and your library folder can read your documents.</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
 
 export function Settings() {
@@ -149,6 +240,8 @@ export function Settings() {
           </button>
         </div>
       </section>
+
+      <YourData />
 
       <section aria-labelledby="reminders" className="flex flex-col gap-3">
         <h2 id="reminders" className="m-0 text-[15px] font-semibold">

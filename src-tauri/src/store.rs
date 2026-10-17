@@ -407,6 +407,37 @@ impl Store {
         Ok(())
     }
 
+    /// Whether `vault` opens the library in `dir` (a recovery key typed in), without changing anything.
+    pub fn opens(dir: &Path, vault: &crate::vault::Vault) -> bool {
+        let path = dir.join(crate::legacy::DB);
+        crate::vault::is_encrypted_db(&path) && open_encrypted(&path, &vault.db_key).is_ok()
+    }
+
+    pub fn recovery_code(&self) -> String {
+        self.vault.recovery_code()
+    }
+
+    /// Every document decrypted, named "Area/Folder/file name" (or "Not filed/…"), for one backup zip.
+    pub fn export_all(&self) -> Result<Vec<(String, Vec<u8>)>, String> {
+        let docs: Vec<(String, String)> = {
+            let db = self.db.lock().unwrap();
+            let mut stmt = db
+                .prepare(
+                    "select coalesce(f.area || '/' || f.name, 'Not filed') || '/' || d.file_name, d.stored_path
+                     from documents d left join folders f on f.id = d.folder_id order by 1",
+                )
+                .map_err(|e| e.to_string())?;
+            let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(|e| e.to_string())?;
+            rows.collect::<Result<_, _>>().map_err(|e| e.to_string())?
+        };
+        docs.into_iter()
+            .map(|(name, path)| {
+                let bytes = fs::read(&path).map_err(|e| format!("{name} could not be read: {e}"))?;
+                Ok((name.replace(['\\', ':'], " "), self.vault.decrypt(bytes)?))
+            })
+            .collect()
+    }
+
     /// A document's file decrypted into the library's "opened" folder, for opening in another app.
     pub fn plain_copy(&self, id: &str) -> Result<PathBuf, String> {
         let (name, bytes) = self.contents_of(&[id.to_string()])?.remove(0);
@@ -1076,6 +1107,22 @@ mod tests {
         assert!(store.search("renta", false).unwrap().is_empty());
         assert_eq!(store.stats().unwrap().documents, 0);
         let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn exports_everything_and_checks_recovery_keys() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let vault = crate::vault::Vault::from_master(&[6; 32]);
+        let code = vault.recovery_code();
+        let store = Store::open(&dir, vault).unwrap();
+        let src = dir.join("note.txt");
+        fs::write(&src, b"invented note").unwrap();
+        store.import(vec![src.to_string_lossy().into()]);
+        let all = store.export_all().unwrap();
+        assert_eq!(all, vec![("Not filed/note.txt".to_string(), b"invented note".to_vec())]);
+        drop(store);
+        assert!(Store::opens(&dir, &crate::vault::Vault::from_recovery_code(&code).unwrap()));
+        assert!(!Store::opens(&dir, &crate::vault::Vault::from_master(&[7; 32])));
     }
 
     #[test]

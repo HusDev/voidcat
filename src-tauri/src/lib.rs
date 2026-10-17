@@ -85,6 +85,42 @@ fn unchecked_for_labels(store: State<Store>) -> Result<Vec<String>, String> {
     labels::unchecked(&store.db.lock().unwrap())
 }
 
+/// The library folder, while its key is missing and the recovery key hasn't been entered yet.
+struct Locked(std::path::PathBuf);
+
+#[tauri::command]
+fn library_locked(app: tauri::AppHandle) -> bool {
+    app.try_state::<Locked>().is_some()
+}
+
+/// Opens a locked library with the recovery key: checked against the library first, then saved to the Keychain and
+/// the app restarts normally.
+#[tauri::command]
+fn recover_library(app: tauri::AppHandle, code: String) -> Result<(), String> {
+    let Some(locked) = app.try_state::<Locked>() else { return Ok(()) };
+    let vault = vault::Vault::from_recovery_code(&code)?;
+    if !Store::opens(&locked.0, &vault) {
+        return Err("That recovery key doesn't open this library. Check each group of four and try again.".into());
+    }
+    vault.save()?;
+    app.restart();
+}
+
+/// The recovery key, shown in Settings only when asked for.
+#[tauri::command]
+fn recovery_code(store: State<Store>) -> String {
+    store.recovery_code()
+}
+
+/// Every document, decrypted, in one .zip sorted into its folders.
+#[tauri::command]
+fn export_all(store: State<Store>, path: String) -> Result<usize, String> {
+    let all = store.export_all()?;
+    let count = all.len();
+    bundle::write(&path, all)?;
+    Ok(count)
+}
+
 /// Saves documents as one .zip at the path the user chose in the save dialog.
 #[tauri::command]
 fn save_zip(store: State<Store>, path: String, ids: Vec<String>) -> Result<(), String> {
@@ -417,7 +453,12 @@ pub fn run() {
             };
             let vault = match vault::Vault::load(&dir.join(legacy::DB)) {
                 Ok(v) => v,
-                Err(e) => {
+                // The key is gone but the library is there: the window opens on "Enter your recovery key".
+                Err(vault::Load::Missing) => {
+                    app.manage(Locked(dir));
+                    return Ok(());
+                }
+                Err(vault::Load::Failed(e)) => {
                     // Without the key nothing can be opened: say why in a window instead of quietly failing.
                     use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
                     app.dialog().message(e).title("Voidcat can't open your library").kind(MessageDialogKind::Error).blocking_show();
@@ -434,6 +475,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            library_locked,
+            recover_library,
+            recovery_code,
+            export_all,
             import_files,
             list_documents,
             library_stats,

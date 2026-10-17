@@ -57,6 +57,20 @@ export async function downloadZip(name: string, ids: string[]) {
   return true;
 }
 
+/** Every document as one zip, sorted into Area/Folder, at a place the user picks. Returns how many, or null if cancelled. */
+export async function exportEverything() {
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const path = await save({ defaultPath: `Voidcat documents ${new Date().toISOString().slice(0, 10)}.zip`, filters: [{ name: "Zip archive", extensions: ["zip"] }] });
+  if (!path) return null;
+  return invoke<number>("export_all", { path });
+}
+
+/** True when the library's key is missing from the Keychain and only the recovery key can open it. */
+export const libraryLocked = () => (hasLibrary ? invoke<boolean>("library_locked") : Promise.resolve(false));
+/** Opens a locked library with the recovery key; the app restarts when it works. */
+export const recoverLibrary = (code: string) => invoke<void>("recover_library", { code });
+export const recoveryCode = () => invoke<string>("recovery_code");
+
 /** Moves a folder and its documents to another area; returns the folder they're in now (a namesake there absorbs it). */
 export const moveFolder = (id: string, area: string) => invoke<string>("move_folder", { id, area });
 
