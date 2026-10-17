@@ -48,6 +48,20 @@ Answer from the documents. If they don't contain the answer, say so. Be concise 
 
 export type LocalChunk = { text: string } | { thinking: string } | { call: { name: string; input: unknown } };
 
+const thinkers = new Map<string, Promise<boolean>>();
+/** Whether a model on this Mac can think (Ollama lists "thinking" among its capabilities); asked once per model. */
+function canThink(model: string) {
+  let known = thinkers.get(model);
+  if (!known) {
+    known = fetch(`${OLLAMA}/api/show`, { method: "POST", body: JSON.stringify({ model }) })
+      .then((r) => r.json() as Promise<{ capabilities?: string[] }>)
+      .then((d) => !!d.capabilities?.includes("thinking"))
+      .catch(() => false);
+    thinkers.set(model, known);
+  }
+  return known;
+}
+
 /** Streams an answer from a model on this Mac (text, and any tool call). Nothing leaves the computer, so the messages are not masked. */
 export async function* askLocalModel(model: string, messages: Turn[]): AsyncGenerator<LocalChunk> {
   const res = await fetch(`${OLLAMA}/api/chat`, {
@@ -56,7 +70,9 @@ export async function* askLocalModel(model: string, messages: Turn[]): AsyncGene
     body: JSON.stringify({
       model,
       stream: true,
-      think: false,
+      // A thinking model gets to think, and Ollama streams the reasoning apart from the answer so it shows live in
+      // the thinking box. Asked not to, some (qwen3) think anyway inside the answer, marked only by a closing </think>.
+      think: await canThink(model),
       options: { num_ctx: 16384 },
       tools: ollamaTools,
       messages: [{ role: "system", content: `${LOCAL_SYSTEM}\n${todayLine()}\n${TOOLS_HELP}` }, ...messages],
