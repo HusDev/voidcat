@@ -1,6 +1,6 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Download, Eye, FileText, FolderInput, FolderSync, LoaderCircle, Search, Sparkles, Trash2, Upload } from "lucide-react";
+import { Download, Eye, FileText, FolderInput, FolderSync, LoaderCircle, Pencil, Search, Sparkles, Trash2, Upload } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { FolderPicker } from "../components/FolderPicker";
@@ -28,6 +28,7 @@ import {
   openDocument,
   removeDocument,
   renameDocument,
+  renameFolder,
   searchLibrary,
 } from "../lib/library";
 import { refileDocument } from "../lib/extract";
@@ -78,6 +79,7 @@ export function Library() {
   const [params] = useSearchParams();
   const folderId = params.get("folder");
   const folder = folders.find((f) => f.id === folderId);
+  const [renamingFolder, setRenamingFolder] = useState(false);
   const progress = useProgress();
   const labels = useLabels();
   const veil = useVeil();
@@ -198,7 +200,37 @@ export function Library() {
               <Link to="/" className="text-ink-2 no-underline hover:text-ink">
                 Library
               </Link>{" "}
-              <span className="text-ink-2">›</span> {folder.area} › <Private>{folder.name}</Private>
+              <span className="text-ink-2">›</span> {folder.area} ›{" "}
+              {renamingFolder ? (
+                <span className="inline-flex w-72 align-middle">
+                  <RenameInput
+                    id={`rename-folder-view-${folder.id}`}
+                    value={folder.name}
+                    label="Folder name"
+                    className="h-10 font-display text-[26px] font-light text-ink"
+                    onSave={async (name) => {
+                      await renameFolder(folder.id, name);
+                      announceChange();
+                    }}
+                    onDone={() => setRenamingFolder(false)}
+                  />
+                </span>
+              ) : (
+                <>
+                  <span onDoubleClick={() => setRenamingFolder(true)}>
+                    <Private>{folder.name}</Private>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRenamingFolder(true)}
+                    aria-label={`Rename ${folder.name}`}
+                    title="Rename"
+                    className="ml-1.5 inline-grid size-8 place-items-center rounded-lg align-middle text-ink-2 hover:bg-card hover:text-ink"
+                  >
+                    <Pencil aria-hidden className="size-4" />
+                  </button>
+                </>
+              )}
             </>
           ) : (
             "Library"
@@ -459,7 +491,7 @@ export function Library() {
                     draggable
                     onDragStart={(e) => dragDocument(e, d.id)}
                     title="Drag onto a folder in the sidebar to move it"
-                    className="flex flex-col gap-2.5 rounded-xl border border-line bg-card p-4"
+                    className="group flex flex-col gap-2.5 rounded-xl border border-line bg-card p-4"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="min-w-0 truncate text-xs font-semibold text-ink-2">
@@ -480,8 +512,19 @@ export function Library() {
                         onDone={() => setRenaming(null)}
                       />
                     ) : (
-                      <span className="text-[15px] font-semibold leading-snug" onDoubleClick={() => setRenaming(d.id)} title="Double-click to rename">
-                        <Private>{d.title}</Private>
+                      <span className="flex items-start gap-1.5">
+                        <span className="min-w-0 flex-1 text-[15px] font-semibold leading-snug" onDoubleClick={() => setRenaming(d.id)}>
+                          <Private>{d.title}</Private>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setRenaming(d.id)}
+                          aria-label={`Rename ${d.title}`}
+                          title="Rename"
+                          className="grid size-6 shrink-0 place-items-center rounded-md text-ink-2 opacity-0 hover:bg-ground hover:text-ink focus-visible:opacity-100 group-hover:opacity-100"
+                        >
+                          <Pencil aria-hidden className="size-3.5" />
+                        </button>
                       </span>
                     )}
 

@@ -14,7 +14,7 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - Documents are filed as **Area › Folder**, for example Home › Lease or Identity › Passport.
 - If Voidcat isn't sure where a document goes, it waits in the **to file** strip at the top of the [Library](#/) with a suggestion: File here, Create and file, or pick another folder.
 - The sidebar shows your folders like Finder. Drag a document onto a folder to move it. Drag a folder onto an area to move the whole folder.
-- Rename: double-click a folder or a document's name, or right-click it.
+- **Rename**: hover a folder or document (in the sidebar or on its card) and click the **pencil**; the name becomes a field right there. Enter saves, Esc cancels. An open folder has a pencil next to its title. Double-click or right-click → Rename work too.
 - **Re-file** on a document card asks the local model again where it belongs.
 - A folder's view has **Download zip** to save all its documents at once.
 

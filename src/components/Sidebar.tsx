@@ -161,7 +161,7 @@ function Folders() {
                         await fileInFolder(id, f.area, f.name);
                         toggle(`folder:${f.id}`, true);
                       })}
-                      className={`flex items-center rounded-md pl-3 pr-2 text-[13.5px] ${
+                      className={`group flex items-center rounded-md pl-3 pr-2 text-[13.5px] ${
                         over === `folder:${f.id}` ? "bg-void/30 text-white ring-1 ring-void" : current === f.id ? "bg-rail-2 text-white" : "text-rail-text hover:text-white"
                       }`}
                     >
@@ -216,8 +216,11 @@ function Folders() {
                         <span className="min-w-0 flex-1 truncate">
                           <Private>{f.name}</Private>
                         </span>
-                        <span className="text-xs tabular-nums text-rail-faint">{f.documents}</span>
+                        <span className="text-xs tabular-nums text-rail-faint group-hover:hidden group-focus-within:hidden">{f.documents}</span>
                       </Link>
+                      )}
+                      {renaming !== `folder:${f.id}` && (
+                        <RenamePencil label={`Rename ${f.name}`} onClick={() => setRenaming(`folder:${f.id}`)} />
                       )}
                     </div>
                     {folderOpen &&
@@ -238,21 +241,23 @@ function Folders() {
                             />
                           </span>
                         ) : (
-                          <button
-                            key={d.id}
-                            type="button"
-                            draggable
-                            onDragStart={(e) => dragDocument(e, d.id)}
-                            onClick={() => openDocument(d.id)}
-                            onContextMenu={(e) => openMenu(e, `doc:${d.id}`)}
-                            title={`Open ${d.fileName}`}
-                            className="flex items-center gap-2 rounded-md py-1 pl-11 pr-2 text-left text-[12.5px] text-rail-mute hover:bg-rail-2 hover:text-white"
-                          >
-                            <FileText aria-hidden className="size-3.5 shrink-0 opacity-70" />
-                            <span className="min-w-0 flex-1 truncate">
-                              <Private>{d.title}</Private>
-                            </span>
-                          </button>
+                          <div key={d.id} className="group flex items-center rounded-md pr-2 text-rail-mute hover:bg-rail-2 hover:text-white">
+                            <button
+                              type="button"
+                              draggable
+                              onDragStart={(e) => dragDocument(e, d.id)}
+                              onClick={() => openDocument(d.id)}
+                              onContextMenu={(e) => openMenu(e, `doc:${d.id}`)}
+                              title={`Open ${d.fileName}`}
+                              className="flex min-w-0 flex-1 items-center gap-2 py-1 pl-11 text-left text-[12.5px] text-inherit"
+                            >
+                              <FileText aria-hidden className="size-3.5 shrink-0 opacity-70" />
+                              <span className="min-w-0 flex-1 truncate">
+                                <Private>{d.title}</Private>
+                              </span>
+                            </button>
+                            <RenamePencil label={`Rename ${d.title}`} onClick={() => setRenaming(`doc:${d.id}`)} />
+                          </div>
                         ),
                       )}
                     {folderOpen && !docs.length && <span className="py-1 pl-11 text-[12px] text-rail-faint">Empty</span>}
@@ -268,6 +273,21 @@ function Folders() {
 }
 
 const item = "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] text-rail-text hover:bg-rail-2 hover:text-white";
+
+/** The pencil on a tree row: shows on hover or keyboard focus, and turns the name into a field in place. */
+function RenamePencil({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title="Rename"
+      className="grid size-5 shrink-0 place-items-center rounded text-rail-faint opacity-0 hover:bg-white/10 hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+    >
+      <Pencil aria-hidden className="size-3" />
+    </button>
+  );
+}
 
 /** What you can do to a folder or a document in the tree, opened with a right-click. */
 function TreeMenu({
