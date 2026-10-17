@@ -67,11 +67,11 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - Phase 5, Observability, README automation section, a full run for the demo video (under 3 min, invented data only).
    - **State on 17 Oct 2026:** phases 1–2 merged and green. Only the Triage custom flow is in the AI Catalog and enabled; Privacy Guard, Pipeline Doctor, Health Reporter and Release still need pasting in (AI › Flows › New flow, sources in `.gitlab/duo/flows/`) and their triggers switching on (Triage's "issue created" trigger didn't fire either). No flow session had ever succeeded: the runtime image lacked `curl` for downloading duo-cli (fixed in `agent-config.yml`, which is read from `main`). Observability is a group setting, switched on in the UI. Issue #3 (Rename button in the folder view) is the small real task for the full loop: Triage → Developer flow → MR → Code Review → merge → tag `v0.1.0` → release.
    - **Demo video:** `bun run demo` opens an empty library in `~/Library/Application Support/dev.hus.voidcat-demo/` (`VOIDCAT_DIR`); drop in `demo/documents/` (all invented). See `demo/README.md`.
-2. **OpenAI privacy-filter model** (Transformers.js/ONNX) to catch names the rules miss.
+2. (done 17 Oct) **OpenAI privacy-filter model**: Settings → "Catch names the rules miss"; not in the MCP server.
 3. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
 4. **Polish:**
    - a Rename-folder button in the folder view;
-   - background reminders when the app is closed;
+   - (done 17 Oct) reminders when the window is closed: menu bar cat, Open at login;
    - (done 17 Oct) `docType` description now says "never a folder, area or person name"; filing no longer shows folders in the first step anyway.
 
 ## How Hussein likes to work

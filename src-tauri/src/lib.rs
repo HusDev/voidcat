@@ -387,7 +387,17 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
+        // Closing the window hides it: Voidcat keeps running in the menu bar so calendar reminders still arrive.
+        // ⌘Q or the menu bar's Quit really quits.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
         .setup(|app| {
+            menu_bar(app)?;
             // VOIDCAT_DIR opens another library (a demo with invented documents, say) and leaves the real one and
             // other apps' settings alone.
             let dir = match std::env::var_os("VOIDCAT_DIR") {
@@ -472,6 +482,41 @@ pub fn run() {
             profile_choices,
             choose_profile_value
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Voidcat");
+        .build(tauri::generate_context!())
+        .expect("error while building Voidcat")
+        .run(|app, event| {
+            // Clicking the Dock icon brings the hidden window back.
+            if let tauri::RunEvent::Reopen { .. } = event {
+                show_window(app);
+            }
+        });
+}
+
+fn show_window(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
+}
+
+/// The cat in the menu bar: open the window again, or quit for real.
+fn menu_bar(app: &tauri::App) -> tauri::Result<()> {
+    use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+    use tauri::tray::TrayIconBuilder;
+    let open = MenuItem::with_id(app, "open", "Open Voidcat", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit Voidcat", true, Some("CmdOrCtrl+Q"))?;
+    let menu = Menu::with_items(app, &[&open, &PredefinedMenuItem::separator(app)?, &quit])?;
+    TrayIconBuilder::with_id("voidcat")
+        .icon(tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?)
+        .icon_as_template(true)
+        .tooltip("Voidcat")
+        .menu(&menu)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "open" => show_window(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .build(app)?;
+    Ok(())
 }

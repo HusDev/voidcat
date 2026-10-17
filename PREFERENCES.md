@@ -114,3 +114,6 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 17 Oct 2026 — Chose white cat with gold eyes (M1, his words: "white with the yellow eye"); applied to the app tokens, the sidebar dot and the app icon.
 - 17 Oct 2026 — Voidcat is the final name (his words: "Voidcat is the final name").
 - 17 Oct 2026 — Hide private details also hides nationality, places, sex and his first name on screen ("do both"); what the AI receives is unchanged.
+- 17 Oct 2026 — Zod stays on 4.6.7 (upgraded at 5 days old, not the planned 14); his words: "no we don't wait". Remaining hackathon tasks are to be finished today; GitLab UI, Google Cloud, video, Devpost form and SCI write-up are his, later.
+- 17 Oct 2026 — Reminders when the window is closed: closing hides it, a white-cat icon in the menu bar opens it again or quits (⌘Q still quits); Settings → Reminders → "Open Voidcat when you log in" (off by default). The window's timers keep running while hidden.
+- 17 Oct 2026 — "Catch names the rules miss" (Settings → Privacy, off by default; 917 MB download once): OpenAI's privacy-filter model (Apache 2.0) runs on the Mac (WebGPU) and masks extra names, addresses, emails, phones, account numbers before Ask and Opportunities send anything to a cloud model. If it fails, nothing is sent. The MCP server isn't covered (it can't run the model).

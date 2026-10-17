@@ -10,6 +10,20 @@
  */
 
 export type Kind = "PERSON" | "ID" | "DATE" | "ADDRESS" | "EMAIL" | "PHONE" | "IBAN" | "PRIVATE";
+/** A detail the privacy-filter model found in a text. */
+export type Found = { value: string; kind: Kind };
+
+/** The privacy-filter model's labels, as the masker's kinds. */
+export const FOUND_KIND: Record<string, Kind> = {
+  private_person: "PERSON",
+  private_address: "ADDRESS",
+  private_email: "EMAIL",
+  private_phone: "PHONE",
+  account_number: "ID",
+  private_date: "DATE",
+  private_url: "PRIVATE",
+  secret: "PRIVATE",
+};
 
 export type Masked = { token: string; kind: Kind; original: string; note?: string };
 
@@ -144,6 +158,21 @@ export class Masker {
       }
     }
     // Full values first, longest first; short forms only where no full value matched.
+    this.known.sort((a, b) => Number(a.variant) - Number(b.variant) || b.value.length - a.value.length);
+  }
+
+  /**
+   * Adds details the privacy-filter model found in the text (names, addresses… the rules missed). The model already
+   * judged them private, so only very short or already known values are skipped.
+   */
+  learnFound(found: Found[]) {
+    const seen = new Set(this.known.map((k) => k.value.toLowerCase()));
+    for (const f of found) {
+      const value = f.value.trim();
+      if (value.length < 3 || seen.has(value.toLowerCase()) || /^\[[A-Z]+_\d+\]$/.test(value)) continue;
+      this.known.push({ value, kind: f.kind, re: new RegExp(escape(value), "giu"), variant: false });  // nosemgrep: eslint.detect-non-literal-regexp -- value is escaped
+      seen.add(value.toLowerCase());
+    }
     this.known.sort((a, b) => Number(a.variant) - Number(b.variant) || b.value.length - a.value.length);
   }
 

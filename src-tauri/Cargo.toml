@@ -19,7 +19,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -33,6 +33,7 @@ tauri-plugin-notification = "2"
 calamine = { version = "0.36.1", features = ["dates"] }
 chrono = { version = "0.4.45", default-features = false, features = ["std", "alloc"] }
 zip = { version = "8", default-features = false, features = ["deflate"] }
+tauri-plugin-autostart = "2.7.0"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

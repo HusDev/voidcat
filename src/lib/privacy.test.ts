@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HIDDEN, Masker, kindOfLabel, parseDate, relative, screenHider } from "./privacy";
+import { FOUND_KIND, HIDDEN, Masker, kindOfLabel, parseDate, relative, screenHider } from "./privacy";
 
 /** The fastest of three runs, in ms: a busy machine only makes runs slower, while a slow pattern is slow every time. */
 function fastest(run: () => unknown) {
@@ -143,5 +143,20 @@ describe("screenHider", () => {
   it("hides sex after its label, and leaves other words alone", () => {
     expect(hide("**Sex:** F")).toBe(`**Sex:** ${HIDDEN}`);
     expect(hide("Fees for Nordbyte, 14/03/1992, [PERSON_1]")).toBe("Fees for Nordbyte, 14/03/1992, [PERSON_1]");
+  });
+});
+
+describe("learnFound", () => {
+  it("masks what the privacy-filter model found, next to the approved facts", () => {
+    const m = new Masker([{ label: "Tenant name", value: "Lena Ortiz" }], today);
+    m.learnFound([
+      { value: "Marc Vidal", kind: FOUND_KIND.private_person },
+      { value: "Carrer de la Lluna 8", kind: FOUND_KIND.private_address },
+      { value: "Lena Ortiz", kind: "PERSON" },
+      { value: "Al", kind: "PERSON" },
+    ]);
+    expect(m.mask("Lena Ortiz rents from Marc Vidal, Carrer de la Lluna 8. Al agreed.")).toBe(
+      "[PERSON_1] rents from [PERSON_2], [ADDRESS_1]. Al agreed.",
+    );
   });
 });

@@ -2,7 +2,8 @@ import { type Turn, askCloud } from "./cloud";
 import { type Document, type Fact, type Hit, documentPages, getSecret, listDocuments, listFacts, searchLibrary } from "./library";
 import { type AskModel, askLocalModel } from "./models";
 import { contactFacts, listContacts } from "./people";
-import { Masker } from "./privacy";
+import { detector } from "./nameCheck";
+import { type Found, Masker } from "./privacy";
 import { BUNDLE, type Bundle, type CatalogEntry, catalogLines, resolveBundle } from "./tools";
 
 /** How Ask builds a question's context, sends it, and streams the answer back. Shared by Ask and a document's own chat. */
@@ -62,7 +63,7 @@ export const hiddenIn = (sent: string) => new Set(sent.match(new RegExp(PLACEHOL
  * The question with its context, as one message (real values) and its masked copy: the approved facts and the pages
  * that best match, from the whole library or only from what you chose with @.
  */
-export async function build(question: string, masker: Masker, scope?: Mention[], extra?: string) {
+export async function build(question: string, masker: Masker, scope?: Mention[], extra?: string, detect?: (text: string) => Promise<Found[]>) {
   const [facts, hits, docs] = await Promise.all([listFacts("approved"), searchLibrary(question, true), listDocuments()]);
   // The masker knows every fact and contact, even outside the scope, so nothing private slips through.
   masker.learn([...facts, ...contactFacts(await listContacts())]);
@@ -94,6 +95,14 @@ export async function build(question: string, masker: Masker, scope?: Mention[],
   ]
     .filter(Boolean)
     .join("\n\n");
+  // For a cloud model with the name check on: the privacy-filter model reads the text first, and what it finds is masked too.
+  if (detect) {
+    try {
+      masker.learnFound(await detect(body));
+    } catch (err) {
+      throw new Error(`The name check couldn't read this question (${err instanceof Error ? err.message : String(err)}). Nothing was sent. Try again, or turn off "Catch names the rules miss" in Settings.`);
+    }
+  }
   const masked = masker.mask(body);
   const notes = masker.notes();
   return { plain: body, masked: notes.length ? `${masked}\n\nNotes on dates:\n${notes.join("\n")}` : masked, sources: top, catalog };
@@ -101,8 +110,14 @@ export async function build(question: string, masker: Masker, scope?: Mention[],
 
 /** A new exchange for a question, waiting for review (cloud with private details) or to be sent. */
 export async function prepare(question: string, model: AskModel, masker: Masker, scope?: Mention[], extra?: string): Promise<Exchange> {
-  const built = await build(question, masker, scope, extra);
   const local = model.provider === "local";
+  let built: Awaited<ReturnType<typeof build>>;
+  try {
+    built = await build(question, masker, scope, extra, local ? undefined : detector());
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    return { id: Date.now(), question, model, scope: scope?.length ? scope : undefined, plain: "", masked: "", sent: "", hidden: 0, sources: [], answer: "", raw: "", state: "failed", error };
+  }
   return {
     id: Date.now(),
     question,
