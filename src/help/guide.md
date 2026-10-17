@@ -94,6 +94,8 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
   2. **Open Ollama**. It stays in the menu bar.
   3. **Download the model** (about 7 GB, once), with a progress bar. Keep Voidcat open until it finishes.
 - Until it's set up, the [Library](#/) shows a "Set up the local model" banner.
+- **Choose the reading model** in [Connected AIs](#/connections) → Local model: qwen3.5:2b (lighter, for 8 GB Macs, less accurate), qwen3.5:9b (recommended) or qwen3.5:27b (most accurate, for 32 GB or more). The card says which ones are too big for this Mac. Choosing one that isn't installed downloads it first. Documents already read stay as they are.
+- For **chat**, the model menu at the top of [Ask](#/ask) lists every model installed in Ollama, plus your cloud model.
 - Cloud models need an OpenRouter key, added in [Connected AIs](#/connections). The key is kept in your Keychain.
 
 ## Settings

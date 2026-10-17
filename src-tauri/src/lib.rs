@@ -92,6 +92,18 @@ fn ollama_installed() -> bool {
     ["/Applications/Ollama.app".into(), home.join("Applications/Ollama.app")].iter().any(|p: &std::path::PathBuf| p.exists())
 }
 
+/// This Mac's memory in GB, so the local model choices can say which ones fit.
+#[tauri::command]
+fn mac_memory_gb() -> u64 {
+    std::process::Command::new("sysctl")
+        .args(["-n", "hw.memsize"])
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse::<u64>().ok())
+        .map(|bytes| bytes / 1_073_741_824)
+        .unwrap_or(16)
+}
+
 #[tauri::command]
 fn open_ollama() -> Result<(), String> {
     std::process::Command::new("open").args(["-a", "Ollama"]).status().map_err(|e| e.to_string())?;
@@ -489,6 +501,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             ollama_installed,
+            mac_memory_gb,
             open_ollama,
             library_locked,
             recover_library,

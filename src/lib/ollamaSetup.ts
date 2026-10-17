@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
-import { LOCAL_MODEL, OLLAMA } from "./extract";
+import { OLLAMA, readingModel } from "./extract";
 import { hasLibrary } from "./library";
 
 /**
@@ -10,26 +10,37 @@ import { hasLibrary } from "./library";
  */
 
 export type OllamaState = "checking" | "missing" | "installed" | "no-model" | "ready";
+export type OllamaStatus = { state: OllamaState; installed: string[] };
 
-export async function ollamaState(): Promise<OllamaState> {
+const same = (a: string, b: string) => a === b || a === `${b}:latest`;
+export const isInstalled = (installed: string[], id: string) => installed.some((n) => same(n, id));
+
+/** Where the setup stands, and which models Ollama already has. "ready" = the reading model is installed. */
+export async function ollamaStatus(): Promise<OllamaStatus> {
   try {
     const res = await fetch(`${OLLAMA}/api/tags`);
     if (res.ok) {
       const { models } = (await res.json()) as { models?: { name: string }[] };
-      return models?.some((m) => m.name === LOCAL_MODEL || m.name === `${LOCAL_MODEL}:latest`) ? "ready" : "no-model";
+      const installed = (models ?? []).map((m) => m.name);
+      return { state: isInstalled(installed, readingModel()) ? "ready" : "no-model", installed };
     }
   } catch {
     /* not running */
   }
-  return hasLibrary && (await invoke<boolean>("ollama_installed")) ? "installed" : "missing";
+  return { state: hasLibrary && (await invoke<boolean>("ollama_installed")) ? "installed" : "missing", installed: [] };
 }
+
+export const ollamaState = async () => (await ollamaStatus()).state;
+
+/** This Mac's memory in GB, to say which models fit. */
+export const macMemory = () => (hasLibrary ? invoke<number>("mac_memory_gb") : Promise.resolve(16));
 
 export const downloadOllama = () => openUrl("https://ollama.com/download");
 export const openOllama = () => invoke<void>("open_ollama");
 
-/** Asks Ollama to download the local model; `progress` gets 0–1 as the files arrive. */
-export async function pullModel(progress: (share: number) => void) {
-  const res = await fetch(`${OLLAMA}/api/pull`, { method: "POST", body: JSON.stringify({ model: LOCAL_MODEL, stream: true }) });
+/** Asks Ollama to download a model (the reading model unless named); `progress` gets 0–1 as the files arrive. */
+export async function pullModel(progress: (share: number) => void, model = readingModel()) {
+  const res = await fetch(`${OLLAMA}/api/pull`, { method: "POST", body: JSON.stringify({ model, stream: true }) });
   if (!res.ok || !res.body) throw new Error(`Ollama couldn't start the download (${res.status}).`);
   const parts = new Map<string, { total: number; completed: number }>();
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -59,29 +70,32 @@ export async function pullModel(progress: (share: number) => void) {
 
 /** The setup state, checked again every few seconds until the model is ready (installing Ollama happens outside). */
 export function useOllamaSetup() {
-  const [state, setState] = useState<OllamaState>("checking");
-  const [share, setShare] = useState<number | null>(null);
+  const [status, setStatus] = useState<OllamaStatus>({ state: "checking", installed: [] });
+  const [pulling, setPulling] = useState<{ model: string; share: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const check = useCallback(() => ollamaState().then(setState), []);
+  const check = useCallback(() => ollamaStatus().then(setStatus), []);
 
   useEffect(() => {
     check();
-    if (state === "ready" || share !== null) return;
+    if (status.state === "ready" || pulling) return;
     const timer = setInterval(check, 3000);
     return () => clearInterval(timer);
-  }, [check, state, share]);
+  }, [check, status.state, pulling]);
 
-  const pull = async () => {
+  /** Downloads `model` (the reading model unless named), then checks again. */
+  const pull = async (model = readingModel()) => {
     setError(null);
-    setShare(0);
+    setPulling({ model, share: 0 });
     try {
-      await pullModel(setShare);
+      await pullModel((share) => setPulling({ model, share }), model);
       await check();
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      return false;
     } finally {
-      setShare(null);
+      setPulling(null);
     }
   };
-  return { state, share, error, pull };
+  return { ...status, share: pulling?.share ?? null, pulling: pulling?.model ?? null, error, pull, check };
 }

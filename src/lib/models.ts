@@ -1,5 +1,5 @@
 import type { Turn } from "./cloud";
-import { LOCAL_MODEL, OLLAMA } from "./extract";
+import { OLLAMA, readingModel } from "./extract";
 import { TOOLS_HELP, ollamaTools, todayLine } from "./tools";
 
 /** Which model answers in Ask: one on this Mac (Ollama) or a cloud model through OpenRouter. */
@@ -35,7 +35,7 @@ export async function listLocalModels(): Promise<LocalModel[] | null> {
     return body.models
       .filter((m) => !m.capabilities || m.capabilities.includes("completion"))
       .map((m) => ({ id: m.name, size: m.details?.parameter_size ?? "" }))
-      .sort((a, b) => (a.id === LOCAL_MODEL ? -1 : b.id === LOCAL_MODEL ? 1 : a.id.localeCompare(b.id)));
+      .sort((a, b) => (a.id === readingModel() ? -1 : b.id === readingModel() ? 1 : a.id.localeCompare(b.id)));
   } catch {
     return null;
   }

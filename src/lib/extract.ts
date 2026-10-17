@@ -10,6 +10,33 @@ import { type Folder, documentPages } from "./library";
 export const OLLAMA = "http://localhost:11434";
 export const LOCAL_MODEL = "qwen3.5:9b";
 
+/** The models that can read and file documents (same family: they see pictures and answer in JSON), lightest first. */
+export const READING_MODELS = [
+  { id: "qwen3.5:2b", size: "2.7 GB", memory: 8, note: "Lighter and faster, for Macs with 8 GB of memory. Files less accurately." },
+  { id: "qwen3.5:9b", size: "6.6 GB", memory: 16, note: "Recommended. Accurate and quick on most Macs." },
+  { id: "qwen3.5:27b", size: "17.5 GB", memory: 32, note: "Most accurate, but slower. For Macs with 32 GB or more." },
+] as const;
+const READING_KEY = "voidcat.readingModel";
+
+/** The model that reads and files documents on this Mac, chosen in Connected AIs (default qwen3.5:9b). */
+export function readingModel(): string {
+  try {
+    const saved = localStorage.getItem(READING_KEY);
+    if (saved && READING_MODELS.some((m) => m.id === saved)) return saved;
+  } catch {
+    /* default */
+  }
+  return LOCAL_MODEL;
+}
+
+export function setReadingModel(id: string) {
+  try {
+    localStorage.setItem(READING_KEY, id);
+  } catch {
+    /* not remembered */
+  }
+}
+
 export const AREAS = ["Identity", "Residency", "Work & money", "Home", "Education", "Health", "Travel", "Other"] as const;
 
 /** What the document is, read without seeing any folder, so existing folders can't pull it into the wrong area. */
@@ -64,7 +91,7 @@ export async function askLocal<T extends z.ZodType>(schema: T, system: string, u
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: LOCAL_MODEL,
+      model: readingModel(),
       stream: false,
       think: false,
       format: z.toJSONSchema(schema),
@@ -169,7 +196,7 @@ export async function papersToBring(pages: string[]): Promise<string[]> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: LOCAL_MODEL,
+      model: readingModel(),
       stream: false,
       think: false,
       format: z.toJSONSchema(Papers),
