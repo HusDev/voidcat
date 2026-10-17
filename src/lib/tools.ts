@@ -20,7 +20,7 @@ export const TOOLS_HELP = `You can put documents together for the user: when the
 
 /** Today's date for the system prompt, so the model can work out ages and how long ago or until something is. */
 export const todayLine = (now = new Date()) =>
-  `Today is ${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}. Use it for ages and for how long ago or until a date is; don't say you don't know today's date.`;
+  `Today is ${now.toLocaleDateString("en-GB", { weekday: "long" })} ${now.getDate()} ${now.toLocaleDateString("en-GB", { month: "long" })} ${now.getFullYear()}. Use it for ages and for how long ago or until a date is; don't say you don't know today's date.`;
 
 export const cloudTools = { [BUNDLE]: tool({ description, inputSchema: BundleInput }) };
 

@@ -28,6 +28,6 @@ describe("tools", () => {
 
 describe("todayLine", () => {
   it("gives the model today's date", () => {
-    expect(todayLine(new Date(2026, 9, 17))).toContain("Today is Saturday, 17 October 2026");
+    expect(todayLine(new Date(2026, 9, 17))).toContain("Today is Saturday 17 October 2026");
   });
 });
