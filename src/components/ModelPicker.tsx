@@ -2,7 +2,7 @@ import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from "@headless
 import { Brain, Check, ChevronDown, Cloud, Cpu, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { type AskModel, type LocalModel, canThink, setThinkFirst, thinkFirst } from "../lib/models";
+import { type AskModel, type LocalModel, alwaysThinks, canThink, setThinkFirst, thinkFirst } from "../lib/models";
 
 const same = (a: AskModel | null, b: AskModel) => a?.provider === b.provider && a.id === b.id;
 
@@ -91,6 +91,13 @@ export function ThinkFirst({ model }: { model: AskModel | null }) {
     if (model?.provider === "local") canThink(model.id).then(setCan);
   }, [model?.provider, model?.id]);
   if (!can) return null;
+  if (model && alwaysThinks(model.id))
+    return (
+      <span title="This model reasons before every answer and can't be told not to; its reasoning shows in the box above the answer." className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[12px] text-ink-2">
+        <Brain aria-hidden className="size-3.5" />
+        Always thinks
+      </span>
+    );
   return (
     <button
       type="button"

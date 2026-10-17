@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scopeIds, splitThinking } from "./ask";
+import { alwaysThinks } from "./models";
 
 const docs = [
   { id: "lease", folderId: "f-home", area: "Home" },
@@ -28,5 +29,12 @@ describe("splitThinking", () => {
     expect(splitThinking("Okay, let me look. </think>\n\nIt expires in 2031.")).toEqual({ thinking: "Okay, let me look.", answer: "It expires in 2031." });
     expect(splitThinking("<think>Still reading")).toEqual({ thinking: "Still reading", answer: "" });
     expect(splitThinking("Plain answer.")).toEqual({ thinking: "", answer: "Plain answer." });
+  });
+});
+
+describe("alwaysThinks", () => {
+  it("knows the models whose thinking can't be turned off", () => {
+    expect(["qwen3:4b", "deepseek-r1:8b", "gpt-oss:20b"].every(alwaysThinks)).toBe(true);
+    expect(["qwen3.5:9b", "qwen3.5:2b", "llama3.2:3b"].some(alwaysThinks)).toBe(false);
   });
 });

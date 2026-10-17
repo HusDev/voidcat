@@ -65,6 +65,12 @@ export function setThinkFirst(on: boolean) {
   }
 }
 
+/**
+ * Models whose thinking can't be turned off: asked not to, they reason anyway inside the answer, with nothing marking
+ * where it ends (qwen3 ignores think: false and /no_think; Ollama says gpt-oss's trace can't be fully disabled).
+ */
+export const alwaysThinks = (model: string) => /^(qwen3(?![.\d])|deepseek-r1|gpt-oss)/i.test(model);
+
 const thinkers = new Map<string, Promise<boolean>>();
 /** Whether a model on this Mac can think (Ollama lists "thinking" among its capabilities); asked once per model. */
 export function canThink(model: string) {
@@ -81,9 +87,8 @@ export function canThink(model: string) {
 
 /** Streams an answer from a model on this Mac (text, and any tool call). Nothing leaves the computer, so the messages are not masked. */
 export async function* askLocalModel(model: string, messages: Turn[]): AsyncGenerator<LocalChunk> {
-  const think = thinkFirst() && (await canThink(model));
-  // Qwen3 (not 3.5) ignores Ollama's think: false; its own switch is "/no_think" at the end of the message.
-  const sent = !think && /^qwen3(?![.\d])/i.test(model) ? messages.map((m, k) => (k === messages.length - 1 && m.role === "user" ? { ...m, content: `${m.content}\n\n/no_think` } : m)) : messages;
+  // Models that think whatever they're told are always asked to, so the reasoning at least lands in the thinking box.
+  const think = (thinkFirst() || alwaysThinks(model)) && (await canThink(model));
   const res = await fetch(`${OLLAMA}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -95,7 +100,7 @@ export async function* askLocalModel(model: string, messages: Turn[]): AsyncGene
       think,
       options: { num_ctx: 16384 },
       tools: ollamaTools,
-      messages: [{ role: "system", content: `${LOCAL_SYSTEM}\n${todayLine()}\n${TOOLS_HELP}` }, ...sent],
+      messages: [{ role: "system", content: `${LOCAL_SYSTEM}\n${todayLine()}\n${TOOLS_HELP}` }, ...messages],
     }),
   });
   if (!res.ok || !res.body) throw new Error(`The local model didn't answer (${res.status}). Is Ollama running?`);
