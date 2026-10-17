@@ -2,10 +2,10 @@ import { AtSign, Check, ChevronRight, Copy, Cpu, FileArchive, FileText, LoaderCi
 import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { type Exchange, PLACEHOLDER } from "../lib/ask";
+import type { Exchange } from "../lib/ask";
 import { downloadZip, openDocument } from "../lib/library";
 import type { Bundle } from "../lib/tools";
-import { Private, useVeil } from "../lib/veil";
+import { PLACEHOLDER, Private, useVeil } from "../lib/veil";
 
 /** A conversation in Ask (or a document's own chat): questions, the review step, answers, sources and zips. */
 
@@ -36,7 +36,7 @@ function Sent({ e, open }: { e: Exchange; open?: boolean }) {
           Answered on this Mac · {e.model.id} · nothing left the computer
         </summary>
         <pre data-selectable className="m-0 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-b-lg bg-code p-3.5 font-mono text-[12px] leading-relaxed text-rail-ink">
-          {veil.on ? <MaskedText text={e.masked} /> : e.plain}
+          {veil.on ? <MaskedText text={veil.hide(e.masked)} /> : e.plain}
         </pre>
       </details>
     );
@@ -183,7 +183,7 @@ export function ChatThread({
             <div className="flex flex-col gap-3">
               {e.answer ? (
                 <div data-selectable className={`md-page leading-relaxed text-ink ${text}`}>
-                  <Markdown remarkPlugins={[remarkGfm]}>{veil.on ? e.raw : e.answer}</Markdown>
+                  <Markdown remarkPlugins={[remarkGfm]}>{veil.on ? veil.hide(e.raw) : e.answer}</Markdown>
                 </div>
               ) : null}
               {e.answer && e.state === "done" && !veil.on ? (

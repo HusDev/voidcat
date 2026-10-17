@@ -39,7 +39,7 @@ Every product, design and working decision Hussein made, with the date. When he 
   - shows **what will be sent** and asks to review only when something private would leave; every answer keeps "What was sent" and its sources.
   - **chat history** in a column on the left, newest message first (opening a chat doesn't move it; a new message does): every conversation is saved on this Mac, you can go back to one and carry on, start a New chat, or delete one (a second click confirms);
   - a **model dropdown** in the header: models on this Mac (Ollama, real values, nothing leaves the computer) or the cloud model (masked). A provider that isn't set up shows as a disabled option saying "add model provider", with a link to Connected AIs.
-- **Hide private details** (his idea, for screen recording): one switch, ⌘⇧H, that shows the AI's placeholders instead of real values everywhere and blurs source pages. Short forms of an address ("Robles 214") must be hidden too.
+- **Hide private details** (his idea, for screen recording): one switch, ⌘⇧H, that shows the AI's placeholders instead of real values everywhere and blurs source pages. Short forms of an address ("Robles 214") must be hidden too. It also hides, **on screen only**, nationality, country, place of birth, issuing place, sex and his first name, shown as [HIDDEN] (17 Oct 2026, seen in a passport answer); the AI still gets those readable because things like visa rules need them.
 - **Calendar** (his idea):
   - every deadline and date becomes a reminder, including appointments such as the empadronamiento, with a "papers to bring" checklist;
   - dates are worked out too: renewal 60 days before expiry, monthly rent days;
@@ -113,3 +113,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 17 Oct 2026 — The purple is out (his words: "i didn't like the purpule color"). Shown blue, ember, gold, white and three black variants; chose white ("white is the option"). Mixes (white cat with gold eyes, or with ember or gold actions) shown; not applied to the app yet.
 - 17 Oct 2026 — Chose white cat with gold eyes (M1, his words: "white with the yellow eye"); applied to the app tokens, the sidebar dot and the app icon.
 - 17 Oct 2026 — Voidcat is the final name (his words: "Voidcat is the final name").
+- 17 Oct 2026 — Hide private details also hides nationality, places, sex and his first name on screen ("do both"); what the AI receives is unchanged.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Masker, kindOfLabel, parseDate, relative } from "./privacy";
+import { HIDDEN, Masker, kindOfLabel, parseDate, relative, screenHider } from "./privacy";
 
 /** The fastest of three runs, in ms: a busy machine only makes runs slower, while a slow pattern is slow every time. */
 function fastest(run: () => unknown) {
@@ -120,5 +120,28 @@ describe("privacy layer", () => {
       expect(fastest(() => m.mask(chunk.repeat(20_000))), chunk).toBeLessThan(200);
     }
     expect(m.mask("write to lucia.prat@mail.com")).toBe("write to [EMAIL_1]");
+  });
+});
+
+describe("screenHider", () => {
+  const facts = [
+    { label: "Nationality", value: "UTOPIAN" },
+    { label: "Place of birth", value: "Port Lumen, Utopia" },
+    { label: "Issuing authority", value: "LUMEN/UTOPIA" },
+    { label: "Date of birth", value: "14/03/1992" },
+    { label: "Employer", value: "Nordbyte" },
+  ];
+  const hide = screenHider(facts, ["Lena Ortiz Brandt"]);
+
+  it("hides nationality, places and your first name, on screen only", () => {
+    expect(hide("**Nationality:** UTOPIAN, born in Port Lumen (Utopia). Hi Lena!")).toBe(
+      `**Nationality:** ${HIDDEN}, born in ${HIDDEN} ${HIDDEN} (${HIDDEN}). Hi ${HIDDEN}!`,
+    );
+    expect(hide("Authority: LUMEN/UTOPIA")).toBe(`Authority: ${HIDDEN}/${HIDDEN}`);
+  });
+
+  it("hides sex after its label, and leaves other words alone", () => {
+    expect(hide("**Sex:** F")).toBe(`**Sex:** ${HIDDEN}`);
+    expect(hide("Fees for Nordbyte, 14/03/1992, [PERSON_1]")).toBe("Fees for Nordbyte, 14/03/1992, [PERSON_1]");
   });
 });

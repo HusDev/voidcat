@@ -1,17 +1,18 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { LIBRARY_CHANGED, listFacts } from "./library";
-import { contactFacts, listContacts } from "./people";
-import { Masker } from "./privacy";
+import { contactFacts, listContacts, ownerNames } from "./people";
+import { HIDDEN, Masker, screenHider } from "./privacy";
 
 /**
  * "Hide private details": a switch for screen recording and screen sharing. While it's on, personal values are shown
- * as the same placeholders the AI sees ([PERSON_1], [ID_2]…), and long free text (source pages) is blurred.
+ * as the same placeholders the AI sees ([PERSON_1], [ID_2]…), details only the screen hides (nationality, places, sex,
+ * your first name) as [HIDDEN], and long free text (source pages) is blurred.
  * Toggle with the eye in the sidebar or ⌘⇧H. Remembered between launches.
  */
 
-type Veil = { on: boolean; toggle: () => void; mask: (text: string) => string };
+type Veil = { on: boolean; toggle: () => void; mask: (text: string) => string; hide: (text: string) => string };
 
-const VeilContext = createContext<Veil>({ on: false, toggle: () => {}, mask: (t) => t });
+const VeilContext = createContext<Veil>({ on: false, toggle: () => {}, mask: (t) => t, hide: (t) => t });
 const KEY = "voidcat.veil";
 
 const read = () => {
@@ -25,11 +26,15 @@ const read = () => {
 export function VeilProvider({ children }: { children: ReactNode }) {
   const [on, setOn] = useState(read);
   const [masker, setMasker] = useState(() => new Masker([]));
+  const [hide, setHide] = useState(() => (t: string) => t);
 
   // One masker for the whole app, built from the approved facts, so a value has the same placeholder on every screen.
   useEffect(() => {
     const refresh = () =>
-      Promise.all([listFacts("approved"), listContacts()]).then(([facts, contacts]) => setMasker(new Masker([...facts, ...contactFacts(contacts)])));
+      Promise.all([listFacts("approved"), listContacts(), ownerNames()]).then(([facts, contacts, owners]) => {
+        setMasker(new Masker([...facts, ...contactFacts(contacts)]));
+        setHide(() => screenHider(facts, owners));
+      });
     refresh();
     window.addEventListener(LIBRARY_CHANGED, refresh);
     return () => window.removeEventListener(LIBRARY_CHANGED, refresh);
@@ -57,13 +62,13 @@ export function VeilProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [toggle]);
 
-  const value = useMemo(() => ({ on, toggle, mask: (t: string) => masker.mask(t) }), [on, toggle, masker]);
+  const value = useMemo(() => ({ on, toggle, mask: (t: string) => hide(masker.mask(t)), hide }), [on, toggle, masker, hide]);
   return <VeilContext.Provider value={value}>{children}</VeilContext.Provider>;
 }
 
 export const useVeil = () => useContext(VeilContext);
 
-const PLACEHOLDER = /(\[(?:PERSON|ID|DATE|ADDRESS|EMAIL|PHONE|IBAN|PRIVATE)_\d+\])/;
+export const PLACEHOLDER = new RegExp(`(\\[(?:PERSON|ID|DATE|ADDRESS|EMAIL|PHONE|IBAN|PRIVATE)_\\d+\\]|${RegExp.escape(HIDDEN)})`);
 
 /** Text with placeholders drawn as cyan chips. */
 export function Placeholders({ text }: { text: string }) {

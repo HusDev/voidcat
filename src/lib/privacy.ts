@@ -207,3 +207,36 @@ export class Masker {
       .map((e) => `${e.token} is ${e.note}.`);
   }
 }
+
+/**
+ * Hide private details, on screen only: values the AI may read (nationality matters for visa rules, a place of birth
+ * for some forms) but a screen recording shouldn't show, plus your own first name, which the masker leaves alone.
+ */
+const SCREEN_ONLY = /national|nacionalidad|citizen|ciudadan|country|pa[ií]s|birth ?place|place of birth|lugar de nacimiento|born in|issuing|authority|autoridad|expedid|expedici/i;
+const SEX = /\b(sex|sexo|gender|g[eé]nero)(\W{0,6})(male|female|masculino|femenino|hombre|mujer|[mfx])\b/giu;
+export const HIDDEN = "[HIDDEN]";
+
+/** "IRAQI" → "IRAQ", "alemana" → "aleman", so the country and the nationality both match. */
+const stem = (w: string) => {
+  const s = w.replace(/(?:ian|ese|ish|an|i|n|a|o)$/i, "");
+  return s.length >= 4 ? s : w;
+};
+
+export function screenHider(facts: KnownFact[], ownNames: string[]): (text: string) => string {
+  const words = new Set<string>();
+  for (const f of facts) {
+    if (!SCREEN_ONLY.test(f.label) || /\d/.test(f.value)) continue;
+    for (const w of f.value.split(/[^\p{L}]+/u)) if (w.length >= 4) words.add(stem(w));
+  }
+  for (const n of ownNames) {
+    const first = n.trim().split(/\s+/)[0] ?? "";
+    if (first.length >= 3) words.add(first);
+  }
+  const alts = [...words].sort((a, b) => b.length - a.length).map(escape);
+  // nosemgrep: eslint.detect-non-literal-regexp -- every word is escaped
+  const re = alts.length ? new RegExp(`(?<![\\p{L}])(?:${alts.join("|")})\\p{L}*`, "giu") : null;
+  return (text) => {
+    const out = text.replace(SEX, (_m, label: string, sep: string) => `${label}${sep}${HIDDEN}`);
+    return re ? out.replace(re, HIDDEN) : out;
+  };
+}
