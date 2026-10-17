@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scopeIds, splitThinking } from "./ask";
+import { mergeFacts, scopeIds, splitThinking } from "./ask";
 import { alwaysThinks } from "./models";
 
 const docs = [
@@ -36,5 +36,15 @@ describe("alwaysThinks", () => {
   it("knows the models whose thinking can't be turned off", () => {
     expect(["qwen3:4b", "deepseek-r1:8b", "gpt-oss:20b"].every(alwaysThinks)).toBe(true);
     expect(["qwen3.5:9b", "qwen3.5:2b", "llama3.2:3b"].some(alwaysThinks)).toBe(false);
+  });
+});
+
+describe("mergeFacts", () => {
+  it("lists the same fact from several documents once", () => {
+    const fact = (label: string, value: string, documentTitle: string, page: number | null) =>
+      ({ id: `${label}${documentTitle}`, documentId: documentTitle, documentTitle, documentMime: null, label, value, page, status: "approved" }) as never;
+    expect(
+      mergeFacts([fact("Full name", "Lena Ortiz", "Passport", 1), fact("Full name", "LENA ORTIZ", "Lease", 2), fact("Surname", "Ortiz", "Passport", 1)]),
+    ).toEqual(["- Full name: Lena Ortiz (Passport, p. 1; Lease, p. 2)", "- Surname: Ortiz (Passport, p. 1)"]);
   });
 });

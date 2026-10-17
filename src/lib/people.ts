@@ -214,6 +214,22 @@ export async function buildProfile(facts: Fact[]): Promise<Profile> {
   };
 }
 
+/**
+ * The profile as lines for a model: the owner's name and details, each value taken from the approved fact it points
+ * at (or the one you chose where documents disagreed). Empty when there's no profile yet.
+ */
+export function aboutYou(profile: Profile | undefined, facts: Fact[], choices: Map<string, string>) {
+  if (!profile) return { name: undefined as string | undefined, lines: [] as string[], rows: [] as { group: Group; label: string; fact: Fact }[] };
+  const byId = new Map(facts.map((f) => [f.id, f]));
+  const rows = profile.fields
+    .map((f) => ({ group: f.group, label: f.label, fact: byId.get(choices.get(f.label.toLowerCase()) ?? f.factId) }))
+    .filter((f): f is { group: Group; label: string; fact: Fact } => !!f.fact);
+  // The model sometimes doesn't say which fact is the owner's name; the profile's own "full name" row then stands in.
+  const name = (profile.ownerFactId ? byId.get(profile.ownerFactId)?.value : undefined) ?? rows.find((r) => /full name|^name$|nombre completo/i.test(r.label))?.fact.value;
+  const lines = [name ? `- Name: ${name}` : "", ...rows.map((r) => `- ${r.group} · ${r.label}: ${r.fact.value}`)].filter(Boolean);
+  return { name, lines, rows };
+}
+
 export async function loadProfile(): Promise<{ profile: Profile; builtAt: string } | null> {
   if (!hasLibrary) return null;
   const row = await invoke<[string, string] | null>("get_profile");

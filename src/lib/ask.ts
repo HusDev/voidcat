@@ -1,7 +1,7 @@
 import { type Turn, askCloud } from "./cloud";
 import { type Document, type Fact, type Hit, documentPages, getSecret, listDocuments, listFacts, searchLibrary } from "./library";
 import { type AskModel, askLocalModel } from "./models";
-import { contactFacts, listContacts } from "./people";
+import { aboutYou, contactFacts, listContacts, loadProfile, profileChoices } from "./people";
 import guide from "../help/guide.md?raw";
 import { detector } from "./nameCheck";
 import { type Found, Masker } from "./privacy";
@@ -75,7 +75,7 @@ export async function build(question: string, masker: Masker, scope?: Mention[],
     const body = `Question: ${question}\n\nThe user is asking how to use the Voidcat app. Answer only from the Voidcat guide below, in a few short steps. Name the exact place in the app and keep its links (like [Settings](#/settings)) so the user can click them. If the guide doesn't cover it, say so.\n\n${guide}`;
     return { plain: body, masked: body, sources: [] as Hit[], catalog: [] as CatalogEntry[] };
   }
-  const [facts, hits, docs] = await Promise.all([listFacts("approved"), searchLibrary(question, true), listDocuments()]);
+  const [facts, hits, docs, saved, choices] = await Promise.all([listFacts("approved"), searchLibrary(question, true), listDocuments(), loadProfile(), profileChoices()]);
   // The masker knows every fact and contact, even outside the scope, so nothing private slips through.
   masker.learn([...facts, ...contactFacts(await listContacts())]);
   const ids = scopeIds(scope, docs);
@@ -95,10 +95,13 @@ export async function build(question: string, masker: Masker, scope?: Mention[],
   const pages = await Promise.all(
     top.map(async (h) => `### ${h.title}, page ${h.page}\n${((await documentPages(h.documentId)).find((p) => p.page === h.page)?.text ?? "").slice(0, PAGE_CHARS)}`),
   );
-  const factLines = facts.filter((f) => !ids || ids.has(f.documentId)).map((f: Fact) => `- ${f.label}: ${f.value} (${f.documentTitle}${f.page ? `, p. ${f.page}` : ""})`);
+  const factLines = mergeFacts(facts.filter((f) => !ids || ids.has(f.documentId)));
+  // Who the user is and their details, already settled on the Me page: the model needn't work it out from every document.
+  const about = aboutYou(saved?.profile, facts, choices).lines;
   const body = [
     `Question: ${question}`,
     extra ?? "",
+    about.length ? `About the user (their profile, already checked; answer questions about them from here first):\n${about.join("\n")}` : "",
     ids ? `The user chose to ask only about: ${inScope.map((d) => d.title).join(", ") || "(nothing)"}. Answer only from these documents.` : "",
     factLines.length ? `Facts the user approved:\n${factLines.join("\n")}` : "",
     pages.length ? `${ids ? "Pages from the chosen documents" : "Matching pages from the user's documents"}:\n\n${pages.join("\n\n")}` : "No document pages matched the question.",
@@ -155,6 +158,20 @@ export function splitThinking(text: string): { thinking: string; answer: string 
   if (end >= 0) return { thinking: text.slice(0, end).replace(/^\s*<think>/, "").trim(), answer: text.slice(end + "</think>".length).trim() };
   if (/^\s*<think>/.test(text)) return { thinking: text.replace(/^\s*<think>/, "").trim(), answer: "" };
   return { thinking: "", answer: text };
+}
+
+/** One line per fact; the same label and value from several documents is one line naming them all. */
+export function mergeFacts(facts: Fact[]) {
+  const lines = new Map<string, { label: string; value: string; where: string[] }>();
+  for (const f of facts) {
+    const key = `${f.label.trim().toLowerCase()}|${f.value.trim().toLowerCase()}`;
+    const where = `${f.documentTitle}${f.page ? `, p. ${f.page}` : ""}`;
+    const line = lines.get(key);
+    if (line) {
+      if (!line.where.includes(where)) line.where.push(where);
+    } else lines.set(key, { label: f.label.trim(), value: f.value.trim(), where: [where] });
+  }
+  return [...lines.values()].map((l) => `- ${l.label}: ${l.value} (${l.where.join("; ")})`);
 }
 
 /** On this Mac, or nothing private in it: no reason to make you confirm before sending. */

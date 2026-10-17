@@ -15,6 +15,7 @@ import {
   loadProfile,
   profileChoices,
   saveProfile,
+  aboutYou,
 } from "../lib/people";
 import { parseDate } from "../lib/privacy";
 import { Private, useVeil } from "../lib/veil";
@@ -124,8 +125,7 @@ export function Me() {
   const profileText = () =>
     [
       "The user is asking about themselves. Their profile, from facts they approved:",
-      shownName ? `- Name: ${shownName}` : "",
-      ...rows.map((r) => `- ${r.group} · ${r.label}: ${r.fact.value}`),
+      ...aboutYou(profile, facts, choices).lines,
       profile?.timeline.length ? "Their timeline:" : "",
       ...(profile?.timeline ?? []).map((t) => `- ${t.when}: ${t.what}`),
       "When asked for a CV, bio, letter or form answers, write it from this profile; leave a clear [placeholder] for anything missing instead of inventing it. A CV or bio never shows salary, ID or passport numbers, unless the user asks for them.",
