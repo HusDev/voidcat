@@ -1,5 +1,5 @@
 import { ArrowUp, AtSign, FileText, Folder as FolderIcon, Library, LifeBuoy, LoaderCircle, X } from "lucide-react";
-import { type RefObject, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { HELP, type Mention } from "../lib/ask";
 import type { Document, Folder } from "../lib/library";
 import { Private } from "../lib/veil";
@@ -45,6 +45,7 @@ export function MentionBox({
   disabled,
   placeholder,
   inputRef,
+  controls,
 }: {
   value: string;
   onChange: (text: string) => void;
@@ -57,6 +58,8 @@ export function MentionBox({
   disabled: boolean;
   placeholder: string;
   inputRef: RefObject<HTMLTextAreaElement | null>;
+  /** Shown in the box's bottom row, left of the send button: the model menu and the thinking switch. */
+  controls?: ReactNode;
 }) {
   const [token, setToken] = useState<{ query: string; start: number } | null>(null);
   const [active, setActive] = useState(0);
@@ -141,7 +144,7 @@ export function MentionBox({
             ))}
           </div>
         )}
-        <div className="flex items-end gap-2">
+        <div className="flex flex-col gap-1">
           <label htmlFor="ask-question" className="sr-only">
             Your question
           </label>
@@ -185,16 +188,20 @@ export function MentionBox({
               }
             }}
             placeholder={placeholder}
-            className="max-h-40 min-h-10 flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] outline-none [field-sizing:content]"
+            className="max-h-40 min-h-10 w-full resize-none bg-transparent px-2.5 py-2 text-[15px] outline-none [field-sizing:content]"
           />
+          <div className="flex items-center gap-1.5">
+          {/* The model menu and the thinking switch, beside the send button. */}
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">{controls}</div>
           <button
             type="submit"
             disabled={!value.trim() || busy || disabled}
             aria-label="Ask"
-            className="grid size-10 place-items-center rounded-xl bg-accent text-on-accent hover:bg-accent-strong disabled:opacity-30"
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-on-accent hover:bg-accent-strong disabled:opacity-30"
           >
             {busy ? <LoaderCircle aria-hidden className="size-5 animate-spin" /> : <ArrowUp aria-hidden className="size-5" />}
           </button>
+          </div>
         </div>
       </form>
       <p className="m-0 px-1 text-[12px] text-ink-2">

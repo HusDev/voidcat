@@ -37,7 +37,8 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 
 ## Ask
 - [Ask](#/ask) answers questions about your documents, for example "When does my residence card expire?".
-- Pick the model at the top: a model on your Mac (nothing leaves the computer) or a cloud model.
+- Pick the model in the chat box, under where you type: a model on your Mac (nothing leaves the computer) or a cloud model. The same menu is in the chat beside a document.
+- **Think first** (next to the model) lets the model reason before answering: better for hard questions, slower to start. Its reasoning shows in a box you can open.
 - With a cloud model, your private details are swapped for placeholders like [PERSON_1] first, and you see exactly what will be sent before it goes.
 - Type **@** to choose what to ask about: one document, a folder, an area, or **@all** for everything. No choice means everything.
 - Type **@help** to ask about using Voidcat itself. Only this guide is sent, never your documents.
@@ -95,7 +96,7 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
   3. **Download the model** (about 7 GB, once), with a progress bar. Keep Voidcat open until it finishes.
 - Until it's set up, the [Library](#/) shows a "Set up the local model" banner.
 - **Choose the reading model** in [Connected AIs](#/connections) → Local model: qwen3.5:2b (lighter, for 8 GB Macs, less accurate), qwen3.5:9b (recommended) or qwen3.5:27b (most accurate, for 32 GB or more). The card says which ones are too big for this Mac. Choosing one that isn't installed downloads it first. Documents already read stay as they are.
-- For **chat**, the model menu at the top of [Ask](#/ask) lists every model installed in Ollama, plus your cloud model.
+- For **chat**, the model menu in the chat box in [Ask](#/ask) lists every model installed in Ollama, plus your cloud model.
 - Cloud models need an OpenRouter key, added in [Connected AIs](#/connections). The key is kept in your Keychain.
 
 ## Settings

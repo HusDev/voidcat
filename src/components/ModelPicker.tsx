@@ -33,12 +33,12 @@ export function ModelPicker({
 
   return (
     <Listbox value={value} onChange={(m) => m && onChange(m)} by={(a, b) => !!a && !!b && a.provider === b.provider && a.id === b.id}>
-      <ListboxButton className="inline-flex max-w-72 items-center gap-1.5 rounded-full bg-card px-2.5 py-1 font-mono text-[12px] text-ink-2 hover:text-ink">
+      <ListboxButton className="inline-flex min-w-0 max-w-64 items-center gap-1.5 rounded-full bg-ground px-2.5 py-1 font-mono text-[12px] text-ink-2 hover:text-ink">
         {value?.provider === "local" ? <Cpu aria-hidden className="size-3.5 shrink-0" /> : <Cloud aria-hidden className="size-3.5 shrink-0" />}
         <span className="truncate">{value?.id ?? "Choose a model"}</span>
         <ChevronDown aria-hidden className="size-3.5 shrink-0" />
       </ListboxButton>
-      <ListboxOptions anchor="bottom start" className="z-20 mt-1 w-72 rounded-xl border border-line bg-card p-1.5 shadow-lg outline-none">
+      <ListboxOptions anchor="top start" className="z-30 mb-1 w-72 rounded-xl border border-line bg-card p-1.5 shadow-lg outline-none">
         <div className={heading}>On this Mac · Ollama</div>
         {local?.length ? (
           local.map((m) => {
@@ -93,7 +93,7 @@ export function ThinkFirst({ model }: { model: AskModel | null }) {
   if (!can) return null;
   if (model && alwaysThinks(model.id))
     return (
-      <span title="This model reasons before every answer and can't be told not to; its reasoning shows in the box above the answer." className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[12px] text-ink-2">
+      <span title="This model reasons before every answer and can't be told not to; its reasoning shows in the box above the answer." className="inline-flex items-center gap-1.5 rounded-full bg-ground px-2.5 py-1 text-[12px] text-ink-2">
         <Brain aria-hidden className="size-3.5" />
         Always thinks
       </span>
@@ -108,7 +108,7 @@ export function ThinkFirst({ model }: { model: AskModel | null }) {
         setOn(!on);
       }}
       title={on ? "Reasons before answering: better answers, slower start" : "Answers straight away: faster, less careful"}
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] ${on ? "bg-accent-soft text-ink" : "bg-card text-ink-2 hover:text-ink"}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] ${on ? "bg-accent-soft text-ink" : "bg-ground text-ink-2 hover:text-ink"}`}
     >
       <Brain aria-hidden className="size-3.5" />
       Think first

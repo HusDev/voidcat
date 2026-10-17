@@ -7,6 +7,7 @@ import { Masker } from "../lib/privacy";
 import { useAskModel } from "../lib/useAskModel";
 import { Private } from "../lib/veil";
 import { ChatThread } from "./ChatThread";
+import { ModelPicker, ThinkFirst } from "./ModelPicker";
 
 /**
  * A chat in a side panel, beside a document or your profile. It works like Ask (same models, review step, tools) but
@@ -43,7 +44,7 @@ export function SideChat({
   const following = useRef(true);
   const input = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
-  const { model, needsSetup } = useAskModel();
+  const { model, choose, local, cloudModel, needsSetup } = useAskModel();
 
   useEffect(() => {
     setThread([]);
@@ -133,7 +134,7 @@ export function SideChat({
             ev.preventDefault();
             ask();
           }}
-          className="flex items-end gap-1.5 rounded-xl border border-line-strong bg-card p-1.5 focus-within:border-ink-2"
+          className="flex flex-col gap-1 rounded-xl border border-line-strong bg-card p-1.5 focus-within:border-ink-2"
         >
           <label htmlFor={`side-question-${resetKey}`} className="sr-only">
             Your question
@@ -151,20 +152,23 @@ export function SideChat({
               }
             }}
             placeholder={placeholder}
-            className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-[14px] outline-none [field-sizing:content]"
+            className="max-h-32 min-h-9 w-full resize-none bg-transparent px-2 py-1.5 text-[14px] outline-none [field-sizing:content]"
           />
-          <button type="submit" disabled={!draft.trim() || busy || !model} aria-label="Ask" className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-on-accent hover:bg-accent-strong disabled:opacity-30">
+          <div className="flex items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+              <ModelPicker value={model} onChange={choose} local={local} cloudModel={cloudModel} />
+              <ThinkFirst model={model} />
+            </div>
+            <button type="submit" disabled={!draft.trim() || busy || !model} aria-label="Ask" className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-on-accent hover:bg-accent-strong disabled:opacity-30">
             {busy ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <ArrowUp aria-hidden className="size-4" />}
-          </button>
-        </form>
-        <div className="flex items-center gap-2 px-1 text-[11.5px] text-ink-2">
-          {model && <span className="truncate font-mono">{model.id}</span>}
-          {chatId && (
-            <button type="button" onClick={() => navigate(`/ask?chat=${chatId}`)} className="ml-auto shrink-0 text-link hover:underline">
-              Continue in Ask
             </button>
-          )}
-        </div>
+          </div>
+        </form>
+        {chatId && (
+          <button type="button" onClick={() => navigate(`/ask?chat=${chatId}`)} className="ml-auto shrink-0 px-1 text-[11.5px] text-link hover:underline">
+            Continue in Ask
+          </button>
+        )}
       </footer>
     </aside>
   );

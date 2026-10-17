@@ -153,8 +153,6 @@ export function Ask() {
       <div className="mx-auto flex h-full w-full max-w-3xl min-h-0 flex-1 flex-col">
         <header className="flex items-center gap-3 pb-4">
           <h1 className="m-0 text-[30px] font-light tracking-tight">Ask</h1>
-          <ModelPicker value={model} onChange={choose} local={local} cloudModel={cloudModel} />
-          <ThinkFirst model={model} />
           {thread.length > 0 && (
             <button type="button" onClick={restart} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-card hover:text-ink">
               <RotateCcw aria-hidden className="size-3.5" /> New conversation
@@ -222,6 +220,12 @@ export function Ask() {
           disabled={!model}
           placeholder={thread.length ? "Ask a follow-up… (@ to choose files)" : "Ask about your documents… (@ to choose files)"}
           inputRef={input}
+          controls={
+            <>
+              <ModelPicker value={model} onChange={choose} local={local} cloudModel={cloudModel} />
+              <ThinkFirst model={model} />
+            </>
+          }
         />
       </div>
     </div>
