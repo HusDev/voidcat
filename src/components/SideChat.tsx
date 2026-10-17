@@ -1,5 +1,5 @@
 import { ArrowUp, FileText, LoaderCircle } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { type Exchange, type Mention, needsReview, prepare, run } from "../lib/ask";
 import { type Document, announceChats, saveChat } from "../lib/library";
@@ -8,6 +8,33 @@ import { useAskModel } from "../lib/useAskModel";
 import { Private } from "../lib/veil";
 import { ChatThread } from "./ChatThread";
 import { ModelPicker, ThinkFirst } from "./ModelPicker";
+
+/**
+ * The height that fits the panel between where it sits and the bottom of the window. The page header pushes it down
+ * at the top of the page and it rises when stuck while scrolling, so it is measured again on scroll and resize.
+ */
+function useFitHeight(ref: RefObject<HTMLElement | null>) {
+  const [height, setHeight] = useState(480);
+  useEffect(() => {
+    let frame = 0;
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const top = ref.current?.getBoundingClientRect().top;
+        if (top !== undefined) setHeight(Math.max(320, Math.round(window.innerHeight - top - 24)));
+      });
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    document.addEventListener("scroll", fit, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", fit);
+      document.removeEventListener("scroll", fit, true);
+    };
+  }, [ref]);
+  return height;
+}
 
 /**
  * A chat in a side panel, beside a document or your profile. It works like Ask (same models, review step, tools) but
@@ -45,6 +72,8 @@ export function SideChat({
   const input = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
   const { model, choose, local, cloudModel, needsSetup } = useAskModel();
+  const panel = useRef<HTMLElement>(null);
+  const height = useFitHeight(panel);
 
   useEffect(() => {
     setThread([]);
@@ -86,7 +115,7 @@ export function SideChat({
   };
 
   return (
-    <aside aria-label={title} className="sticky top-0 flex h-[calc(100vh-10rem)] max-w-[440px] min-w-0 flex-[1_1_340px] flex-col self-start overflow-hidden rounded-xl border border-line bg-card">
+    <aside ref={panel} style={{ height }} aria-label={title} className="sticky top-0 flex max-w-[440px] min-w-0 flex-[1_1_340px] flex-col self-start overflow-hidden rounded-xl border border-line bg-card">
       <header className="flex flex-col gap-1 border-b border-line px-4 py-3">
         <span className="text-[15px] font-semibold">{title}</span>
         <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] text-private-ink">{reads}</span>
