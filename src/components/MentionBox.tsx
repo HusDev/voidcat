@@ -1,6 +1,6 @@
-import { ArrowUp, AtSign, FileText, Folder as FolderIcon, Library, LoaderCircle, X } from "lucide-react";
+import { ArrowUp, AtSign, FileText, Folder as FolderIcon, Library, LifeBuoy, LoaderCircle, X } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";
-import type { Mention } from "../lib/ask";
+import { HELP, type Mention } from "../lib/ask";
 import type { Document, Folder } from "../lib/library";
 import { Private } from "../lib/veil";
 
@@ -13,20 +13,21 @@ function atToken(text: string, caret: number) {
   return m ? { query: m[2], start: caret - m[2].length - 1 } : null;
 }
 
-/** What "@query" can stand for: everything, then documents, folders and areas whose names match. */
+/** What "@query" can stand for: everything, help with the app, then documents, folders and areas whose names match. */
 export function mentionOptions(query: string, docs: Document[], folders: Folder[]): Mention[] {
   const q = query.toLowerCase();
   const hit = (s: string) => s.toLowerCase().includes(q);
   const areas = [...new Set(folders.map((f) => f.area))];
   return [
     ...("all".startsWith(q) || hit("everything") ? [ALL] : []),
+    ...("help".startsWith(q) ? [HELP] : []),
     ...docs.filter((d) => hit(d.title)).map((d): Mention => ({ kind: "document", id: d.id, label: d.title })),
     ...folders.filter((f) => hit(`${f.area} ${f.name}`)).map((f): Mention => ({ kind: "folder", id: f.id, label: `${f.area} › ${f.name}` })),
     ...areas.filter(hit).map((a): Mention => ({ kind: "area", id: a, label: a })),
   ].slice(0, MAX_OPTIONS);
 }
 
-const icon = { all: Library, document: FileText, folder: FolderIcon, area: FolderIcon };
+const icon = { all: Library, help: LifeBuoy, document: FileText, folder: FolderIcon, area: FolderIcon };
 
 /**
  * The message box in Ask. Typing @ lists documents, folders and areas to narrow the question to; picks become chips.
@@ -73,8 +74,10 @@ export function MentionBox({
     if (!token) return;
     // Take "@query" out of the text and keep the rest as typed.
     onChange((value.slice(0, token.start) + value.slice(caret.current)).replace(/\s{2,}/g, " "));
-    // @all clears the narrower choices; a narrower choice replaces @all.
-    onMentions(m.kind === "all" ? [ALL] : [...mentions.filter((x) => x.kind !== "all" && !(x.kind === m.kind && x.id === m.id)), m]);
+    // @all and @help stand alone; a narrower choice replaces them.
+    onMentions(
+      m.kind === "all" || m.kind === "help" ? [m] : [...mentions.filter((x) => x.kind !== "all" && x.kind !== "help" && !(x.kind === m.kind && x.id === m.id)), m],
+    );
     setToken(null);
     inputRef.current?.focus();
   };
@@ -105,7 +108,7 @@ export function MentionBox({
                 >
                   <Icon aria-hidden className="size-3.5 shrink-0 text-ink-2" />
                   <span className="min-w-0 flex-1 truncate">{o.kind === "document" ? <Private>{o.label}</Private> : o.label}</span>
-                  <span className="shrink-0 text-[11.5px] text-ink-2">{{ all: "whole library", document: "document", folder: "folder", area: "area" }[o.kind]}</span>
+                  <span className="shrink-0 text-[11.5px] text-ink-2">{{ all: "whole library", help: "using Voidcat", document: "document", folder: "folder", area: "area" }[o.kind]}</span>
                 </button>
               </li>
             );
@@ -195,9 +198,11 @@ export function MentionBox({
         </div>
       </form>
       <p className="m-0 px-1 text-[12px] text-ink-2">
-        {narrowed.length
+        {mentions.some((m) => m.kind === "help")
+          ? "Answers from the Voidcat guide only; your documents aren't sent. Remove @help to ask about your library."
+          : narrowed.length
           ? `Answers only from ${narrowed.length === 1 ? "this" : `these ${narrowed.length}`}. Remove the chips to ask the whole library.`
-          : "Type @ to ask about one document or folder, or @all for the whole library. Answers can be wrong; check the sources."}
+          : "Type @ to ask about one document or folder, @all for the whole library, or @help for how Voidcat works. Answers can be wrong; check the sources."}
       </p>
     </div>
   );

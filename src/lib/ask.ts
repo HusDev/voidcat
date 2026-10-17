@@ -2,6 +2,7 @@ import { type Turn, askCloud } from "./cloud";
 import { type Document, type Fact, type Hit, documentPages, getSecret, listDocuments, listFacts, searchLibrary } from "./library";
 import { type AskModel, askLocalModel } from "./models";
 import { contactFacts, listContacts } from "./people";
+import guide from "../help/guide.md?raw";
 import { detector } from "./nameCheck";
 import { type Found, Masker } from "./privacy";
 import { BUNDLE, type Bundle, type CatalogEntry, catalogLines, resolveBundle } from "./tools";
@@ -17,7 +18,10 @@ const MAX_CATALOG = 300;
 export const PLACEHOLDER = /(\[(?:PERSON|ID|DATE|ADDRESS|EMAIL|PHONE|IBAN|PRIVATE)_\d+\])/;
 
 /** Something you narrowed the question to with @: a document, a folder, an area, or everything. */
-export type Mention = { kind: "document" | "folder" | "area" | "all"; id: string; label: string };
+export type Mention = { kind: "document" | "folder" | "area" | "all" | "help"; id: string; label: string };
+/** @help: ask about using Voidcat. Only the built-in guide is sent, never the library. */
+export const HELP: Mention = { kind: "help", id: "help", label: "Help" };
+export const isHelp = (scope?: Mention[]) => !!scope?.some((m) => m.kind === "help");
 
 export type Exchange = {
   id: number;
@@ -64,6 +68,10 @@ export const hiddenIn = (sent: string) => new Set(sent.match(new RegExp(PLACEHOL
  * that best match, from the whole library or only from what you chose with @.
  */
 export async function build(question: string, masker: Masker, scope?: Mention[], extra?: string, detect?: (text: string) => Promise<Found[]>) {
+  if (isHelp(scope)) {
+    const body = `Question: ${question}\n\nThe user is asking how to use the Voidcat app. Answer only from the Voidcat guide below, in a few short steps. Name the exact place in the app and keep its links (like [Settings](#/settings)) so the user can click them. If the guide doesn't cover it, say so.\n\n${guide}`;
+    return { plain: body, masked: body, sources: [] as Hit[], catalog: [] as CatalogEntry[] };
+  }
   const [facts, hits, docs] = await Promise.all([listFacts("approved"), searchLibrary(question, true), listDocuments()]);
   // The masker knows every fact and contact, even outside the scope, so nothing private slips through.
   masker.learn([...facts, ...contactFacts(await listContacts())]);

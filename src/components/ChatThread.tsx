@@ -1,11 +1,31 @@
 import { AtSign, Check, ChevronRight, Copy, Cpu, FileArchive, FileText, LoaderCircle, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+import { useNavigate } from "react-router";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Exchange } from "../lib/ask";
 import { downloadZip, openDocument } from "../lib/library";
 import type { Bundle } from "../lib/tools";
 import { PLACEHOLDER, Private, useVeil } from "../lib/veil";
+
+/** Links in answers: a Voidcat screen ("#/settings", from @help) opens in the app, a web page in the browser. */
+function AnswerLink({ href, children }: { href?: string; children?: ReactNode }) {
+  const navigate = useNavigate();
+  if (href?.startsWith("#/"))
+    return (
+      <a href={href} onClick={(ev) => (ev.preventDefault(), navigate(href.slice(1)))} className="text-link">
+        {children}
+      </a>
+    );
+  if (href?.startsWith("https://"))
+    return (
+      <a href={href} onClick={(ev) => (ev.preventDefault(), openUrl(href))} className="text-link">
+        {children}
+      </a>
+    );
+  return <>{children}</>;
+}
 
 /** A conversation in Ask (or a document's own chat): questions, the review step, answers, sources and zips. */
 
@@ -183,7 +203,7 @@ export function ChatThread({
             <div className="flex flex-col gap-3">
               {e.answer ? (
                 <div data-selectable className={`md-page leading-relaxed text-ink ${text}`}>
-                  <Markdown remarkPlugins={[remarkGfm]}>{veil.on ? veil.hide(e.raw) : e.answer}</Markdown>
+                  <Markdown remarkPlugins={[remarkGfm]} components={{ a: AnswerLink }}>{veil.on ? veil.hide(e.raw) : e.answer}</Markdown>
                 </div>
               ) : null}
               {e.answer && e.state === "done" && !veil.on ? (
