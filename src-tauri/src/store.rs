@@ -13,6 +13,7 @@ use std::{
 pub struct Store {
     pub db: Mutex<Connection>,
     files: PathBuf,
+    vault: crate::vault::Vault,
 }
 
 #[derive(Serialize)]
@@ -285,6 +286,63 @@ fn place(tx: &Connection, id: &str, s: &Suggestion) -> Result<(), String> {
     Ok(())
 }
 
+/// Where "Open in default app" puts decrypted copies; emptied on every start.
+const OPENED: &str = "opened";
+
+/// Opens the library database with its key. A library from before encryption is converted first: exported into an
+/// encrypted copy, every table's row count compared, and only then swapped in (the plain file is deleted after).
+fn open_encrypted(path: &Path, key: &str) -> Result<Connection, String> {
+    let keyed = |p: &Path| -> Result<Connection, String> {
+        let db = Connection::open(p).map_err(|e| e.to_string())?;
+        db.execute_batch(&format!("pragma key = \"x'{key}'\";")).map_err(|e| e.to_string())?;
+        Ok(db)
+    };
+    let readable = |db: &Connection| db.query_row("select count(*) from sqlite_master", [], |r| r.get::<_, i64>(0)).is_ok();
+    if !path.exists() || !crate::vault::is_encrypted_db(path) && fs::metadata(path).map(|m| m.len() == 0).unwrap_or(true) {
+        return keyed(path);
+    }
+    if crate::vault::is_encrypted_db(path) {
+        let db = keyed(path)?;
+        return if readable(&db) { Ok(db) } else { Err("The library couldn't be unlocked with the key in the Keychain.".into()) };
+    }
+
+    // A plain library: convert it.
+    let plain = Connection::open(path).map_err(|e| e.to_string())?;
+    plain.execute_batch("pragma wal_checkpoint(truncate);").map_err(|e| e.to_string())?;
+    let tables: Vec<String> = {
+        let mut stmt = plain
+            .prepare("select name from sqlite_master where type = 'table' and name not like 'sqlite_%' and sql not like 'create virtual%' collate nocase")
+            .map_err(|e| e.to_string())?;
+        let rows = stmt.query_map([], |r| r.get(0)).map_err(|e| e.to_string())?;
+        rows.collect::<Result<_, _>>().map_err(|e| e.to_string())?
+    };
+    let count = |db: &Connection, t: &str| db.query_row(&format!("select count(*) from \"{t}\""), [], |r| r.get::<_, i64>(0)).map_err(|e| e.to_string());
+    let encrypting = path.with_extension("db.encrypting");
+    let _ = fs::remove_file(&encrypting);
+    let target = encrypting.to_string_lossy().replace('\'', "''");
+    plain
+        .execute_batch(&format!("attach database '{target}' as enc key \"x'{key}'\"; select sqlcipher_export('enc'); detach database enc;"))
+        .map_err(|e| format!("Couldn't encrypt the library: {e}"))?;
+    let version: i64 = plain.query_row("pragma user_version", [], |r| r.get(0)).map_err(|e| e.to_string())?;
+    {
+        let enc = keyed(&encrypting)?;
+        enc.execute_batch(&format!("pragma user_version = {version};")).map_err(|e| e.to_string())?;
+        for t in &tables {
+            if count(&plain, t)? != count(&enc, t)? {
+                let _ = fs::remove_file(&encrypting);
+                return Err(format!("Stopped encrypting: table {t} didn't copy completely. The library is unchanged."));
+            }
+        }
+    }
+    drop(plain);
+    for side in ["db-wal", "db-shm"] {
+        let _ = fs::remove_file(path.with_extension(side));
+    }
+    fs::rename(&encrypting, path).map_err(|e| e.to_string())?;
+    let db = keyed(path)?;
+    if readable(&db) { Ok(db) } else { Err("The encrypted library couldn't be opened.".into()) }
+}
+
 /// Words that say nothing about a document (greetings, question words, fillers in English and Spanish): a question
 /// like "hello there" must not turn up pages that happen to contain "there".
 const FILLER: &[&str] = &[
@@ -297,10 +355,10 @@ const FILLER: &[&str] = &[
 ];
 
 impl Store {
-    pub fn open(dir: &Path) -> Result<Self, String> {
+    pub fn open(dir: &Path, vault: crate::vault::Vault) -> Result<Self, String> {
         let files = dir.join("files");
         fs::create_dir_all(&files).map_err(|e| e.to_string())?;
-        let db = Connection::open(dir.join(crate::legacy::DB)).map_err(|e| e.to_string())?;
+        let db = open_encrypted(&dir.join(crate::legacy::DB), &vault.db_key)?;
         db.execute_batch("pragma journal_mode = wal; pragma foreign_keys = on;")
             .map_err(|e| e.to_string())?;
         db.execute_batch(SCHEMA).map_err(|e| e.to_string())?;
@@ -312,10 +370,51 @@ impl Store {
         db.execute_batch(crate::labels::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::apps::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::people::SCHEMA).map_err(|e| e.to_string())?;
-        Ok(Store {
+        let store = Store {
             db: Mutex::new(db),
             files,
-        })
+            vault,
+        };
+        store.encrypt_files()?;
+        // Copies decrypted for "Open in default app" last until the next start.
+        let _ = fs::remove_dir_all(dir.join(OPENED));
+        Ok(store)
+    }
+
+    /// Encrypts the stored copies of documents added before encryption, each checked against its sha256 before the
+    /// plain copy is replaced.
+    fn encrypt_files(&self) -> Result<(), String> {
+        let docs: Vec<(String, String)> = {
+            let db = self.db.lock().unwrap();
+            let mut stmt = db.prepare("select stored_path, sha256 from documents").map_err(|e| e.to_string())?;
+            let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(|e| e.to_string())?;
+            rows.collect::<Result<_, _>>().map_err(|e| e.to_string())?
+        };
+        for (path, sha) in docs {
+            let Ok(bytes) = fs::read(&path) else { continue };
+            if crate::vault::is_encrypted(&bytes) {
+                continue;
+            }
+            let sealed = self.vault.encrypt(&bytes)?;
+            let back = self.vault.decrypt(sealed.clone())?;
+            if hex::encode(Sha256::digest(&back)) != sha {
+                return Err(format!("Stopped encrypting: {path} didn't read back the same."));
+            }
+            let tmp = format!("{path}.encrypting");
+            fs::write(&tmp, &sealed).map_err(|e| e.to_string())?;
+            fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+
+    /// A document's file decrypted into the library's "opened" folder, for opening in another app.
+    pub fn plain_copy(&self, id: &str) -> Result<PathBuf, String> {
+        let (name, bytes) = self.contents_of(&[id.to_string()])?.remove(0);
+        let dir = self.files.parent().unwrap_or(&self.files).join(OPENED).join(id);
+        fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        let path = dir.join(Path::new(&name).file_name().unwrap_or_default());
+        fs::write(&path, bytes).map_err(|e| e.to_string())?;
+        Ok(path)
     }
 
     /// Copies files into the library. The same content twice is one document.
@@ -358,7 +457,14 @@ impl Store {
                 .map(|e| format!(".{}", e.to_lowercase()))
                 .unwrap_or_default();
             let stored = self.files.join(format!("{id}{ext}"));
-            if let Err(e) = fs::write(&stored, &bytes) {
+            let sealed = match self.vault.encrypt(&bytes) {
+                Ok(b) => b,
+                Err(e) => {
+                    out.failed.push((name, e));
+                    continue;
+                }
+            };
+            if let Err(e) = fs::write(&stored, &sealed) {
                 out.failed.push((name, e.to_string()));
                 continue;
             }
@@ -422,19 +528,28 @@ impl Store {
         .map_err(|_| "Document not found.".to_string())
     }
 
-    /// Each document's original file name and where it is stored, in the order asked.
-    pub fn files_of(&self, ids: &[String]) -> Result<Vec<(String, String)>, String> {
-        let db = self.db.lock().unwrap();
-        ids.iter()
-            .map(|id| {
-                db.query_row("select file_name, stored_path from documents where id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?)))
-                    .map_err(|_| "Document not found.".to_string())
+    /// Each document's original file name and its contents (decrypted), in the order asked.
+    pub fn contents_of(&self, ids: &[String]) -> Result<Vec<(String, Vec<u8>)>, String> {
+        let paths: Vec<(String, String)> = {
+            let db = self.db.lock().unwrap();
+            ids.iter()
+                .map(|id| {
+                    db.query_row("select file_name, stored_path from documents where id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?)))
+                        .map_err(|_| "Document not found.".to_string())
+                })
+                .collect::<Result<_, _>>()?
+        };
+        paths
+            .into_iter()
+            .map(|(name, path)| {
+                let bytes = fs::read(&path).map_err(|e| format!("{name} could not be read: {e}"))?;
+                Ok((name, self.vault.decrypt(bytes)?))
             })
             .collect()
     }
 
     pub fn bytes_of(&self, id: &str) -> Result<Vec<u8>, String> {
-        fs::read(self.path_of(id)?).map_err(|e| e.to_string())
+        self.vault.decrypt(fs::read(self.path_of(id)?).map_err(|e| e.to_string())?)
     }
 
     /// Stores the text of each page (replacing any earlier reading) so it can be searched.
@@ -764,7 +879,7 @@ mod tests {
     #[test]
     fn refiling_moves_a_document_keeps_its_facts_and_drops_the_empty_folder() {
         let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
-        let store = Store::open(&dir).unwrap();
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
         let src = dir.join("grant.xlsx");
         fs::write(&src, b"example").unwrap();
         store.import(vec![src.to_string_lossy().to_string()]);
@@ -791,7 +906,7 @@ mod tests {
     #[test]
     fn moving_a_folder_takes_its_documents_and_merges_with_a_namesake() {
         let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
-        let store = Store::open(&dir).unwrap();
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
         for name in ["a.pdf", "b.pdf"] {
             let src = dir.join(name);
             fs::write(&src, name.as_bytes()).unwrap();
@@ -812,7 +927,7 @@ mod tests {
     #[test]
     fn renames_documents_and_folders() {
         let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
-        let store = Store::open(&dir).unwrap();
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
         let src = dir.join("scan.pdf");
         fs::write(&src, b"scan").unwrap();
         store.import(vec![src.to_string_lossy().to_string()]);
@@ -831,7 +946,7 @@ mod tests {
     #[test]
     fn imports_once_and_removes() {
         let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
-        let store = Store::open(&dir).unwrap();
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
         let src = dir.join("lease.pdf");
         fs::write(&src, b"%PDF-1.4 example").unwrap();
         let p = src.to_string_lossy().to_string();
@@ -961,5 +1076,62 @@ mod tests {
         assert!(store.search("renta", false).unwrap().is_empty());
         assert_eq!(store.stats().unwrap().documents, 0);
         let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn converts_a_library_from_before_encryption() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(dir.join("files")).unwrap();
+        let stored = dir.join("files").join("lease.pdf");
+        fs::write(&stored, b"%PDF-1.4 invented lease").unwrap();
+        {
+            let plain = Connection::open(dir.join(crate::legacy::DB)).unwrap();
+            plain.execute_batch(SCHEMA).unwrap();
+            plain
+                .execute(
+                    "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path) values ('d1', 'Lease', 'lease.pdf', 'application/pdf', 23, ?1, ?2)",
+                    params![hex::encode(Sha256::digest(b"%PDF-1.4 invented lease")), stored.to_string_lossy()],
+                )
+                .unwrap();
+            plain.execute("insert into pages (document_id, page, text) values ('d1', 1, 'contrato de arrendamiento')", []).unwrap();
+        }
+
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
+        assert!(crate::vault::is_encrypted_db(&dir.join(crate::legacy::DB)), "the database is encrypted");
+        assert!(crate::vault::is_encrypted(&fs::read(&stored).unwrap()), "the stored file is encrypted");
+        assert_eq!(store.list().unwrap().len(), 1);
+        assert_eq!(store.search("arrendamiento", false).unwrap().len(), 1);
+        assert_eq!(store.bytes_of("d1").unwrap(), b"%PDF-1.4 invented lease");
+        assert_eq!(fs::read(store.plain_copy("d1").unwrap()).unwrap(), b"%PDF-1.4 invented lease");
+        drop(store);
+
+        // Opens again with the same key, and refuses another one.
+        assert!(Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).is_ok());
+        assert!(Store::open(&dir, crate::vault::Vault::from_master(&[4; 32])).is_err());
+    }
+}
+
+#[cfg(test)]
+mod copy_check {
+    /// Converts a copy of a real library (VOIDCAT_COPY) with a throwaway key; prints only counts.
+    #[test]
+    #[ignore]
+    fn converts_a_copy() {
+        let Ok(dir) = std::env::var("VOIDCAT_COPY") else { return };
+        let dir = std::path::PathBuf::from(dir);
+        let store = super::Store::open(&dir, crate::vault::Vault::from_master(&[9; 32])).unwrap();
+        let docs = store.list().unwrap();
+        let mut read = 0;
+        for d in &docs {
+            if store.bytes_of(&d.id).is_ok() {
+                read += 1;
+            }
+        }
+        let db = store.db.lock().unwrap();
+        let pages: i64 = db.query_row("select count(*) from pages", [], |r| r.get(0)).unwrap();
+        let facts: i64 = db.query_row("select count(*) from facts", [], |r| r.get(0)).unwrap();
+        let chats: i64 = db.query_row("select count(*) from chats", [], |r| r.get(0)).unwrap();
+        println!("documents {} (files read back {read}), pages {pages}, facts {facts}, chats {chats}", docs.len());
+        println!("db encrypted {}", crate::vault::is_encrypted_db(&dir.join(crate::legacy::DB)));
     }
 }

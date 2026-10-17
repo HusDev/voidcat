@@ -5,7 +5,7 @@ Voidcat is a macOS desktop app (Tauri 2 + React) that stores personal documents,
 ## Rules
 - **No real personal data**, ever: code, tests, comments, prompts, docs, commit messages. Invent names, addresses, ID numbers, IBANs and amounts. New invented values that look like IDs or emails go in `.privacy-allow`, or the privacy guard fails the pipeline.
 - Text that can reach a cloud model goes through the `Masker` (`src/lib/privacy.ts`). Every OpenRouter model sets `provider: { zdr: true, data_collection: "deny" }`.
-- The library is not encrypted yet; never say it is.
+- The library is encrypted (SQLCipher database, AES-256-GCM files, key in the Keychain). Never read stored files directly or add a code path that writes them unencrypted.
 - Personal values shown in the UI are wrapped in `<Private>` (`src/lib/veil.tsx`).
 - Style: match the surrounding code; Tailwind theme tokens from `src/index.css`; short plain copy.
 

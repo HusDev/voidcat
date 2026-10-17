@@ -68,7 +68,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - **State on 17 Oct 2026:** phases 1–2 merged and green. Only the Triage custom flow is in the AI Catalog and enabled; Privacy Guard, Pipeline Doctor, Health Reporter and Release still need pasting in (AI › Flows › New flow, sources in `.gitlab/duo/flows/`) and their triggers switching on (Triage's "issue created" trigger didn't fire either). No flow session had ever succeeded: the runtime image lacked `curl` for downloading duo-cli (fixed in `agent-config.yml`, which is read from `main`). Observability is a group setting, switched on in the UI. Issue #3 (Rename button in the folder view) is the small real task for the full loop: Triage → Developer flow → MR → Code Review → merge → tag `v0.1.0` → release.
    - **Demo video:** `bun run demo` opens an empty library in `~/Library/Application Support/dev.hus.voidcat-demo/` (`VOIDCAT_DIR`); drop in `demo/documents/` (all invented). See `demo/README.md`.
 2. (done 17 Oct) **OpenAI privacy-filter model**: Settings → "Catch names the rules miss"; not in the MCP server.
-3. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
+3. (done 17 Oct) **Encrypted library**: SQLCipher database + AES-256-GCM files, key in the Keychain; MCP answers through the running app. Plain backup kept at `~/Library/Application Support/dev.hus.voidcat.backup-2026-10-17-before-encryption` (delete once happy).
 4. **Polish:**
    - a Rename-folder button in the folder view;
    - (done 17 Oct) reminders when the window is closed: menu bar cat, Open at login;

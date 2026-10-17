@@ -5,12 +5,14 @@ mod chats;
 mod docx;
 mod labels;
 mod legacy;
+mod mcp_bridge;
 mod ocr;
 mod opportunities;
 mod people;
 mod secrets;
 mod sheets;
 mod store;
+mod vault;
 
 use store::{Document, Fact, Folder, Hit, Imported, NewFact, Page, Stats, Store, Suggestion};
 use tauri::{Manager, State};
@@ -33,9 +35,10 @@ fn library_stats(store: State<Store>) -> Result<Stats, String> {
 
 #[tauri::command]
 fn open_document(app: tauri::AppHandle, store: State<Store>, id: String) -> Result<(), String> {
-    let path = store.path_of(&id)?;
+    // The stored file is encrypted: the other app gets a decrypted copy, removed when Voidcat next starts.
+    let path = store.plain_copy(&id)?;
     app.opener()
-        .open_path(path, None::<&str>)
+        .open_path(path.to_string_lossy(), None::<&str>)
         .map_err(|e| e.to_string())
 }
 
@@ -85,7 +88,7 @@ fn unchecked_for_labels(store: State<Store>) -> Result<Vec<String>, String> {
 /// Saves documents as one .zip at the path the user chose in the save dialog.
 #[tauri::command]
 fn save_zip(store: State<Store>, path: String, ids: Vec<String>) -> Result<(), String> {
-    bundle::write(&path, store.files_of(&ids)?)
+    bundle::write(&path, store.contents_of(&ids)?)
 }
 
 /// Moves a folder and its documents to another area (merging with a folder of the same name there).
@@ -412,9 +415,22 @@ pub fn run() {
                     dir
                 }
             };
-            let store = Store::open(&dir)
+            let vault = match vault::Vault::load(&dir.join(legacy::DB)) {
+                Ok(v) => v,
+                Err(e) => {
+                    // Without the key nothing can be opened: say why in a window instead of quietly failing.
+                    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+                    app.dialog().message(e).title("Voidcat can't open your library").kind(MessageDialogKind::Error).blocking_show();
+                    std::process::exit(1);
+                }
+            };
+            let store = Store::open(&dir, vault)
                 .map_err(|e| format!("Could not open the library in {}: {e}", dir.display()))?;
             app.manage(store);
+            // The MCP server reads the library through the app, since only the app holds the key.
+            if let Err(e) = mcp_bridge::start(app.handle().clone(), &dir) {
+                eprintln!("{e}");
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

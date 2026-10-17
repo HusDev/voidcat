@@ -11,6 +11,7 @@ Built for the GitLab Transcend Hackathon (October 2026).
 
 ## What it does
 
+- **Encrypted on your Mac.** The library database (SQLCipher) and every stored document (AES-256-GCM) are encrypted with a key kept in the macOS Keychain.
 - **Reads documents on your Mac.** PDFs, photos, scans, spreadsheets and Word files are read locally (Apple Vision OCR and a local model through Ollama). Nothing is uploaded to do this.
 - **Files them.** Each document gets a title, an area and a folder; you confirm when it isn't sure.
 - **Pulls out facts for you to approve.** Dates, ID numbers, amounts and addresses go to an inbox with the source page highlighted.
@@ -87,7 +88,6 @@ Tauri 2 (Rust: SQLite via rusqlite with FTS5, Apple Vision OCR, macOS Keychain) 
 ## Roadmap
 
 - A local privacy-filter model to catch names the rules miss
-- Encrypt the library at rest (SQLCipher). Until then the library is **not** encrypted.
 - Background reminders when the app is closed
 
 See `docs/STATUS.md` for what's built and what's next.
