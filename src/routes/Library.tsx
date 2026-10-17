@@ -35,6 +35,7 @@ import { dateKind } from "../lib/calendar";
 import { checkAll, removeLabel, useLabels } from "../lib/labels";
 import { parseDate } from "../lib/privacy";
 import { type Step, process, useProgress } from "../lib/pipeline";
+import { LocalModelBanner } from "../components/LocalModelSetup";
 import { Private, useVeil } from "../lib/veil";
 
 const statusBadge: Record<Document["status"], [string, string]> = {
@@ -244,6 +245,7 @@ export function Library() {
           />
         </label>
       </header>
+      <LocalModelBanner />
 
       {hits ? (
         <section aria-label="Search results" className="flex flex-col gap-2">

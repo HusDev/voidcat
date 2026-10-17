@@ -85,6 +85,19 @@ fn unchecked_for_labels(store: State<Store>) -> Result<Vec<String>, String> {
     labels::unchecked(&store.db.lock().unwrap())
 }
 
+/// Whether the Ollama app is installed (it runs the local model), so Voidcat can offer "Open Ollama".
+#[tauri::command]
+fn ollama_installed() -> bool {
+    let home = std::env::var_os("HOME").map(std::path::PathBuf::from).unwrap_or_default();
+    ["/Applications/Ollama.app".into(), home.join("Applications/Ollama.app")].iter().any(|p: &std::path::PathBuf| p.exists())
+}
+
+#[tauri::command]
+fn open_ollama() -> Result<(), String> {
+    std::process::Command::new("open").args(["-a", "Ollama"]).status().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// The library folder, while its key is missing and the recovery key hasn't been entered yet.
 struct Locked(std::path::PathBuf);
 
@@ -475,6 +488,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            ollama_installed,
+            open_ollama,
             library_locked,
             recover_library,
             recovery_code,

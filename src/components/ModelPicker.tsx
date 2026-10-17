@@ -26,7 +26,7 @@ export function ModelPicker({
   if (none)
     return (
       <Link to="/connections" className="inline-flex items-center gap-1.5 rounded-full bg-private-soft px-3 py-1 text-[12.5px] font-semibold text-private-ink hover:underline">
-        <Plus aria-hidden className="size-3.5" /> Add a model provider
+        <Plus aria-hidden className="size-3.5" /> Set up a model
       </Link>
     );
 

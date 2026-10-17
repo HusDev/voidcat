@@ -89,7 +89,11 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - They can only ask while Voidcat is open (it stays in the menu bar).
 
 ## Models
-- The local model runs on your Mac through **Ollama**. Install Ollama from ollama.com, then download the model with `ollama pull qwen3.5:9b` in Terminal.
+- The local model reads, files and answers on your Mac. It doesn't come inside Voidcat, but Voidcat sets it up for you in [Connected AIs](#/connections) → Local model, in three steps, no Terminal:
+  1. **Download Ollama**, the free app that runs the model: open the file and drag Ollama to Applications.
+  2. **Open Ollama**. It stays in the menu bar.
+  3. **Download the model** (about 7 GB, once), with a progress bar. Keep Voidcat open until it finishes.
+- Until it's set up, the [Library](#/) shows a "Set up the local model" banner.
 - Cloud models need an OpenRouter key, added in [Connected AIs](#/connections). The key is kept in your Keychain.
 
 ## Settings
