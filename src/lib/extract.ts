@@ -15,7 +15,7 @@ export const AREAS = ["Identity", "Residency", "Work & money", "Home", "Educatio
 /** What the document is, read without seeing any folder, so existing folders can't pull it into the wrong area. */
 const Reading = z.object({
   title: z.string().describe("Short, specific name for this document, e.g. 'Passport', 'Rental contract, Carrer Robles', 'Payslip September 2026'"),
-  docType: z.string().describe("snake_case type, e.g. passport, residence_card, rental_contract, payslip, diploma, tax_return, bank_statement, letter"),
+  docType: z.string().describe("What kind of document this is, in snake_case, e.g. passport, residence_card, rental_contract, payslip, diploma, tax_return, bank_statement, letter. The kind of paper, never a folder, area or person name."),
   area: z.enum(AREAS),
   facts: z
     .array(

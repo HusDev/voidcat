@@ -70,7 +70,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 4. **Polish:**
    - a Rename-folder button in the folder view;
    - background reminders when the app is closed;
-   - `docType` sometimes gets the folder name (seen once): tighten the schema description.
+   - (done 17 Oct) `docType` description now says "never a folder, area or person name"; filing no longer shows folders in the first step anyway.
 
 ## How Hussein likes to work
 - Short answers; challenge with evidence instead of folding.
@@ -80,6 +80,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - Explain in plain words; no jargon in the UI.
 
 ## Gotchas
+- Timing tests take the fastest of three runs (`fastest` in `privacy.test.ts`); a single run failed at random when the machine was busy.
 - **Restart the dev app** after `bun add` (a stale React copy causes "Invalid hook call") and after Rust changes: kill `target/debug/voidcat`, `tauri dev`, and port 1420, then `bun run tauri dev` in the background.
 - Run `bun run build:mcp` before `cargo test` or a fresh `tauri dev` if `src-tauri/binaries/` is empty (Tauri checks the sidecar exists). After changing `mcp/server.ts` or `src/lib/mcp.ts`, rebuild it; apps pick it up the next time they start the server.
 - Documents store absolute file paths (`documents.stored_path`): any change to the data folder must rewrite them (see `legacy::fix_paths`).
@@ -92,7 +93,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - The library DB is real user data: never reset it. Migrations add columns in `store.rs` `migrate()`; new tables use `create table if not exists`.
 
 ## Security findings reviewed (13 Oct 2026, MR !1)
-- **Zod 4.6.6, CVE-2023-54404 (high):** the advisory covers "through 4.6.5", so 4.6.6 is outside it; the scanner's data lags. Not upgraded to 4.6.7 because it was one day old (supply-chain caution). Recheck later and bump.
+- **Zod 4.6.6, CVE-2023-54404 (high):** the advisory covers "through 4.6.5", so 4.6.6 is outside it; the scanner's data lags. Not upgraded to 4.6.7 at first because it was one day old (supply-chain caution); upgraded on 17 Oct 2026 once it was five days old.
 - **glib 0.18.5, RUSTSEC-2024-0429 (medium):** comes from Tauri's Linux (GTK) dependencies; the macOS app doesn't build it, and Tauri pins this version. Not applicable.
 - **6 × "regular expression with non-literal value" (SAST, medium):** false positives. Three were rewritten as fixed patterns (month names, the guard's copy); the other three build patterns from the user's own values through the standard `RegExp.escape` (ES2025) and keep a `nosemgrep` comment with the reason. The app now needs macOS 15.2+ (Safari 18.2 engine) for `RegExp.escape`.
 - **Found while testing (not flagged by the scanner):** the email pattern took quadratic time on long text without an `@` (0.75 s on 40,000 letters). Fixed by starting matches only at word starts and capping the name part at 64 characters; tests now time every pattern on adversarial input.

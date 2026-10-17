@@ -42,7 +42,9 @@ export function Ask() {
   /** What was last stored, so opening a chat doesn't save it again and move it to the top. */
   const stored = useRef("");
   const masker = useRef(new Masker([]));
-  const bottom = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  // Follow new text only while you're at the bottom, so you can scroll up mid-answer.
+  const following = useRef(true);
   const input = useRef<HTMLTextAreaElement>(null);
   const { model, choose, local, cloudModel, needsSetup } = useAskModel();
 
@@ -57,7 +59,8 @@ export function Ask() {
     return () => window.removeEventListener(LIBRARY_CHANGED, refresh);
   }, []);
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "end" });
+    const el = list.current;
+    if (el && following.current) el.scrollTop = el.scrollHeight;
   }, [thread]);
 
   const refreshChats = () => listChats().then(setChats);
@@ -71,6 +74,7 @@ export function Ask() {
   useEffect(() => {
     if (chatId === showing.current) return;
     showing.current = chatId;
+    following.current = true;
     if (!chatId) {
       setThread([]);
       setMentions([]);
@@ -112,6 +116,7 @@ export function Ask() {
     if (!q || busy || !model) return;
     setDraft("");
     setBusy(true);
+    following.current = true;
     if (!showing.current) {
       const id = crypto.randomUUID();
       showing.current = id;
@@ -156,7 +161,14 @@ export function Ask() {
           )}
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-6">
+        <div
+          ref={list}
+          onScroll={(ev) => {
+            const el = ev.currentTarget;
+            following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+          }}
+          className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-6"
+        >
           {thread.length === 0 ? (
             <div className="m-auto flex max-w-lg flex-col items-center gap-4 py-10 text-center">
               <span className="grid size-12 place-items-center rounded-2xl bg-rail text-void">
@@ -195,7 +207,6 @@ export function Ask() {
               }}
             />
           )}
-          <div ref={bottom} />
         </div>
 
         <MentionBox
