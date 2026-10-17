@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { ChatHistory } from "../components/ChatHistory";
 import { ChatThread } from "../components/ChatThread";
 import { MentionBox } from "../components/MentionBox";
-import { ModelPicker } from "../components/ModelPicker";
+import { ModelPicker, ThinkFirst } from "../components/ModelPicker";
 import { type Exchange, type Mention, needsReview, prepare, resume, run } from "../lib/ask";
 import {
   CHATS_CHANGED,
@@ -154,6 +154,7 @@ export function Ask() {
         <header className="flex items-center gap-3 pb-4">
           <h1 className="m-0 text-[30px] font-light tracking-tight">Ask</h1>
           <ModelPicker value={model} onChange={choose} local={local} cloudModel={cloudModel} />
+          <ThinkFirst model={model} />
           {thread.length > 0 && (
             <button type="button" onClick={restart} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink-2 hover:bg-card hover:text-ink">
               <RotateCcw aria-hidden className="size-3.5" /> New conversation

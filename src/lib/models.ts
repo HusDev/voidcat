@@ -48,9 +48,26 @@ Answer from the documents. If they don't contain the answer, say so. Be concise 
 
 export type LocalChunk = { text: string } | { thinking: string } | { call: { name: string; input: unknown } };
 
+const THINK_KEY = "voidcat.thinkFirst";
+/** "Think first": thinking models reason before answering (better answers, slower start). On unless turned off. */
+export function thinkFirst() {
+  try {
+    return localStorage.getItem(THINK_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+export function setThinkFirst(on: boolean) {
+  try {
+    localStorage.setItem(THINK_KEY, on ? "on" : "off");
+  } catch {
+    /* not remembered */
+  }
+}
+
 const thinkers = new Map<string, Promise<boolean>>();
 /** Whether a model on this Mac can think (Ollama lists "thinking" among its capabilities); asked once per model. */
-function canThink(model: string) {
+export function canThink(model: string) {
   let known = thinkers.get(model);
   if (!known) {
     known = fetch(`${OLLAMA}/api/show`, { method: "POST", body: JSON.stringify({ model }) })
@@ -72,7 +89,7 @@ export async function* askLocalModel(model: string, messages: Turn[]): AsyncGene
       stream: true,
       // A thinking model gets to think, and Ollama streams the reasoning apart from the answer so it shows live in
       // the thinking box. Asked not to, some (qwen3) think anyway inside the answer, marked only by a closing </think>.
-      think: await canThink(model),
+      think: thinkFirst() && (await canThink(model)),
       options: { num_ctx: 16384 },
       tools: ollamaTools,
       messages: [{ role: "system", content: `${LOCAL_SYSTEM}\n${todayLine()}\n${TOOLS_HELP}` }, ...messages],
