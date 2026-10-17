@@ -388,12 +388,20 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let dir = app.path().app_data_dir()?;
-            legacy::move_library(&dir)?;
-            // Other apps set up under the old name, or before the app moved, start this copy of the server.
-            for name in ["claude-desktop", "cursor"] {
-                apps::sync_entry(name);
-            }
+            // VOIDCAT_DIR opens another library (a demo with invented documents, say) and leaves the real one and
+            // other apps' settings alone.
+            let dir = match std::env::var_os("VOIDCAT_DIR") {
+                Some(d) => std::path::PathBuf::from(d),
+                None => {
+                    let dir = app.path().app_data_dir()?;
+                    legacy::move_library(&dir)?;
+                    // Other apps set up under the old name, or before the app moved, start this copy of the server.
+                    for name in ["claude-desktop", "cursor"] {
+                        apps::sync_entry(name);
+                    }
+                    dir
+                }
+            };
             let store = Store::open(&dir)
                 .map_err(|e| format!("Could not open the library in {}: {e}", dir.display()))?;
             app.manage(store);
