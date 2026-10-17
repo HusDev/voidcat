@@ -81,6 +81,9 @@ export function canThink(model: string) {
 
 /** Streams an answer from a model on this Mac (text, and any tool call). Nothing leaves the computer, so the messages are not masked. */
 export async function* askLocalModel(model: string, messages: Turn[]): AsyncGenerator<LocalChunk> {
+  const think = thinkFirst() && (await canThink(model));
+  // Qwen3 (not 3.5) ignores Ollama's think: false; its own switch is "/no_think" at the end of the message.
+  const sent = !think && /^qwen3(?![.\d])/i.test(model) ? messages.map((m, k) => (k === messages.length - 1 && m.role === "user" ? { ...m, content: `${m.content}\n\n/no_think` } : m)) : messages;
   const res = await fetch(`${OLLAMA}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -89,10 +92,10 @@ export async function* askLocalModel(model: string, messages: Turn[]): AsyncGene
       stream: true,
       // A thinking model gets to think, and Ollama streams the reasoning apart from the answer so it shows live in
       // the thinking box. Asked not to, some (qwen3) think anyway inside the answer, marked only by a closing </think>.
-      think: thinkFirst() && (await canThink(model)),
+      think,
       options: { num_ctx: 16384 },
       tools: ollamaTools,
-      messages: [{ role: "system", content: `${LOCAL_SYSTEM}\n${todayLine()}\n${TOOLS_HELP}` }, ...messages],
+      messages: [{ role: "system", content: `${LOCAL_SYSTEM}\n${todayLine()}\n${TOOLS_HELP}` }, ...sent],
     }),
   });
   if (!res.ok || !res.body) throw new Error(`The local model didn't answer (${res.status}). Is Ollama running?`);
