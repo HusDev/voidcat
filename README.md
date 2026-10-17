@@ -1,7 +1,7 @@
 # Voidcat
 
 [![pipeline status](https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase/badges/main/pipeline.svg)](https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase/-/pipelines)
-[![License: MIT](https://img.shields.io/badge/license-MIT-8b5cf6.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-f5b83d.svg)](LICENSE)
 
 ![Voidcat](docs/cover.png)
 
@@ -11,11 +11,14 @@ Built for the GitLab Transcend Hackathon (October 2026).
 
 ## What it does
 
-- **Reads documents on your Mac.** PDFs, photos and scans are read locally (Apple Vision OCR and a local model through Ollama). Nothing is uploaded to do this.
+- **Reads documents on your Mac.** PDFs, photos, scans, spreadsheets and Word files are read locally (Apple Vision OCR and a local model through Ollama). Nothing is uploaded to do this.
 - **Files them.** Each document gets a title, an area and a folder; you confirm when it isn't sure.
 - **Pulls out facts for you to approve.** Dates, ID numbers, amounts and addresses go to an inbox with the source page highlighted.
 - **Calendar and reminders.** Expiry dates, appointments, renewals and monthly payments from the facts you approved, with Mac notifications and `.ics` export.
 - **Ask any AI, safely.** Questions go to a cloud model only after a privacy filter swaps names, IDs and addresses for placeholders like `[PERSON_1]`; the answer is put back together on your Mac. Zero data retention is required on every request.
+- **Everything in tabs.** Screens and documents open in tabs inside the app; facts are marked on the page, with approve and reject beside it.
+- **Local or cloud models.** Pick an Ollama model on your Mac (nothing leaves) or a cloud model (masked), keep a chat history, and type @ to ask about one document, folder or area. Ask for "my rental papers as a zip" and it gathers them.
+- **Labels.** Expired, ended, duplicate, unsigned, incomplete and not useful documents are flagged, and copies of the same document are grouped.
 - **MCP server.** Claude Desktop, Cursor or Claude Code can use your library through MCP, with per-app access levels and the same masking.
 - **Contacts and Me.** People and organisations found in your documents, and a profile of you built from approved facts, each value linked to its source.
 - **Opportunities.** Benefits, deadlines and savings that apply to you, found from your masked facts.
