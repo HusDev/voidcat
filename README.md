@@ -20,7 +20,9 @@ Built for the GitLab Transcend Hackathon (October 2026).
 - **Everything in tabs.** Screens and documents open in tabs inside the app; facts are marked on the page, with approve and reject beside it.
 - **Local or cloud models.** Pick an Ollama model on your Mac (nothing leaves) or a cloud model (masked), keep a chat history, and type @ to ask about one document, folder or area. Ask for "my rental papers as a zip" and it gathers them.
 - **Labels.** Expired, ended, duplicate, unsigned, incomplete and not useful documents are flagged, and copies of the same document are grouped.
-- **MCP server.** Claude Desktop, Cursor or Claude Code can use your library through MCP, with per-app access levels and the same masking.
+- **Encrypted on your Mac.** The library database (SQLCipher) and every stored document (AES-256-GCM) are encrypted with a key kept in the macOS Keychain.
+- **Catches names the rules miss.** Optionally, OpenAI's privacy-filter model runs on your Mac and masks extra names and addresses before anything goes to a cloud model.
+- **MCP server.** While Voidcat is open (it stays in the menu bar), Claude Desktop, Cursor or Claude Code can use your library through MCP, with per-app access levels and the same masking.
 - **Contacts and Me.** People and organisations found in your documents, and a profile of you built from approved facts, each value linked to its source.
 - **Opportunities.** Benefits, deadlines and savings that apply to you, found from your masked facts.
 
@@ -87,8 +89,8 @@ Tauri 2 (Rust: SQLite via rusqlite with FTS5, Apple Vision OCR, macOS Keychain) 
 
 ## Roadmap
 
-- A local privacy-filter model to catch names the rules miss
-- Background reminders when the app is closed
+- Get the local model from inside Voidcat (Ollama still installed separately)
+- A browser demo with invented documents
 
 See `docs/STATUS.md` for what's built and what's next.
 

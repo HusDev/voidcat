@@ -82,6 +82,8 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - Explain in plain words; no jargon in the UI.
 
 ## Gotchas
+- The library is encrypted: never read `files/` or `voidcat.db` directly; use `bytes_of` / `contents_of`, and for scripts against a copy use the ignored test `copy_check` (`VOIDCAT_COPY=<dir> cargo test copy_check -- --ignored`, throwaway key, prints counts only).
+- Dev builds are ad-hoc signed: after a Rust rebuild macOS asks again for the "library-key" Keychain item (Always Allow). Refusing shows a dialog and quits.
 - Timing tests take the fastest of three runs (`fastest` in `privacy.test.ts`); a single run failed at random when the machine was busy.
 - **Restart the dev app** after `bun add` (a stale React copy causes "Invalid hook call") and after Rust changes: kill `target/debug/voidcat`, `tauri dev`, and port 1420, then `bun run tauri dev` in the background.
 - Run `bun run build:mcp` before `cargo test` or a fresh `tauri dev` if `src-tauri/binaries/` is empty (Tauri checks the sidecar exists). After changing `mcp/server.ts` or `src/lib/mcp.ts`, rebuild it; apps pick it up the next time they start the server.
