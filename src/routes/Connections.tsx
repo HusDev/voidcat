@@ -86,7 +86,7 @@ function CloudCard() {
             autoComplete="off"
             className="h-10 min-w-0 flex-1 rounded-lg border border-line-strong px-3 font-mono text-sm"
           />
-          <button type="submit" disabled={!hasLibrary} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-40">
+          <button type="submit" disabled={!hasLibrary} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent hover:bg-accent-strong disabled:opacity-40">
             Save in Keychain
           </button>
         </form>

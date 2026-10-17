@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { Masker, kindOfLabel, parseDate, relative } from "./privacy";
 
+/** The fastest of three runs, in ms: a busy machine only makes runs slower, while a slow pattern is slow every time. */
+function fastest(run: () => unknown) {
+  let best = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < 3; i++) {
+    const start = performance.now();
+    run();
+    best = Math.min(best, performance.now() - start);
+  }
+  return best;
+}
+
 const today = new Date(2026, 9, 12); // 12 Oct 2026
 
 describe("privacy layer", () => {
@@ -92,9 +103,8 @@ describe("privacy layer", () => {
     // A value that would hang a backtracking engine if it were read as a pattern.
     const evil = "(a+)+$";
     const m = new Masker([{ label: "Holder name", value: `${evil} ${evil} ${evil}` }, { label: "Street address", value: "Calle (x+)+ 12" }], today);
-    const start = performance.now();
-    const out = m.mask(`${"a".repeat(40_000)}! then ${evil} ${evil} ${evil}`);
-    expect(performance.now() - start).toBeLessThan(500);
+    let out = "";
+    expect(fastest(() => (out = m.mask(`${"a".repeat(40_000)}! then ${evil} ${evil} ${evil}`)))).toBeLessThan(500);
     expect(out).toContain("[PERSON_1]");
     expect(out.startsWith("a".repeat(100))).toBe(true);
   });
@@ -107,9 +117,7 @@ describe("privacy layer", () => {
   it("stays fast on long text with no matches (no slow patterns)", () => {
     const m = new Masker([], today);
     for (const chunk of ["a", "1", "a.", "1 ", "A1", "a@"]) {
-      const start = performance.now();
-      m.mask(chunk.repeat(20_000));
-      expect(performance.now() - start, chunk).toBeLessThan(200);
+      expect(fastest(() => m.mask(chunk.repeat(20_000))), chunk).toBeLessThan(200);
     }
     expect(m.mask("write to lucia.prat@mail.com")).toBe("write to [EMAIL_1]");
   });

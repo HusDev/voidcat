@@ -136,7 +136,7 @@ function AddEvent({ onDone }: { onDone: () => void }) {
           </option>
         ))}
       </select>
-      <button type="submit" className="h-9 rounded-md bg-accent px-3.5 text-[13px] font-semibold text-white hover:bg-accent-strong">
+      <button type="submit" className="h-9 rounded-md bg-accent px-3.5 text-[13px] font-semibold text-on-accent hover:bg-accent-strong">
         Add
       </button>
       {error && <span className="col-span-full text-[12.5px] text-danger">{error}</span>}
@@ -202,7 +202,7 @@ export function Calendar() {
         {next && (
           <article className="flex flex-col gap-3 rounded-xl border-2 border-accent bg-card p-4.5">
             <div className="flex items-start gap-3.5">
-              <div className="flex w-15 shrink-0 flex-col items-center rounded-lg bg-accent py-1.5 text-white">
+              <div className="flex w-15 shrink-0 flex-col items-center rounded-lg bg-accent py-1.5 text-on-accent">
                 <span className="text-[11px] font-semibold uppercase tracking-wider">{day(next.date, { weekday: "short" })}</span>
                 <span className="text-2xl font-bold leading-tight">{fromIso(next.date).getDate()}</span>
                 <span className="text-[11px]">{day(next.date, { month: "short" })}</span>

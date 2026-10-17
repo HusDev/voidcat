@@ -11,6 +11,7 @@ import {
   flagContact,
   initials,
   listContacts,
+  reachable,
   scanAll,
   unscannedForContacts,
   useScanning,
@@ -92,7 +93,7 @@ function EditForm({ c, onDone }: { c: Contact; onDone: () => void }) {
       {text("idNumber", "ID number")}
       {error && <span className="text-[12.5px] text-danger">{error}</span>}
       <div className="flex gap-2 pt-1">
-        <button type="submit" className="h-9 rounded-md bg-accent px-3.5 text-[13px] font-semibold text-white hover:bg-accent-strong">
+        <button type="submit" className="h-9 rounded-md bg-accent px-3.5 text-[13px] font-semibold text-on-accent hover:bg-accent-strong">
           Save
         </button>
         <button type="button" onClick={onDone} className="h-9 px-3 text-[13px] text-ink-2 hover:text-ink">
@@ -233,7 +234,7 @@ export function Contacts() {
   const veil = useVeil();
 
   const refresh = useCallback(() => {
-    listContacts().then(setContacts);
+    listContacts().then((all) => setContacts(all.filter(reachable)));
     unscannedForContacts().then(setUnscanned);
   }, []);
   useEffect(() => {
@@ -269,8 +270,8 @@ export function Contacts() {
           <h1 className="m-0 text-[30px] font-light tracking-tight">Contacts</h1>
           <span className="text-sm text-ink-2">
             {contacts.length
-              ? `${contacts.length} ${contacts.length === 1 ? "person or organisation" : "people and organisations"} found in your documents`
-              : "People and organisations found in your documents, read on this Mac."}
+              ? `${contacts.length} ${contacts.length === 1 ? "contact" : "contacts"} with an email or phone number, found in your documents`
+              : "People and organisations you can reach, found in your documents on this Mac."}
           </span>
         </div>
         <label htmlFor="contacts-q" className="ml-auto flex h-10 w-72 items-center gap-2 rounded-lg border border-line-strong bg-card px-3 text-ink-2 focus-within:border-accent">
@@ -292,7 +293,7 @@ export function Contacts() {
               <span>
                 {unscanned.length} {unscanned.length === 1 ? "document hasn't" : "documents haven't"} been read for contacts yet.
               </span>
-              <button type="button" onClick={scan} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-semibold text-white hover:bg-accent-strong">
+              <button type="button" onClick={scan} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-semibold text-on-accent hover:bg-accent-strong">
                 <ScanSearch aria-hidden className="size-4" /> Find contacts
               </button>
             </>
@@ -314,7 +315,7 @@ export function Contacts() {
               key={a}
               aria-selected={area === a}
               onClick={() => setArea(a)}
-              className={`rounded-full px-3 py-1.5 text-[13px] ${area === a ? "bg-accent font-semibold text-white" : "bg-card text-ink hover:bg-card/70"}`}
+              className={`rounded-full px-3 py-1.5 text-[13px] ${area === a ? "bg-accent font-semibold text-on-accent" : "bg-card text-ink hover:bg-card/70"}`}
             >
               {a === "all" ? "All" : CATEGORY_NAMES[a]}
             </button>
@@ -324,7 +325,7 @@ export function Contacts() {
 
       {contacts.length === 0 && !scanning && (
         <div className="rounded-xl border border-line bg-card px-5 py-8 text-sm text-ink-2">
-          No contacts yet. New documents are read for contacts after they're filed; use Find contacts for the ones you already have.
+          No contacts yet. Only people and organisations with an email or phone number in your documents appear here. New documents are read after they're filed; use Find contacts for the ones you already have.
         </div>
       )}
 
@@ -346,7 +347,10 @@ export function Contacts() {
                     <span className="truncate text-[14.5px] font-semibold">
                       <Private>{c.name}</Private>
                     </span>
-                    <span className="truncate text-[12.5px] text-ink-2">{[c.role, c.organisation].filter(Boolean).join(" · ") || "—"}</span>
+                    <span className="truncate text-[12.5px] text-ink-2">
+                      {c.role && `${c.role} · `}
+                      <Private>{c.email ?? c.phone ?? ""}</Private>
+                    </span>
                   </span>
                   <span className="text-[12.5px] text-ink-2">{CATEGORY_NAMES[c.category]}</span>
                   <span className="text-right text-[12.5px] text-ink-2">

@@ -16,4 +16,12 @@ First version, built for the GitLab Transcend Hackathon.
 - Opportunities: benefits and deadlines that may apply to you, found from masked facts.
 - Contacts and Me: the people in your documents, and a profile of you built from approved facts.
 - MCP server: Claude Desktop, Cursor and Claude Code can use the library, masked, with per-app access levels.
+- Tabs: every screen and every document opens in a tab, like a code editor; documents are shown inside the app (PDF, images, text, Markdown, spreadsheets, Word).
+- Reading: Excel, Numbers-exported and OpenDocument spreadsheets, CSV and Word (.docx) files.
+- Reviewing facts beside the document: each value marked on its page, with approve, edit and reject next to it.
+- Folders: a Finder-like tree; drag documents and folders, rename, move, and re-file with the local model; download a folder as a zip.
+- Ask: local models through Ollama or cloud models through OpenRouter in one dropdown, saved chat history, @ mentions to limit the context to documents, folders or areas, and zips of matching documents on request.
+- Side chats: ask about one open document, or about yourself from the Me page (a CV, a short bio, form answers).
+- Labels: expired, ended, duplicate, unsigned, incomplete and not useful, checked strictly, with duplicate copies grouped.
+- Look: a white line cat with gold eyes, black-and-white actions, light and dark themes.
 - Pipeline: verify, secure, govern (privacy guard), package and release stages.

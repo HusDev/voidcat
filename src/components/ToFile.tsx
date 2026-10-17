@@ -37,7 +37,7 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
           <span className="text-[13px] text-ink-2">Voidcat filed the documents it was sure about. Check where these go; nothing moves until you confirm.</span>
         </div>
         {docs.length > 1 && (
-          <button type="button" onClick={fileAll} disabled={busy} className="ml-auto h-9 rounded-lg bg-accent px-3.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50">
+          <button type="button" onClick={fileAll} disabled={busy} className="ml-auto h-9 rounded-lg bg-accent px-3.5 text-sm font-semibold text-on-accent hover:bg-accent-strong disabled:opacity-50">
             File all {docs.length}
           </button>
         )}
@@ -101,7 +101,7 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
                     />
                   </div>
                   <div className="flex gap-2">
-                    <button type="submit" disabled={!renaming.name.trim()} className="h-8 rounded-md bg-accent px-3 text-[13px] font-semibold text-white hover:bg-accent-strong disabled:opacity-40">
+                    <button type="submit" disabled={!renaming.name.trim()} className="h-8 rounded-md bg-accent px-3 text-[13px] font-semibold text-on-accent hover:bg-accent-strong disabled:opacity-40">
                       {folders.some((f) => f.area === renaming.area && f.name.toLowerCase() === renaming.name.trim().toLowerCase()) ? "File here" : "Create and file"}
                     </button>
                     <button type="button" onClick={() => setRenaming(null)} className="h-8 px-2 text-[13px] text-ink-2 hover:text-ink">
@@ -116,7 +116,7 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
                   <button
                     type="button"
                     onClick={() => d.suggestedArea && d.suggestedFolder && file(d, d.suggestedArea, d.suggestedFolder)}
-                    className="h-8 rounded-md bg-accent px-3 text-[13px] font-semibold text-white hover:bg-accent-strong"
+                    className="h-8 rounded-md bg-accent px-3 text-[13px] font-semibold text-on-accent hover:bg-accent-strong"
                   >
                     {isNew ? "Create and file" : "File here"}
                   </button>

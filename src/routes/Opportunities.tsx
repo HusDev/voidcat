@@ -83,7 +83,7 @@ function Card({ o, onStatus }: { o: Opportunity; onStatus: (status: Opportunity[
         <h3 className="m-0 flex-1 text-[16px] font-bold leading-snug">
           <Private>{o.title}</Private>
         </h3>
-        {o.status === "kept" && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold text-white">Kept</span>}
+        {o.status === "kept" && <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold text-on-accent">Kept</span>}
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold ${fitCls}`}>{fit}</span>
       </div>
       <p data-selectable className="m-0 text-[14px] leading-relaxed text-ink">
@@ -127,7 +127,7 @@ function Card({ o, onStatus }: { o: Opportunity; onStatus: (status: Opportunity[
           </button>
         ) : (
           <>
-            <button type="button" onClick={() => onStatus(o.status === "kept" ? "new" : "kept")} aria-pressed={o.status === "kept"} className={`${button} ${o.status === "kept" ? "border-ink bg-accent text-white hover:bg-accent-strong" : ""}`}>
+            <button type="button" onClick={() => onStatus(o.status === "kept" ? "new" : "kept")} aria-pressed={o.status === "kept"} className={`${button} ${o.status === "kept" ? "border-ink bg-accent text-on-accent hover:bg-accent-strong" : ""}`}>
               <Sparkles aria-hidden className="size-3.5" /> {o.status === "kept" ? "Kept" : "Keep"}
             </button>
             {added ? (
@@ -278,7 +278,7 @@ export function Opportunities() {
           type="button"
           onClick={prepare}
           disabled={state !== "idle" || !hasLibrary || hasKey === false}
-          className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-[13.5px] font-semibold text-white hover:bg-accent-strong disabled:opacity-40"
+          className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-[13.5px] font-semibold text-on-accent hover:bg-accent-strong disabled:opacity-40"
         >
           {state === "building" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <ScanSearch aria-hidden className="size-4" />}
           {items.length ? "Scan again" : "Find opportunities"}
@@ -324,7 +324,7 @@ export function Opportunities() {
             </span>
           </label>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={scan} disabled={state === "scanning"} className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-60">
+            <button type="button" onClick={scan} disabled={state === "scanning"} className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent hover:bg-accent-strong disabled:opacity-60">
               {state === "scanning" && <LoaderCircle aria-hidden className="size-4 animate-spin" />}
               {state === "scanning" ? "Scanning… (up to a minute)" : "Scan"}
             </button>
@@ -352,7 +352,7 @@ export function Opportunities() {
               key={a}
               aria-selected={area === a}
               onClick={() => setArea(a)}
-              className={`rounded-full px-3 py-1.5 text-[13px] ${area === a ? "bg-accent font-semibold text-white" : "bg-card text-ink hover:bg-white/70"}`}
+              className={`rounded-full px-3 py-1.5 text-[13px] ${area === a ? "bg-accent font-semibold text-on-accent" : "bg-card text-ink hover:bg-white/70"}`}
             >
               {a === "all" ? "All" : AREA_NAMES[a]}
             </button>

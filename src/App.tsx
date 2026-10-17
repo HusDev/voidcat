@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Route, Routes } from "react-router";
+import { DocumentTabs } from "./components/DocumentTabs";
 import { Sidebar } from "./components/Sidebar";
 import { EyeOff } from "lucide-react";
 import { LIBRARY_CHANGED, libraryStats } from "./lib/library";
@@ -16,6 +17,7 @@ import { Library } from "./routes/Library";
 import { Me } from "./routes/Me";
 import { Opportunities } from "./routes/Opportunities";
 import { Settings } from "./routes/Settings";
+import { Viewer } from "./routes/Viewer";
 
 export default function App() {
   const [pending, setPending] = useState(0);
@@ -56,7 +58,8 @@ export default function App() {
             </button>
           )}
         </div>
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8">
+        <DocumentTabs />
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8 pt-6">
           <Routes>
             <Route index element={<Library />} />
             <Route path="me" element={<Me />} />
@@ -67,6 +70,7 @@ export default function App() {
             <Route path="inbox" element={<Inbox />} />
             <Route path="connections" element={<Connections />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="doc/:id" element={<Viewer />} />
           </Routes>
         </main>
       </div>

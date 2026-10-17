@@ -1,0 +1,457 @@
+import { invoke } from "@tauri-apps/api/core";
+import { ExternalLink, FolderInput, ListChecks, LoaderCircle, MessageSquareText, Pencil } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import { useParams } from "react-router";
+import remarkGfm from "remark-gfm";
+import { getDocumentProxy } from "unpdf";
+import { DocChat } from "../components/SideChat";
+import { LabelChips } from "../components/LabelChips";
+import { FolderPicker } from "../components/FolderPicker";
+import { RenameInput } from "../components/RenameInput";
+import { ReviewPanel } from "../components/ReviewPanel";
+import {
+  type Document,
+  type Fact,
+  type Folder,
+  type Page,
+  type Sheet,
+  LIBRARY_CHANGED,
+  announceChange,
+  documentPages,
+  fileInFolder,
+  isSpreadsheet,
+  listFacts,
+  listFolders,
+  openInDefaultApp,
+  readSheets,
+  renameDocument,
+  settleFact,
+} from "../lib/library";
+import { useLabels } from "../lib/labels";
+import { type Mark, type PageText, cellHas, findRuns, markClass, markText, pageText } from "../lib/marks";
+import { useTabs } from "../lib/tabs";
+import { Blurred, Private } from "../lib/veil";
+
+const bytesOf = async (id: string) => new Uint8Array(await invoke<ArrayBuffer>("document_bytes", { id }));
+
+type Box = { x: number; y: number; w: number; h: number; len: number };
+/** A drawn PDF page: where its marks go, its text, and each text run's box (in % of the page). */
+type DrawnPage = { overlay: HTMLDivElement; text: PageText; boxes: Box[] };
+
+/** Every page of a PDF drawn with pdf.js, one under the other, with the facts marked over the words they came from. */
+function PdfPages({ id, marks, selected }: { id: string; marks: Mark[]; selected: string | null }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const drawn = useRef<DrawnPage[]>([]);
+  const [pages, setPages] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let stop = false;
+    const box = ref.current;
+    if (!box) return;
+    box.replaceChildren();
+    drawn.current = [];
+    setPages(0);
+    (async () => {
+      const pdf = await getDocumentProxy(await bytesOf(id));
+      const dpr = window.devicePixelRatio || 1;
+      for (let n = 1; n <= pdf.numPages && !stop; n++) {
+        const page = await pdf.getPage(n);
+        const base = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: (Math.min(box.clientWidth, 920) * dpr) / base.width });
+        const frame = document.createElement("div");
+        frame.className = "relative overflow-hidden rounded-md bg-white shadow-sm ring-1 ring-line";
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.className = "block w-full";
+        canvas.setAttribute("aria-label", `Page ${n}`);
+        const overlay = document.createElement("div");
+        overlay.className = "pointer-events-none absolute inset-0";
+        frame.append(canvas, overlay);
+        box.append(frame);
+        await page.render({ canvasContext: canvas.getContext("2d")!, viewport, canvas }).promise;
+
+        const runs = (await page.getTextContent()).items.flatMap((it) => ("str" in it ? [it] : []));
+        drawn.current.push({
+          overlay,
+          text: pageText(runs.map((r) => r.str)),
+          boxes: runs.map((r) => {
+            const [x, y] = base.convertToViewportPoint(r.transform[4], r.transform[5]);
+            const h = Math.hypot(r.transform[2], r.transform[3]) || r.height;
+            return { x: (x / base.width) * 100, y: ((y - h * 0.85) / base.height) * 100, w: (r.width / base.width) * 100, h: ((h * 1.15) / base.height) * 100, len: r.str.length };
+          }),
+        });
+        setPages(n);
+      }
+    })().catch((e) => setError(String(e)));
+    return () => {
+      stop = true;
+    };
+  }, [id]);
+
+  // Draw the marks: each fact on its own page first, else on the first page that has it.
+  useEffect(() => {
+    for (const p of drawn.current) p.overlay.replaceChildren();
+    for (const m of marks) {
+      const order = m.page ? [drawn.current[m.page - 1], ...drawn.current] : drawn.current;
+      for (const p of order) {
+        const runs = p && findRuns(p.text, m.value);
+        if (!runs) continue;
+        let first: HTMLElement | null = null;
+        for (const [run, [from, to]] of runs) {
+          const b = p.boxes[run];
+          if (!b?.len) continue;
+          const el = document.createElement("span");
+          el.className = `absolute rounded-sm mix-blend-multiply ${markClass(m.status, m.id === selected)}`;
+          el.style.left = `${b.x + (b.w * from) / b.len}%`;
+          el.style.width = `${(b.w * (to - from)) / b.len}%`;
+          el.style.top = `${b.y}%`;
+          el.style.height = `${b.h}%`;
+          p.overlay.append(el);
+          first ??= el;
+        }
+        if (m.id === selected) first?.scrollIntoView({ block: "center", behavior: "smooth" });
+        break;
+      }
+    }
+  }, [marks, selected, pages]);
+
+  if (error) return <p className="text-sm text-danger">This PDF could not be shown: {error}</p>;
+  return <div ref={ref} className="mx-auto flex w-full max-w-[920px] flex-col gap-4" />;
+}
+
+function ImageFile({ doc }: { doc: Document }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let made: string | null = null;
+    bytesOf(doc.id).then((bytes) => {
+      made = URL.createObjectURL(new Blob([bytes], { type: doc.mime ?? "image/png" }));
+      setUrl(made);
+    });
+    return () => {
+      if (made) URL.revokeObjectURL(made);
+    };
+  }, [doc.id, doc.mime]);
+  if (!url) return <Loading />;
+  return <img src={url} alt={doc.title} className="mx-auto max-h-[calc(100vh-10rem)] rounded-md object-contain shadow-sm ring-1 ring-line" />;
+}
+
+/** Marks the facts in text the app laid out itself (text, Markdown, read pages). */
+function useMarked(marks: Mark[], selected: string | null, ready: unknown) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (ref.current) markText(ref.current, marks, selected);
+  }, [marks, selected, ready]);
+  return ref;
+}
+
+function TextFile({ doc, marks, selected }: { doc: Document; marks: Mark[]; selected: string | null }) {
+  const [text, setText] = useState<string | null>(null);
+  const ref = useMarked(marks, selected, text);
+  useEffect(() => {
+    bytesOf(doc.id).then((b) => setText(new TextDecoder().decode(b)));
+  }, [doc.id]);
+  if (text === null) return <Loading />;
+  return (
+    <div ref={ref} data-selectable className="mx-auto w-full max-w-[820px] rounded-xl border border-line bg-card px-8 py-8 text-page-ink">
+      {doc.mime === "text/markdown" ? (
+        <div className="md-page text-[14px] leading-relaxed">
+          <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+        </div>
+      ) : (
+        <pre className="whitespace-pre-wrap font-mono text-[12.5px] leading-relaxed">{text}</pre>
+      )}
+    </div>
+  );
+}
+
+/** A spreadsheet: one tab per sheet, the cells as a table with column letters and row numbers, facts marked in their cells. */
+function Spreadsheet({ doc, marks, selected }: { doc: Document; marks: Mark[]; selected: string | null }) {
+  const [sheets, setSheets] = useState<Sheet[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [at, setAt] = useState(0);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    readSheets(doc.id)
+      .then(setSheets)
+      .catch((e) => setError(String(e)));
+  }, [doc.id]);
+
+  // Show the chosen fact's sheet (a sheet is a page), then scroll to its cell.
+  const chosen = marks.find((m) => m.id === selected);
+  useEffect(() => {
+    if (chosen?.page && sheets && chosen.page <= sheets.length) setAt(chosen.page - 1);
+  }, [chosen?.id, chosen?.page, sheets]);
+  useEffect(() => {
+    box.current?.querySelector("[data-chosen]")?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+  }, [selected, at, sheets]);
+
+  if (error) return <p className="text-sm text-danger">{error}</p>;
+  if (!sheets) return <Loading />;
+  if (!sheets.length) return <p className="text-sm text-ink-2">This spreadsheet is empty.</p>;
+  const sheet = sheets[Math.min(at, sheets.length - 1)];
+  const width = Math.max(...sheet.rows.map((r) => r.length));
+  const column = (i: number) => (i >= 26 ? String.fromCharCode(64 + Math.floor(i / 26)) : "") + String.fromCharCode(65 + (i % 26));
+  // The chosen fact wins a cell that more than one fact matches.
+  const markOf = (cell: string) => (cell ? ((chosen && cellHas(cell, chosen.value) ? chosen : undefined) ?? marks.find((m) => cellHas(cell, m.value))) : undefined);
+
+  return (
+    <div className="flex flex-col gap-3">
+      {sheets.length > 1 && (
+        <div role="tablist" aria-label="Sheets" className="flex flex-wrap gap-1.5">
+          {sheets.map((s, i) => (
+            <button
+              key={s.name}
+              type="button"
+              role="tab"
+              aria-selected={i === at}
+              onClick={() => setAt(i)}
+              className={`rounded-md px-2.5 py-1 text-[12.5px] ${i === at ? "bg-accent-soft font-semibold text-ink" : "text-ink-2 hover:bg-card hover:text-ink"}`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <div ref={box} data-selectable className="max-h-[calc(100vh-14rem)] overflow-auto rounded-xl border border-line bg-card">
+        <table className="border-collapse font-mono text-[12px] tabular-nums text-page-ink">
+          <thead className="sticky top-0 z-10 bg-ground text-ink-2">
+            <tr>
+              <th className="sticky left-0 border-b border-r border-line bg-ground px-2 py-1" />
+              {Array.from({ length: width }, (_, i) => (
+                <th key={i} className="min-w-16 border-b border-r border-line px-2 py-1 font-medium">
+                  {column(i)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sheet.rows.map((row, r) => (
+              <tr key={r}>
+                <th className="sticky left-0 border-b border-r border-line bg-ground px-2 py-1 text-right font-medium text-ink-2">{r + 1}</th>
+                {Array.from({ length: width }, (_, c) => {
+                  const cell = row[c] ?? "";
+                  const mark = markOf(cell);
+                  return (
+                    <td
+                      key={c}
+                      data-chosen={(mark && mark.id === selected) || undefined}
+                      className={`max-w-80 truncate border-b border-r border-line px-2 py-1 ${/^-?[\d.,]+%?$/.test(cell) ? "text-right" : ""} ${mark ? markClass(mark.status, mark.id === selected) : ""}`}
+                      title={cell}
+                    >
+                      {cell}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {sheet.cut && <p className="m-0 text-[12.5px] text-ink-2">Only the first 2,000 rows are shown. Open in the default app to see the rest.</p>}
+    </div>
+  );
+}
+
+/** Files the app can't draw (Word, email): the text Voidcat read from them, with the facts marked. */
+function ReadPages({ doc, marks, selected }: { doc: Document; marks: Mark[]; selected: string | null }) {
+  const [pages, setPages] = useState<Page[] | null>(null);
+  const ref = useMarked(marks, selected, pages);
+  useEffect(() => {
+    documentPages(doc.id).then(setPages);
+  }, [doc.id]);
+  if (pages === null) return <Loading />;
+  if (!pages.length)
+    return (
+      <p className="text-sm text-ink-2">
+        Voidcat can't show this kind of file yet. Use <b>Open in default app</b> above.
+      </p>
+    );
+  return (
+    <div ref={ref} className="mx-auto flex w-full max-w-[820px] flex-col gap-4">
+      {pages.map((p) => (
+        <div key={p.page} data-selectable className="whitespace-pre-wrap rounded-xl border border-line bg-card px-8 py-8 text-[13px] leading-relaxed text-page-ink">
+          {p.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="grid place-items-center py-20 text-ink-2">
+      <LoaderCircle aria-hidden className="size-5 animate-spin" />
+    </div>
+  );
+}
+
+/** A document opened in its tab, with the facts found in it beside it to check. */
+export function Viewer() {
+  const { id = "" } = useParams();
+  const { documents } = useTabs();
+  const doc = documents.get(id);
+  const [facts, setFacts] = useState<Fact[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const { labels } = useLabels();
+  const [renaming, setRenaming] = useState(false);
+  const [moving, setMoving] = useState<Folder[] | null>(null);
+  /** What sits beside the document: its facts to check, a chat about it, or nothing. */
+  const [panel, setPanel] = useState<"facts" | "ask" | null>(null);
+
+  useEffect(() => {
+    const load = () => Promise.all([listFacts("pending"), listFacts("approved")]).then(([p, a]) => setFacts([...p, ...a].filter((f) => f.documentId === id)));
+    load();
+    window.addEventListener(LIBRARY_CHANGED, load);
+    return () => window.removeEventListener(LIBRARY_CHANGED, load);
+  }, [id]);
+
+  const pending = facts.filter((f) => f.status === "pending");
+  const approved = facts.filter((f) => f.status === "approved");
+  const current = facts.some((f) => f.id === selected) ? selected : (pending[0]?.id ?? null);
+  const marks = useMemo<Mark[]>(() => facts.map((f) => ({ id: f.id, value: f.value, status: f.status, page: f.page })), [facts]);
+
+  if (!doc) return <Loading />;
+  const side = panel ?? (facts.length ? "facts" : null);
+
+  const settle = async (f: Fact, status: "approved" | "rejected", value?: string) => {
+    // Move on to the next fact to check.
+    const at = pending.findIndex((p) => p.id === f.id);
+    setSelected(pending[at + 1]?.id ?? pending[at - 1]?.id ?? null);
+    await settleFact(f.id, status, value);
+    announceChange();
+  };
+  const approveAll = async () => {
+    for (const f of pending) await settleFact(f.id, "approved");
+    announceChange();
+  };
+
+  const mime = doc.mime ?? "";
+  const body =
+    mime === "application/pdf" ? (
+      <PdfPages id={doc.id} marks={marks} selected={current} />
+    ) : isSpreadsheet(doc.mime) ? (
+      <Spreadsheet doc={doc} marks={marks} selected={current} />
+    ) : mime.startsWith("image/") ? (
+      <ImageFile doc={doc} />
+    ) : mime.startsWith("text/") ? (
+      <TextFile doc={doc} marks={marks} selected={current} />
+    ) : (
+      <ReadPages doc={doc} marks={marks} selected={current} />
+    );
+
+  return (
+    <div className="flex flex-col gap-5">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-1 flex-col">
+          {renaming ? (
+            <RenameInput
+              id="rename-document"
+              value={doc.title}
+              label="Document name"
+              className="h-9 font-display text-2xl font-light text-ink"
+              onSave={async (title) => {
+                await renameDocument(doc.id, title);
+                announceChange();
+              }}
+              onDone={() => setRenaming(false)}
+            />
+          ) : (
+            <div className="group flex min-w-0 items-center gap-2">
+              <h1 className="truncate text-2xl" onDoubleClick={() => setRenaming(true)}>
+                <Private>{doc.title}</Private>
+              </h1>
+              <button
+                type="button"
+                onClick={() => setRenaming(true)}
+                aria-label="Rename document"
+                title="Rename"
+                className="grid size-7 shrink-0 place-items-center rounded-md text-ink-2 opacity-0 hover:bg-card hover:text-ink focus:opacity-100 group-hover:opacity-100"
+              >
+                <Pencil aria-hidden className="size-3.5" />
+              </button>
+            </div>
+          )}
+          <span className="font-mono text-xs text-ink-2">
+            {doc.folderName ? <Private>{doc.folderName}</Private> : "Not filed"}
+            {doc.pageCount ? ` · ${doc.pageCount} ${doc.pageCount === 1 ? "page" : "pages"}` : ""}
+          </span>
+          <div className="mt-1.5">
+            <LabelChips documentId={doc.id} labels={labels} canAdd />
+          </div>
+        </div>
+        {pending.length > 0 && (
+          <span className="rounded-full bg-private-soft px-3 py-1 text-[13px] font-semibold text-private-ink">
+            {pending.length} {pending.length === 1 ? "fact" : "facts"} to check
+          </span>
+        )}
+        <div role="group" aria-label="Beside the document" className="flex rounded-md border border-line-strong">
+          {facts.length > 0 && (
+            <button
+              type="button"
+              aria-pressed={side === "facts"}
+              onClick={() => setPanel(side === "facts" ? "ask" : "facts")}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-l-md px-2.5 text-[13px] ${side === "facts" ? "bg-accent-soft font-semibold" : "hover:bg-card"}`}
+            >
+              <ListChecks aria-hidden className="size-4" /> Facts
+            </button>
+          )}
+          <button
+            type="button"
+            aria-pressed={side === "ask"}
+            onClick={() => setPanel(side === "ask" ? (facts.length ? "facts" : null) : "ask")}
+            className={`inline-flex h-8 items-center gap-1.5 px-2.5 text-[13px] ${facts.length ? "rounded-r-md" : "rounded-md"} ${side === "ask" ? "bg-accent-soft font-semibold" : "hover:bg-card"}`}
+          >
+            <MessageSquareText aria-hidden className="size-4" /> Ask
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={async () => setMoving(moving ? null : await listFolders())}
+          aria-expanded={!!moving}
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2"
+        >
+          <FolderInput aria-hidden className="size-4" /> Move
+        </button>
+        <button
+          type="button"
+          onClick={() => openInDefaultApp(doc.id)}
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2"
+        >
+          <ExternalLink aria-hidden className="size-4" /> Open in default app
+        </button>
+      </header>
+      {moving && (
+        <div className="max-w-md">
+          <FolderPicker
+            folders={moving.filter((f) => f.id !== doc.folderId)}
+            area={doc.area ?? "Other"}
+            onPick={async (area, name) => {
+              await fileInFolder(doc.id, area, name);
+              setMoving(null);
+              announceChange();
+            }}
+            onCancel={() => setMoving(null)}
+          />
+        </div>
+      )}
+      {side ? (
+        <div className="flex flex-wrap items-start gap-5">
+          <div className="min-w-0 flex-[999_1_520px]">
+            <Blurred>{body}</Blurred>
+            {side === "facts" && mime.startsWith("image/") && <p className="m-0 mt-2 text-[12.5px] text-ink-2">Values can't be marked on a photo; check them against the picture.</p>}
+          </div>
+          {side === "facts" ? (
+            <ReviewPanel pending={pending} approved={approved} selected={current} onSelect={setSelected} onSettle={settle} onApproveAll={approveAll} />
+          ) : (
+            <DocChat doc={doc} />
+          )}
+        </div>
+      ) : (
+        <Blurred>{body}</Blurred>
+      )}
+    </div>
+  );
+}

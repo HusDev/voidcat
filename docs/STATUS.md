@@ -1,9 +1,9 @@
 # Voidcat — status and next steps
 
-Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 12 Oct 2026 (Voidcat rebrand).
+Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 17 Oct 2026.
 
 ## The product
-**Voidcat** (first called SafeBox; name not final): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
+**Voidcat** (final name; first called SafeBox): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
 
 - **Tagline:** "Drop your life in. Any AI can use it. None of them can take it."
 - **First target users:** people whose paperwork spans countries (immigrants, expats, international workers).
@@ -11,7 +11,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - **Repo:** https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase (remote `showcase`, where work happens; must be public + MIT for the hackathon). Private copy: https://gitlab.com/hus.dev/voidcat (remote `origin`), pushed to later.
 - **Owner:** Hussein (husdev). Separate from Hus, his private app in `~/lab/hus`. Never copy Hus's personal data into this repo.
 
-## Built (all pushed to `main`)
+## Built
 1. **Desktop app:** Tauri 2 + React + Tailwind; Library, Ask, Calendar, Facts to approve, Connected AIs.
 2. **Library:**
    - drag-and-drop or file picker; SQLite and files in `~/Library/Application Support/dev.hus.voidcat/`;
@@ -45,10 +45,18 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - Claude Desktop, Cursor and Claude Code can list documents, read approved facts and see upcoming dates, all masked;
    - searching and reading pages need the higher level; each app starts at "masked facts and dates" and you change it in Connected AIs;
    - one click adds Voidcat to Claude Desktop or Cursor; Claude Code gets a command to copy. ChatGPT isn't supported (it needs an internet server).
-12. **Voidcat rebrand:** line-cat logo and app icon, violet accent, Outfit headings, light and dark themes that follow the Mac (sidebar dark in both), name Voidcat in the window and the interface. Canvas: https://claude.ai/artifact/97fHrNDyKQs6Q6DQ7cmB1Z (dark and light rows).
+12. **Voidcat rebrand:** line-cat logo and app icon (white cat with gold eyes since 17 Oct; violet before), black-and-white actions, Outfit headings, light and dark themes that follow the Mac (sidebar dark in both), name Voidcat in the window and the interface. Canvas: https://claude.ai/artifact/97fHrNDyKQs6Q6DQ7cmB1Z (dark and light rows).
 13. **Renamed to Voidcat everywhere in the app:** package, identifier `dev.hus.voidcat`, database `voidcat.db`, Keychain service, MCP server and its entry in other apps. The old library folder, key and MCP entry move over automatically on first start (`legacy.rs`; it also rewrites each document's saved file path). Backup taken before the rename: `~/Library/Application Support/dev.hus.safebox.backup-2026-10-12`. The local folder is `~/lab/voidcat` and the GitLab project `hus.dev/voidcat` (renamed from safebox; GitLab redirects the old URL).
 14. **Contacts:** people and organisations found in each document by the local model (after filing, or "Find contacts" for older documents), merged across documents, with role, area, phone, email, address, ID and where they appear; edit, "This is me", hide. People's details are hidden from every AI like approved facts.
 15. **Me:** a profile built on this Mac from approved facts (identity, residency, home, work & money, education, health), each value with its source document; "Needs you" for conflicting values (your choice is remembered) and missing details; a timeline.
+16. **Tabs:** every screen and document gets a tab (Ask is one tab); documents open inside the app: PDFs with fact marks, images, text/Markdown, spreadsheets as tables, Word as text.
+17. **More file types:** .xlsx/.xls/.ods (calamine) and .docx (zip + XML), both in Rust.
+18. **Review beside the document:** pending facts in a panel next to the page, values marked on it; Library splits "Needs your review" from "All set".
+19. **Folders, phase 2:** two-step filing (area first, then that area's folders) fixed "everything in Travel"; Re-file; drag and drop; rename; move; Download zip.
+20. **Ask, phase 2:** local (Ollama) and cloud models in one dropdown; chat history; @ mentions to scope the context (@all = everything); the model can propose a zip of documents (`bundle_documents`), saved only when you click; today's date in the prompt; greetings get a short answer and filler words don't search.
+21. **Side chats:** "Ask about this document" in a document tab, "Ask about me" on Me.
+22. **Labels:** expired / ended from dates, duplicates by text similarity, unsigned only with a "sign here" request in a signable kind of document plus the vision model, incomplete from "page X of Y", not useful only when no facts were found.
+23. **Me redesign** (dark ID header, missing chips, section cards, timeline) and Contacts limited to people you can reach.
 
 ## Next, in order
 1. **GitLab hackathon work** (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):
@@ -57,12 +65,14 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - Phase 3, foundational flows on (Code Review, Developer, Fix CI/CD Pipeline, Security Review, SAST flows);
    - Phase 4, custom flows in the AI Catalog (sources in `.gitlab/duo/flows/`): Triage, Privacy Guard, Pipeline Doctor, Health Reporter, Release;
    - Phase 5, Observability, README automation section, a full run for the demo video (under 3 min, invented data only).
+   - **State on 17 Oct 2026:** phases 1–2 merged and green. Only the Triage custom flow is in the AI Catalog and enabled; Privacy Guard, Pipeline Doctor, Health Reporter and Release still need pasting in (AI › Flows › New flow, sources in `.gitlab/duo/flows/`) and their triggers switching on (Triage's "issue created" trigger didn't fire either). No flow session had ever succeeded: the runtime image lacked `curl` for downloading duo-cli (fixed in `agent-config.yml`, which is read from `main`). Observability is a group setting, switched on in the UI. Issue #3 (Rename button in the folder view) is the small real task for the full loop: Triage → Developer flow → MR → Code Review → merge → tag `v0.1.0` → release.
+   - **Demo video:** `bun run demo` opens an empty library in `~/Library/Application Support/dev.hus.voidcat-demo/` (`VOIDCAT_DIR`); drop in `demo/documents/` (all invented). See `demo/README.md`.
 2. **OpenAI privacy-filter model** (Transformers.js/ONNX) to catch names the rules miss.
 3. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
 4. **Polish:**
    - a Rename-folder button in the folder view;
    - background reminders when the app is closed;
-   - `docType` sometimes gets the folder name (seen once): tighten the schema description.
+   - (done 17 Oct) `docType` description now says "never a folder, area or person name"; filing no longer shows folders in the first step anyway.
 
 ## How Hussein likes to work
 - Short answers; challenge with evidence instead of folding.
@@ -72,6 +82,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - Explain in plain words; no jargon in the UI.
 
 ## Gotchas
+- Timing tests take the fastest of three runs (`fastest` in `privacy.test.ts`); a single run failed at random when the machine was busy.
 - **Restart the dev app** after `bun add` (a stale React copy causes "Invalid hook call") and after Rust changes: kill `target/debug/voidcat`, `tauri dev`, and port 1420, then `bun run tauri dev` in the background.
 - Run `bun run build:mcp` before `cargo test` or a fresh `tauri dev` if `src-tauri/binaries/` is empty (Tauri checks the sidecar exists). After changing `mcp/server.ts` or `src/lib/mcp.ts`, rebuild it; apps pick it up the next time they start the server.
 - Documents store absolute file paths (`documents.stored_path`): any change to the data folder must rewrite them (see `legacy::fix_paths`).
@@ -84,7 +95,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - The library DB is real user data: never reset it. Migrations add columns in `store.rs` `migrate()`; new tables use `create table if not exists`.
 
 ## Security findings reviewed (13 Oct 2026, MR !1)
-- **Zod 4.6.6, CVE-2023-54404 (high):** the advisory covers "through 4.6.5", so 4.6.6 is outside it; the scanner's data lags. Not upgraded to 4.6.7 because it was one day old (supply-chain caution). Recheck later and bump.
+- **Zod 4.6.6, CVE-2023-54404 (high):** the advisory covers "through 4.6.5", so 4.6.6 is outside it; the scanner's data lags. Not upgraded to 4.6.7 at first because it was one day old (supply-chain caution); upgraded on 17 Oct 2026 once it was five days old.
 - **glib 0.18.5, RUSTSEC-2024-0429 (medium):** comes from Tauri's Linux (GTK) dependencies; the macOS app doesn't build it, and Tauri pins this version. Not applicable.
 - **6 × "regular expression with non-literal value" (SAST, medium):** false positives. Three were rewritten as fixed patterns (month names, the guard's copy); the other three build patterns from the user's own values through the standard `RegExp.escape` (ES2025) and keep a `nosemgrep` comment with the reason. The app now needs macOS 15.2+ (Safari 18.2 engine) for `RegExp.escape`.
 - **Found while testing (not flagged by the scanner):** the email pattern took quadratic time on long text without an `@` (0.75 s on 40,000 letters). Fixed by starting matches only at word starts and capping the name part at 64 characters; tests now time every pattern on adversarial input.
