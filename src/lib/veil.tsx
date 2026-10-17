@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { LIBRARY_CHANGED, listFacts } from "./library";
 import { contactFacts, listContacts, ownerNames } from "./people";
-import { HIDDEN, Masker, screenHider } from "./privacy";
+import { Masker, screenHider } from "./privacy";
 
 /**
  * "Hide private details": a switch for screen recording and screen sharing. While it's on, personal values are shown
@@ -68,7 +68,8 @@ export function VeilProvider({ children }: { children: ReactNode }) {
 
 export const useVeil = () => useContext(VeilContext);
 
-export const PLACEHOLDER = new RegExp(`(\\[(?:PERSON|ID|DATE|ADDRESS|EMAIL|PHONE|IBAN|PRIVATE)_\\d+\\]|${RegExp.escape(HIDDEN)})`);
+/** A placeholder from the masker, or the screen-only [HIDDEN] (`HIDDEN` in privacy.ts). */
+export const PLACEHOLDER = /(\[(?:PERSON|ID|DATE|ADDRESS|EMAIL|PHONE|IBAN|PRIVATE)_\d+\]|\[HIDDEN\])/;
 
 /** Text with placeholders drawn as cyan chips. */
 export function Placeholders({ text }: { text: string }) {
