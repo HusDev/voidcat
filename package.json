@@ -49,5 +49,8 @@
     "vite": "^8.0.16",
     "vitest": "^5.0.4"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "qs": "^6.16.1"
+  }
 }

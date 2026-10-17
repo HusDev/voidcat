@@ -167,6 +167,10 @@ function TextFile({ doc, marks, selected }: { doc: Document; marks: Mark[]; sele
   );
 }
 
+/** A cell that holds a number ("1.150", "-3,5", "20%"), so it lines up on the right. */
+// nosemgrep: nodejs_scan.javascript-dos-rule-regex_dos -- a single character class, linear time on any cell
+const isNumber = (cell: string) => /^-?[\d.,]+%?$/.test(cell);
+
 /** A spreadsheet: one tab per sheet, the cells as a table with column letters and row numbers, facts marked in their cells. */
 function Spreadsheet({ doc, marks, selected }: { doc: Document; marks: Mark[]; selected: string | null }) {
   const [sheets, setSheets] = useState<Sheet[] | null>(null);
@@ -238,7 +242,7 @@ function Spreadsheet({ doc, marks, selected }: { doc: Document; marks: Mark[]; s
                     <td
                       key={c}
                       data-chosen={(mark && mark.id === selected) || undefined}
-                      className={`max-w-80 truncate border-b border-r border-line px-2 py-1 ${/^-?[\d.,]+%?$/.test(cell) ? "text-right" : ""} ${mark ? markClass(mark.status, mark.id === selected) : ""}`}
+                      className={`max-w-80 truncate border-b border-r border-line px-2 py-1 ${isNumber(cell) ? "text-right" : ""} ${mark ? markClass(mark.status, mark.id === selected) : ""}`}
                       title={cell}
                     >
                       {cell}
