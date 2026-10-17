@@ -108,7 +108,7 @@ Hussein Hasan ([@hus.dev](https://gitlab.com/hus.dev)).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Open-source parts that ship with the app, and their licenses: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Project status
 

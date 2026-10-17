@@ -17,11 +17,15 @@ function ortFiles() {
         const name = String(req.url ?? "").slice(1).split("?")[0];
         if (!files.includes(name)) return next();
         res.setHeader("Content-Type", name.endsWith(".wasm") ? "application/wasm" : "text/javascript");
+        // nosemgrep: eslint.detect-non-literal-fs-filename -- name must be one of the files listed above, so no "../" gets through; dev server only
         fs.createReadStream(`${ORT}/${name}`).pipe(res);
       });
     },
     generateBundle(this: { emitFile: (f: { type: "asset"; fileName: string; source: Uint8Array }) => void }) {
-      for (const f of files) this.emitFile({ type: "asset", fileName: `ort/${f}`, source: fs.readFileSync(`${ORT}/${f}`) });
+      for (const f of files) {
+        // nosemgrep: eslint.detect-non-literal-fs-filename -- f comes from the folder listing above; build time only
+        this.emitFile({ type: "asset", fileName: `ort/${f}`, source: fs.readFileSync(`${ORT}/${f}`) });
+      }
     },
   };
 }
