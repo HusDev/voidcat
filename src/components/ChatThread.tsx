@@ -201,6 +201,23 @@ export function ChatThread({
             </div>
           ) : (
             <div className="flex flex-col gap-3">
+              {e.thinking ? (
+                <details className="group rounded-lg border border-line bg-ground/60">
+                  <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-[12.5px] text-ink-2 hover:text-ink">
+                    <ChevronRight aria-hidden className="size-3.5 transition-transform group-open:rotate-90" />
+                    {e.state === "sending" && !e.answer ? (
+                      <>
+                        <LoaderCircle aria-hidden className="size-3.5 animate-spin" /> Thinking…
+                      </>
+                    ) : (
+                      "Thought it through"
+                    )}
+                  </summary>
+                  <div data-selectable className="max-h-72 overflow-y-auto whitespace-pre-wrap border-t border-line px-3 py-2 text-[12.5px] leading-relaxed text-ink-2">
+                    {veil.on ? veil.hide(e.rawThinking ?? "") : e.thinking}
+                  </div>
+                </details>
+              ) : null}
               {e.answer ? (
                 <div data-selectable className={`md-page leading-relaxed text-ink ${text}`}>
                   <Markdown remarkPlugins={[remarkGfm]} components={{ a: AnswerLink }}>{veil.on ? veil.hide(e.raw) : e.answer}</Markdown>
@@ -208,7 +225,7 @@ export function ChatThread({
               ) : null}
               {e.answer && e.state === "done" && !veil.on ? (
                 <CopyAnswer text={e.answer} />
-              ) : e.state === "sending" && !e.answer ? (
+              ) : e.state === "sending" && !e.answer && !e.thinking ? (
                 <span className="flex items-center gap-2 text-sm text-ink-2">
                   <LoaderCircle aria-hidden className="size-4 animate-spin" /> Thinking…
                 </span>

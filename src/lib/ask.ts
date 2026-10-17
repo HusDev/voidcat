@@ -44,6 +44,9 @@ export type Exchange = {
   answer: string;
   /** The answer as the model wrote it, with placeholders (shown while private details are hidden). */
   raw: string;
+  /** A thinking model's reasoning before its answer, shown folded away; and the same masked. */
+  thinking?: string;
+  rawThinking?: string;
   state: "review" | "sending" | "done" | "failed";
   error?: string;
 };
@@ -143,6 +146,17 @@ export async function prepare(question: string, model: AskModel, masker: Masker,
   };
 }
 
+/**
+ * Thinking models (qwen3 and others) may write their reasoning into the answer, between <think> tags or with only the
+ * closing tag. That part goes in the thinking box, the rest is the answer.
+ */
+export function splitThinking(text: string): { thinking: string; answer: string } {
+  const end = text.lastIndexOf("</think>");
+  if (end >= 0) return { thinking: text.slice(0, end).replace(/^\s*<think>/, "").trim(), answer: text.slice(end + "</think>".length).trim() };
+  if (/^\s*<think>/.test(text)) return { thinking: text.replace(/^\s*<think>/, "").trim(), answer: "" };
+  return { thinking: "", answer: text };
+}
+
 /** On this Mac, or nothing private in it: no reason to make you confirm before sending. */
 export const needsReview = (e: Exchange) => e.model.provider === "cloud" && PLACEHOLDER.test(e.masked);
 
@@ -150,7 +164,7 @@ export const needsReview = (e: Exchange) => e.model.provider === "cloud" && PLAC
 export async function resume(saved: Exchange[]) {
   const masker = new Masker([]);
   masker.learn([...(await listFacts("approved")), ...contactFacts(await listContacts())]);
-  return { masker, thread: saved.map((e) => ({ ...e, masked: masker.mask(e.plain), raw: masker.mask(e.answer) })) };
+  return { masker, thread: saved.map((e) => ({ ...e, masked: masker.mask(e.plain), raw: masker.mask(e.answer), rawThinking: e.thinking ? masker.mask(e.thinking) : undefined })) };
 }
 
 /** Sends one exchange with the earlier ones as context, and streams the answer in through `update`, unmasked on this Mac. */
@@ -172,13 +186,17 @@ export async function run(e: Exchange, earlier: Exchange[], masker: Masker, upda
   try {
     let text = "";
     if (local) {
+      let thought = "";
       for await (const chunk of askLocalModel(e.model.id, messages)) {
         if ("call" in chunk) {
           if (chunk.call.name === BUNDLE) update({ bundle: resolveBundle(chunk.call.input, e.catalog ?? []) ?? undefined });
           continue;
         }
-        text += chunk.text;
-        update({ answer: text, raw: masker.mask(text) });
+        if ("thinking" in chunk) thought += chunk.thinking;
+        else text += chunk.text;
+        const split = splitThinking(text);
+        const thinking = [thought.trim(), split.thinking].filter(Boolean).join("\n\n");
+        update({ answer: split.answer, raw: masker.mask(split.answer), thinking: thinking || undefined, rawThinking: thinking ? masker.mask(thinking) : undefined });
       }
     } else {
       const apiKey = await getSecret("openrouter");

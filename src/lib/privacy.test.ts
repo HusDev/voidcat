@@ -140,6 +140,14 @@ describe("screenHider", () => {
     expect(hide("Authority: LUMEN/UTOPIA")).toBe(`Authority: ${HIDDEN}/${HIDDEN}`);
   });
 
+  it("hides each word of an approved name, however the model writes it", () => {
+    const h = screenHider([{ label: "Full name", value: "LENA MARIE ORTIZ de la BRANDT" }], []);
+    expect(h("Your first name is LENA, middle name Marie, last name Ortiz de la Brandt.")).toBe(
+      `Your first name is ${HIDDEN}, middle name ${HIDDEN}, last name ${HIDDEN} de la ${HIDDEN}.`,
+    );
+    expect(h("Lenatech and Ortizville stay")).toBe("Lenatech and Ortizville stay");
+  });
+
   it("hides sex after its label, and leaves other words alone", () => {
     expect(hide("**Sex:** F")).toBe(`**Sex:** ${HIDDEN}`);
     expect(hide("Fees for Nordbyte, 14/03/1992, [PERSON_1]")).toBe("Fees for Nordbyte, 14/03/1992, [PERSON_1]");

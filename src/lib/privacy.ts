@@ -239,11 +239,16 @@ export class Masker {
 
 /**
  * Hide private details, on screen only: values the AI may read (nationality matters for visa rules, a place of birth
- * for some forms) but a screen recording shouldn't show, plus your own first name, which the masker leaves alone.
+ * for some forms) but a screen recording shouldn't show, plus every word of approved names (a model may write "HUSSEIN"
+ * alone, which the masker, matching whole names, leaves alone).
  */
 const SCREEN_ONLY = /national|nacionalidad|citizen|ciudadan|country|pa[ií]s|birth ?place|place of birth|lugar de nacimiento|born in|issuing|authority|autoridad|expedid|expedici/i;
 const SEX = /\b(sex|sexo|gender|g[eé]nero)(\W{0,6})(male|female|masculino|femenino|hombre|mujer|[mfx])\b/giu;
 export const HIDDEN = "[HIDDEN]";
+/** Joining words inside names ("de", "bin"): left readable, they say nothing on their own. */
+/** Labels that hold a person's name (not an employer or other organisation, which stay readable). */
+const PERSON_NAME = /\bname\b|names|nombre|surname|apellido|given|forename/i;
+const PARTICLES = new Set(["del", "las", "los", "van", "von", "der", "den", "dos", "das", "bin", "ibn", "bint", "abu", "the", "and"]);
 
 /** "IRAQI" → "IRAQ", "alemana" → "aleman", so the country and the nationality both match. */
 const stem = (w: string) => {
@@ -257,15 +262,20 @@ export function screenHider(facts: KnownFact[], ownNames: string[]): (text: stri
     if (!SCREEN_ONLY.test(f.label) || /\d/.test(f.value)) continue;
     for (const w of f.value.split(/[^\p{L}]+/u)) if (w.length >= 4) words.add(stem(w));
   }
-  for (const n of ownNames) {
-    const first = n.trim().split(/\s+/)[0] ?? "";
-    if (first.length >= 3) words.add(first);
-  }
+  // Exact words (no stem), so a surname doesn't swallow longer words that start like it.
+  const exact = new Set<string>();
+  const nameWords = (v: string) => v.split(/[^\p{L}'’-]+/u).filter((w) => w.length >= 3 && !PARTICLES.has(w.toLowerCase()));
+  for (const f of facts) if (PERSON_NAME.test(f.label) && !/\d/.test(f.value)) for (const w of nameWords(f.value)) exact.add(w);
+  for (const n of ownNames) for (const w of nameWords(n)) exact.add(w);
   const alts = [...words].sort((a, b) => b.length - a.length).map(escape);
+  const names = [...exact].sort((a, b) => b.length - a.length).map(escape);
   // nosemgrep: eslint.detect-non-literal-regexp -- every word is escaped
   const re = alts.length ? new RegExp(`(?<![\\p{L}])(?:${alts.join("|")})\\p{L}*`, "giu") : null;
+  // nosemgrep: eslint.detect-non-literal-regexp -- every word is escaped
+  const nameRe = names.length ? new RegExp(`(?<![\\p{L}])(?:${names.join("|")})(?![\\p{L}])`, "giu") : null;
   return (text) => {
-    const out = text.replace(SEX, (_m, label: string, sep: string) => `${label}${sep}${HIDDEN}`);
+    let out = text.replace(SEX, (_m, label: string, sep: string) => `${label}${sep}${HIDDEN}`);
+    if (nameRe) out = out.replace(nameRe, HIDDEN);
     return re ? out.replace(re, HIDDEN) : out;
   };
 }

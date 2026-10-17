@@ -46,7 +46,7 @@ Notes tell you roughly how far each date is from today; use them to reason about
 Answer only what was asked. The documents and facts are background for answering, not something to recite: never list or summarise them unless the user asks for that. If the message is a greeting, thanks or small talk, reply in one short friendly sentence and offer help, without any facts.
 Answer from the documents. If they don't contain the answer, say so. Be concise and practical. Use Markdown: a one-line direct answer first, then short bullet points only when they help.`;
 
-export type LocalChunk = { text: string } | { call: { name: string; input: unknown } };
+export type LocalChunk = { text: string } | { thinking: string } | { call: { name: string; input: unknown } };
 
 /** Streams an answer from a model on this Mac (text, and any tool call). Nothing leaves the computer, so the messages are not masked. */
 export async function* askLocalModel(model: string, messages: Turn[]): AsyncGenerator<LocalChunk> {
@@ -73,8 +73,9 @@ export async function* askLocalModel(model: string, messages: Turn[]): AsyncGene
     rest = lines.pop() ?? "";
     for (const line of lines) {
       if (!line.trim()) continue;
-      const chunk = JSON.parse(line) as { message?: { content?: string; tool_calls?: { function: { name: string; arguments: unknown } }[] }; error?: string };
+      const chunk = JSON.parse(line) as { message?: { content?: string; thinking?: string; tool_calls?: { function: { name: string; arguments: unknown } }[] }; error?: string };
       if (chunk.error) throw new Error(chunk.error);
+      if (chunk.message?.thinking) yield { thinking: chunk.message.thinking };
       if (chunk.message?.content) yield { text: chunk.message.content };
       for (const c of chunk.message?.tool_calls ?? []) yield { call: { name: c.function.name, input: c.function.arguments } };
     }
