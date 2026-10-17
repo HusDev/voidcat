@@ -21,7 +21,7 @@ vi.mock("./extract", () => ({
   })),
 }));
 
-const { buildProfile, contactFacts, initials } = await import("./people");
+const { buildProfile, contactFacts, initials, reachable } = await import("./people");
 
 const fact = (id: string, label: string, value: string): Fact => ({ id, documentId: "d", documentTitle: "Doc", documentMime: null, label, value, page: 1, status: "approved" });
 
@@ -43,6 +43,16 @@ describe("people", () => {
       { ...base, id: "2", name: "Banco Sabadell", kind: "organisation", phone: "900 100 200", email: null },
     ]);
     expect(known.map((k) => k.value)).toEqual(["Carla Ruiz", "+34 600 000 000", "carla@mail.com"]);
+  });
+
+  it("shows only contacts you can reach, or edited by hand", () => {
+    const none = { email: null, phone: null, edited: false };
+    expect(reachable(none)).toBe(false);
+    expect(reachable({ ...none, email: "info@agencia.example" })).toBe(true);
+    expect(reachable({ ...none, email: "see website" })).toBe(false);
+    expect(reachable({ ...none, phone: "+34 912 345 678" })).toBe(true);
+    expect(reachable({ ...none, phone: "060" })).toBe(false);
+    expect(reachable({ ...none, edited: true })).toBe(true);
   });
 
   it("makes initials from words", () => {

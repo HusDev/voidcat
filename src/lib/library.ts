@@ -1,4 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import type { DragEvent } from "react";
 
 /** The local library, kept by the Rust side in the app's data folder (`src-tauri/src/store.rs`). */
 
@@ -13,7 +14,7 @@ export type Document = {
   /** new = stored, not read yet · read = text extracted · filed = classified and facts extracted */
   status: "new" | "read" | "filed";
   addedAt: string;
-  textMethod: "pdf-text" | "text" | "ocr" | "pdf-ocr" | "unsupported" | null;
+  textMethod: "pdf-text" | "text" | "ocr" | "pdf-ocr" | "sheet" | "unsupported" | null;
   pageCount: number | null;
   folderId: string | null;
   /** "Area › Folder" */
@@ -41,11 +42,46 @@ export const listFolders = () => (hasLibrary ? invoke<Folder[]>("list_folders") 
 /** Puts a document in "area › name", creating the folder if needed. */
 export const fileInFolder = (id: string, area: string, name: string) => invoke<string>("file_document", { id, area, name });
 export const renameFolder = (id: string, name: string) => invoke<void>("rename_folder", { id, name });
+/** The name a document shows in Voidcat; the stored file keeps its own name. */
+export const renameDocument = (id: string, title: string) => invoke<void>("rename_document", { id, title });
+/**
+ * Saves documents as one .zip, each under its original file name, where you choose in the save dialog.
+ * Returns false when you cancel.
+ */
+export async function downloadZip(name: string, ids: string[]) {
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const safe = name.replace(/[\\/:*?"<>|]+/g, " ").trim() || "Documents";
+  const path = await save({ defaultPath: `${safe}.zip`, filters: [{ name: "Zip archive", extensions: ["zip"] }] });
+  if (!path) return false;
+  await invoke<void>("save_zip", { path, ids });
+  return true;
+}
+
+/** Moves a folder and its documents to another area; returns the folder they're in now (a namesake there absorbs it). */
+export const moveFolder = (id: string, area: string) => invoke<string>("move_folder", { id, area });
+
+/** Drag and drop inside the app: what is being dragged, as a data type the drop targets look for. */
+export const DRAG_DOCUMENT = "application/x-voidcat-document";
+export const DRAG_FOLDER = "application/x-voidcat-folder";
+export const dragDocument = (e: DragEvent, id: string) => {
+  e.dataTransfer.setData(DRAG_DOCUMENT, id);
+  e.dataTransfer.effectAllowed = "move";
+};
 export const importFiles = (paths: string[]) => invoke<Imported>("import_files", { paths });
-export const openDocument = (id: string) => invoke<void>("open_document", { id });
+export const OPEN_DOCUMENT = "voidcat:open-document";
+/** Opens a document in a tab inside the app (see `lib/tabs.tsx`). */
+export const openDocument = (id: string) => window.dispatchEvent(new CustomEvent(OPEN_DOCUMENT, { detail: id }));
+/** Opens the file in the Mac's default app for its type (Preview, a browser…). */
+export const openInDefaultApp = (id: string) => invoke<void>("open_document", { id });
 export const removeDocument = (id: string) => invoke<void>("remove_document", { id });
 
-export const fileTypes = ["pdf", "png", "jpg", "jpeg", "heic", "webp", "txt", "md", "eml", "docx"];
+export const fileTypes = ["pdf", "png", "jpg", "jpeg", "heic", "webp", "txt", "md", "csv", "eml", "docx", "xlsx", "xls", "ods"];
+
+const SHEETS = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel", "application/vnd.oasis.opendocument.spreadsheet"];
+export const isSpreadsheet = (mime: string | null) => SHEETS.includes(mime ?? "");
+export type Sheet = { name: string; rows: string[][]; cut: boolean };
+/** A spreadsheet's sheets as rows of text, read on this Mac. */
+export const readSheets = (id: string) => invoke<Sheet[]>("read_sheets", { id });
 
 export function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -65,6 +101,16 @@ export const documentPages = (id: string) => invoke<Page[]>("document_pages", { 
 export const settleFact = (id: string, status: Fact["status"], value?: string) => invoke<void>("settle_fact", { id, status, value: value ?? null });
 
 /** Tells every screen that the library changed (a fact approved, a document filed…). */
+export type Chat = { id: string; title: string; updatedAt: string };
+/** Ask's saved conversations, newest first. */
+export const listChats = () => (hasLibrary ? invoke<Chat[]>("list_chats") : Promise.resolve([]));
+/** A conversation's JSON, or null when it was deleted. */
+export const getChat = (id: string) => (hasLibrary ? invoke<string | null>("get_chat", { id }) : Promise.resolve(null));
+export const saveChat = (id: string, title: string, body: string) => (hasLibrary ? invoke<void>("save_chat", { id, title, body }) : Promise.resolve());
+export const deleteChat = (id: string) => invoke<void>("delete_chat", { id });
+export const CHATS_CHANGED = "voidcat:chats-changed";
+export const announceChats = () => window.dispatchEvent(new Event(CHATS_CHANGED));
+
 export const LIBRARY_CHANGED = "voidcat:library-changed";
 export const announceChange = () => window.dispatchEvent(new Event(LIBRARY_CHANGED));
 

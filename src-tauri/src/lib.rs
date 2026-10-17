@@ -1,10 +1,15 @@
 mod apps;
+mod bundle;
 mod calendar;
+mod chats;
+mod docx;
+mod labels;
 mod legacy;
 mod ocr;
 mod opportunities;
 mod people;
 mod secrets;
+mod sheets;
 mod store;
 
 use store::{Document, Fact, Folder, Hit, Imported, NewFact, Page, Stats, Store, Suggestion};
@@ -38,6 +43,73 @@ fn open_document(app: tauri::AppHandle, store: State<Store>, id: String) -> Resu
 #[tauri::command]
 fn document_bytes(store: State<Store>, id: String) -> Result<tauri::ipc::Response, String> {
     store.bytes_of(&id).map(tauri::ipc::Response::new)
+}
+
+/// Renames a document (its title in Voidcat; the stored file is untouched).
+#[tauri::command]
+fn rename_document(store: State<Store>, id: String, title: String) -> Result<(), String> {
+    store.rename_document(&id, &title)
+}
+
+#[tauri::command]
+fn list_labels(store: State<Store>) -> Result<Vec<labels::Label>, String> {
+    labels::list(&store.db.lock().unwrap())
+}
+
+/// Automatic labels of these kinds, worked out afresh (for one document when `document_id` is given).
+#[tauri::command]
+fn replace_auto_labels(store: State<Store>, kinds: Vec<String>, labels: Vec<labels::NewLabel>, document_id: Option<String>) -> Result<(), String> {
+    labels::replace_auto(&mut store.db.lock().unwrap(), &kinds, labels, document_id.as_deref())
+}
+
+#[tauri::command]
+fn set_label(store: State<Store>, document_id: String, kind: String, note: Option<String>) -> Result<(), String> {
+    labels::set(&store.db.lock().unwrap(), &document_id, &kind, note)
+}
+
+#[tauri::command]
+fn remove_label(store: State<Store>, document_id: String, kind: String) -> Result<(), String> {
+    labels::remove(&store.db.lock().unwrap(), &document_id, &kind)
+}
+
+#[tauri::command]
+fn reset_label_checks(store: State<Store>, kinds: Vec<String>) -> Result<(), String> {
+    labels::reset_checks(&store.db.lock().unwrap(), &kinds)
+}
+
+#[tauri::command]
+fn unchecked_for_labels(store: State<Store>) -> Result<Vec<String>, String> {
+    labels::unchecked(&store.db.lock().unwrap())
+}
+
+/// Saves documents as one .zip at the path the user chose in the save dialog.
+#[tauri::command]
+fn save_zip(store: State<Store>, path: String, ids: Vec<String>) -> Result<(), String> {
+    bundle::write(&path, store.files_of(&ids)?)
+}
+
+/// Moves a folder and its documents to another area (merging with a folder of the same name there).
+#[tauri::command]
+fn move_folder(store: State<Store>, id: String, area: String) -> Result<String, String> {
+    store.move_folder(&id, &area)
+}
+
+/// Files a document again (area, type, folder), keeping its facts.
+#[tauri::command]
+fn refile_document(store: State<Store>, id: String, area: String, doc_type: String, suggestion: Suggestion) -> Result<(), String> {
+    store.refile(&id, &area, &doc_type, suggestion)
+}
+
+/// A stored Word document's text, as pages, read on this Mac.
+#[tauri::command]
+async fn read_docx(store: State<'_, Store>, id: String) -> Result<Vec<String>, String> {
+    docx::read(store.bytes_of(&id)?)
+}
+
+/// A stored spreadsheet's sheets as rows of text, read on this Mac.
+#[tauri::command]
+async fn read_sheets(store: State<'_, Store>, id: String) -> Result<Vec<sheets::Sheet>, String> {
+    sheets::read(store.bytes_of(&id)?)
 }
 
 /// Reads the text of a stored image document.
@@ -124,6 +196,26 @@ fn save_opportunities(store: State<Store>, found: Vec<opportunities::Opportunity
 #[tauri::command]
 fn set_opportunity_status(store: State<Store>, key: String, status: String) -> Result<(), String> {
     opportunities::set_status(&store.db.lock().unwrap(), &key, &status)
+}
+
+#[tauri::command]
+fn list_chats(store: State<Store>) -> Result<Vec<chats::Chat>, String> {
+    chats::list(&store.db.lock().unwrap())
+}
+
+#[tauri::command]
+fn get_chat(store: State<Store>, id: String) -> Result<Option<String>, String> {
+    chats::get(&store.db.lock().unwrap(), &id)
+}
+
+#[tauri::command]
+fn save_chat(store: State<Store>, id: String, title: String, body: String) -> Result<(), String> {
+    chats::save(&store.db.lock().unwrap(), &id, &title, &body)
+}
+
+#[tauri::command]
+fn delete_chat(store: State<Store>, id: String) -> Result<(), String> {
+    chats::delete(&store.db.lock().unwrap(), &id)
 }
 
 #[tauri::command]
@@ -314,6 +406,18 @@ pub fn run() {
             open_document,
             remove_document,
             document_bytes,
+            read_sheets,
+            read_docx,
+            refile_document,
+            move_folder,
+            rename_document,
+            save_zip,
+            list_labels,
+            replace_auto_labels,
+            set_label,
+            remove_label,
+            unchecked_for_labels,
+            reset_label_checks,
             save_reading,
             document_pages,
             search,
@@ -340,6 +444,10 @@ pub fn run() {
             list_opportunities,
             save_opportunities,
             set_opportunity_status,
+            list_chats,
+            get_chat,
+            save_chat,
+            delete_chat,
             list_ai_apps,
             set_ai_app_level,
             remove_ai_app,

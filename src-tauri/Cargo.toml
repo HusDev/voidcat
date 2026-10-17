@@ -30,6 +30,9 @@ uuid = { version = "1.28.0", features = ["v4"] }
 tauri-plugin-dialog = "2"
 keyring = { version = "3", features = ["apple-native"] }
 tauri-plugin-notification = "2"
+calamine = { version = "0.36.1", features = ["dates"] }
+chrono = { version = "0.4.45", default-features = false, features = ["std", "alloc"] }
+zip = { version = "8", default-features = false, features = ["deflate"] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

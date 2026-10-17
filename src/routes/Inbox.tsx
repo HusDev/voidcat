@@ -2,7 +2,7 @@ import { CheckCheck } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { SourcePage } from "../components/SourcePage";
 import { Blurred, Private } from "../lib/veil";
-import { type Fact, type Page, LIBRARY_CHANGED, announceChange, documentPages, listFacts, settleFact } from "../lib/library";
+import { type Fact, type Page, LIBRARY_CHANGED, announceChange, documentPages, listFacts, openDocument, settleFact } from "../lib/library";
 
 const quiet = "h-10 rounded-lg border border-line-strong bg-card px-3.5 text-sm text-ink hover:border-ink-2";
 
@@ -50,9 +50,14 @@ export function Inbox() {
 
         {facts.map((f, i) => (
           <Fragment key={f.id}>
-            {(i === 0 || facts[i - 1].documentId !== f.documentId) && <h2 className="m-0 mt-2 text-sm font-semibold text-ink-2">
+            {(i === 0 || facts[i - 1].documentId !== f.documentId) && (
+              <h2 className="m-0 mt-2 flex items-center gap-3 text-sm font-semibold text-ink-2">
                 <Private>{f.documentTitle}</Private>
-              </h2>}
+                <button type="button" onClick={() => openDocument(f.documentId)} className="text-[13px] font-semibold text-link hover:underline">
+                  Review in the document
+                </button>
+              </h2>
+            )}
             <article
               onFocus={() => setSelected(f.id)}
               onMouseEnter={() => setSelected(f.id)}
@@ -85,7 +90,7 @@ export function Inbox() {
                   <button type="button" onClick={() => setEditing(null)} className={quiet}>
                     Cancel
                   </button>
-                  <button type="button" onClick={() => settle(f, "approved", draft)} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong">
+                  <button type="button" onClick={() => settle(f, "approved", draft)} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent hover:bg-accent-strong">
                     Save and approve
                   </button>
                 </>
@@ -104,7 +109,7 @@ export function Inbox() {
                   <button type="button" onClick={() => settle(f, "rejected")} className={quiet}>
                     Reject
                   </button>
-                  <button type="button" onClick={() => settle(f, "approved")} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong">
+                  <button type="button" onClick={() => settle(f, "approved")} className="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent hover:bg-accent-strong">
                     Approve
                   </button>
                 </>

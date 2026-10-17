@@ -41,6 +41,13 @@ export type Contact = {
 };
 export type ContactEdit = Omit<Contact, "id" | "kind" | "edited" | "mentions">;
 
+/**
+ * Worth showing in Contacts: there is a way to reach them (an email or a phone number), or you edited them by hand.
+ * The others stay stored, because their names still feed the privacy filter.
+ */
+export const reachable = (c: Pick<Contact, "email" | "phone" | "edited">) =>
+  c.edited || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email?.trim() ?? "") || (c.phone ?? "").replace(/\D/g, "").length >= 6;
+
 const Found = z.object({
   contacts: z
     .array(

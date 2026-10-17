@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { HashRouter } from "react-router";
 import App from "./App";
 import { applyTheme, savedTheme } from "./lib/theme";
+import { TabsProvider } from "./lib/tabs";
 import { VeilProvider } from "./lib/veil";
 import "./index.css";
 
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <HashRouter>
       <VeilProvider>
-        <App />
+        <TabsProvider>
+          <App />
+        </TabsProvider>
       </VeilProvider>
     </HashRouter>
   </React.StrictMode>,

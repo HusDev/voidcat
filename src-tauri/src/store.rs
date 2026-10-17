@@ -28,7 +28,7 @@ pub struct Document {
     /// new = stored, not read yet · read = text extracted · filed = classified and facts extracted
     status: String,
     added_at: String,
-    /// How the text was read: pdf-text, text, ocr (photo), pdf-ocr (scanned PDF) or unsupported.
+    /// How the text was read: pdf-text, text, ocr (photo), pdf-ocr (scanned PDF), sheet (spreadsheet) or unsupported.
     text_method: Option<String>,
     page_count: Option<i64>,
     folder_id: Option<String>,
@@ -184,6 +184,16 @@ fn migrate(db: &Connection) -> rusqlite::Result<()> {
             db.execute_batch(&format!("alter table documents add column {col};"))?;
         }
     }
+    // Files added before Voidcat knew their type (spreadsheets, CSV) get it now, so they can be read.
+    let unknown: Vec<(String, String)> = db
+        .prepare("select id, file_name from documents where mime is null")?
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    for (id, name) in unknown {
+        if let Some(mime) = mime_of(&name) {
+            db.execute("update documents set mime = ?2 where id = ?1", params![id, mime])?;
+        }
+    }
     Ok(())
 }
 
@@ -245,10 +255,46 @@ fn mime_of(name: &str) -> Option<String> {
         "md" => "text/markdown",
         "eml" => "message/rfc822",
         "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "xls" => "application/vnd.ms-excel",
+        "ods" => "application/vnd.oasis.opendocument.spreadsheet",
+        "csv" => "text/csv",
         _ => return None,
     };
     Some(m.to_string())
 }
+
+/// Puts a document in the suggested folder when it exists and the model is sure; otherwise it waits in "to file".
+fn place(tx: &Connection, id: &str, s: &Suggestion) -> Result<(), String> {
+    let (folder_area, folder_name) = (s.area.trim(), s.folder.trim());
+    let existing: Option<String> = tx
+        .query_row("select id from folders where area = ?1 collate nocase and name = ?2 collate nocase", params![folder_area, folder_name], |r| r.get(0))
+        .optional()
+        .map_err(|e| e.to_string())?;
+    match existing {
+        Some(folder) if s.confidence == "high" => tx.execute(
+            "update documents set folder_id = ?2, area = ?3, filing = 'auto', suggested_area = null, suggested_folder = null, suggestion_reason = ?4 where id = ?1",
+            params![id, folder, folder_area, s.reason],
+        ),
+        _ => tx.execute(
+            "update documents set folder_id = null, filing = 'suggested', suggested_area = ?2, suggested_folder = ?3, suggestion_reason = ?4 where id = ?1",
+            params![id, folder_area, folder_name, s.reason],
+        ),
+    }
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Words that say nothing about a document (greetings, question words, fillers in English and Spanish): a question
+/// like "hello there" must not turn up pages that happen to contain "there".
+const FILLER: &[&str] = &[
+    "hello", "hola", "thanks", "thank", "gracias", "please", "there", "here", "what", "when", "where", "which", "while",
+    "whom", "whose", "that", "this", "these", "those", "have", "does", "with", "from", "into", "about", "your", "yours",
+    "mine", "they", "them", "their", "then", "than", "were", "been", "being", "would", "could", "should", "will", "shall",
+    "some", "much", "many", "more", "most", "also", "just", "only", "very", "like", "want", "need", "know", "tell", "show",
+    "give", "find", "make", "okay", "cual", "cuál", "cuando", "cuándo", "donde", "dónde", "como", "cómo", "para",
+    "esta", "este", "esto", "estos", "estas", "tengo", "tiene", "sobre", "dime", "quiero", "puedes", "buenas", "buenos",
+];
 
 impl Store {
     pub fn open(dir: &Path) -> Result<Self, String> {
@@ -262,6 +308,8 @@ impl Store {
         crate::legacy::fix_paths(&db, dir).map_err(|e| e.to_string())?;
         db.execute_batch(crate::calendar::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::opportunities::SCHEMA).map_err(|e| e.to_string())?;
+        db.execute_batch(crate::chats::SCHEMA).map_err(|e| e.to_string())?;
+        db.execute_batch(crate::labels::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::apps::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::people::SCHEMA).map_err(|e| e.to_string())?;
         Ok(Store {
@@ -374,6 +422,17 @@ impl Store {
         .map_err(|_| "Document not found.".to_string())
     }
 
+    /// Each document's original file name and where it is stored, in the order asked.
+    pub fn files_of(&self, ids: &[String]) -> Result<Vec<(String, String)>, String> {
+        let db = self.db.lock().unwrap();
+        ids.iter()
+            .map(|id| {
+                db.query_row("select file_name, stored_path from documents where id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?)))
+                    .map_err(|_| "Document not found.".to_string())
+            })
+            .collect()
+    }
+
     pub fn bytes_of(&self, id: &str) -> Result<Vec<u8>, String> {
         fs::read(self.path_of(id)?).map_err(|e| e.to_string())
     }
@@ -424,7 +483,7 @@ impl Store {
     pub fn search(&self, query: &str, any: bool) -> Result<Vec<Hit>, String> {
         let words: Vec<String> = query
             .split(|c: char| !c.is_alphanumeric())
-            .filter(|w| !w.is_empty() && (!any || w.chars().count() > 3))
+            .filter(|w| !w.is_empty() && (!any || (w.chars().count() > 3 && !FILLER.contains(&w.to_lowercase().as_str()))))
             .map(|w| format!("\"{}\"*", w.replace('"', "")))
             .collect();
         if words.is_empty() {
@@ -490,22 +549,25 @@ impl Store {
             })
             .map_err(|e| e.to_string())?;
         if let (Some(s), false) = (suggestion, placed.as_deref() == Some("confirmed")) {
-            let (folder_area, folder_name) = (s.area.trim(), s.folder.trim());
-            let existing: Option<String> = tx
-                .query_row("select id from folders where area = ?1 collate nocase and name = ?2 collate nocase", params![folder_area, folder_name], |r| r.get(0))
-                .optional()
-                .map_err(|e| e.to_string())?;
-            match existing {
-                Some(folder) if s.confidence == "high" => tx.execute(
-                    "update documents set folder_id = ?2, area = ?3, filing = 'auto', suggested_area = null, suggested_folder = null, suggestion_reason = ?4 where id = ?1",
-                    params![id, folder, folder_area, s.reason],
-                ),
-                _ => tx.execute(
-                    "update documents set folder_id = null, filing = 'suggested', suggested_area = ?2, suggested_folder = ?3, suggestion_reason = ?4 where id = ?1",
-                    params![id, folder_area, folder_name, s.reason],
-                ),
-            }
+            place(&tx, id, &s)?;
+        }
+        tx.commit().map_err(|e| e.to_string())
+    }
+
+    /// Files a document again: a new area, type and folder suggestion, even over a folder you chose. Its facts stay as
+    /// they are. A folder the document leaves empty is removed.
+    pub fn refile(&self, id: &str, area: &str, doc_type: &str, suggestion: Suggestion) -> Result<(), String> {
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction().map_err(|e| e.to_string())?;
+        let old: Option<String> = tx
+            .query_row("select folder_id from documents where id = ?1", [id], |r| r.get(0))
             .map_err(|e| e.to_string())?;
+        tx.execute("update documents set area = ?2, doc_type = ?3 where id = ?1", params![id, area, doc_type])
+            .map_err(|e| e.to_string())?;
+        place(&tx, id, &suggestion)?;
+        if let Some(old) = old {
+            tx.execute("delete from folders where id = ?1 and not exists (select 1 from documents where folder_id = ?1)", [&old])
+                .map_err(|e| e.to_string())?;
         }
         tx.commit().map_err(|e| e.to_string())
     }
@@ -559,6 +621,50 @@ impl Store {
         )
         .map_err(|e| e.to_string())?;
         Ok(folder)
+    }
+
+    /// Moves a folder, with its documents, to another area. When that area already has a folder of the same name, the
+    /// two become one. Returns the folder the documents are in now.
+    pub fn move_folder(&self, id: &str, area: &str) -> Result<String, String> {
+        let area = area.trim();
+        if area.is_empty() {
+            return Err("Choose an area.".into());
+        }
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction().map_err(|e| e.to_string())?;
+        let name: String = tx
+            .query_row("select name from folders where id = ?1", [id], |r| r.get(0))
+            .map_err(|e| e.to_string())?;
+        let same: Option<String> = tx
+            .query_row("select id from folders where area = ?1 collate nocase and name = ?2 collate nocase and id != ?3", params![area, name, id], |r| r.get(0))
+            .optional()
+            .map_err(|e| e.to_string())?;
+        let into = match same {
+            Some(other) => {
+                tx.execute("update documents set folder_id = ?2 where folder_id = ?1", params![id, other]).map_err(|e| e.to_string())?;
+                tx.execute("delete from folders where id = ?1", [id]).map_err(|e| e.to_string())?;
+                other
+            }
+            None => {
+                tx.execute("update folders set area = ?2 where id = ?1", params![id, area]).map_err(|e| e.to_string())?;
+                id.to_string()
+            }
+        };
+        tx.execute("update documents set area = ?2 where folder_id = ?1", params![into, area]).map_err(|e| e.to_string())?;
+        tx.commit().map_err(|e| e.to_string())?;
+        Ok(into)
+    }
+
+    /// The name a document shows everywhere in Voidcat; the stored file keeps its own name.
+    pub fn rename_document(&self, id: &str, title: &str) -> Result<(), String> {
+        let title = title.trim();
+        if title.is_empty() {
+            return Err("Give the document a name.".into());
+        }
+        let db = self.db.lock().unwrap();
+        db.execute("update documents set title = ?2 where id = ?1", params![id, title])
+            .map_err(|e| e.to_string())?;
+        Ok(())
     }
 
     pub fn rename_folder(&self, id: &str, name: &str) -> Result<(), String> {
@@ -656,6 +762,73 @@ mod tests {
     }
 
     #[test]
+    fn refiling_moves_a_document_keeps_its_facts_and_drops_the_empty_folder() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir).unwrap();
+        let src = dir.join("grant.xlsx");
+        fs::write(&src, b"example").unwrap();
+        store.import(vec![src.to_string_lossy().to_string()]);
+        let id = store.list().unwrap()[0].id.clone();
+        store
+            .save_filing(&id, "Equity grant", "Travel", "grant", vec![NewFact { label: "Initial grant".into(), value: "6000".into(), page: Some(1) }], None)
+            .unwrap();
+        store.file_document(&id, "Travel", "Passports").unwrap();
+        let fact = store.facts("pending").unwrap()[0].id.clone();
+        store.settle_fact(&fact, "approved", None).unwrap();
+
+        store.file_document(&id, "Work & money", "Equity").unwrap();
+        store.file_document(&id, "Travel", "Passports").unwrap();
+        let s = Suggestion { area: "Work & money".into(), folder: "equity".into(), confidence: "high".into(), reason: "An equity grant".into() };
+        store.refile(&id, "Work & money", "equity_grant", s).unwrap();
+
+        let doc = &store.list().unwrap()[0];
+        assert_eq!(doc.folder_name.as_deref(), Some("Work & money › Equity"));
+        assert_eq!(doc.area.as_deref(), Some("Work & money"));
+        assert_eq!(store.facts("approved").unwrap().len(), 1, "facts are kept");
+        assert!(store.folders().unwrap().iter().all(|f| f.area != "Travel"), "the folder it left empty is gone");
+    }
+
+    #[test]
+    fn moving_a_folder_takes_its_documents_and_merges_with_a_namesake() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir).unwrap();
+        for name in ["a.pdf", "b.pdf"] {
+            let src = dir.join(name);
+            fs::write(&src, name.as_bytes()).unwrap();
+            store.import(vec![src.to_string_lossy().to_string()]);
+        }
+        let ids: Vec<String> = store.list().unwrap().iter().map(|d| d.id.clone()).collect();
+        let travel = store.file_document(&ids[0], "Travel", "Passports").unwrap();
+
+        assert_eq!(store.move_folder(&travel, "Identity").unwrap(), travel, "a plain move keeps the folder");
+        assert!(store.list().unwrap().iter().any(|d| d.folder_name.as_deref() == Some("Identity › Passports") && d.area.as_deref() == Some("Identity")));
+
+        let other = store.file_document(&ids[1], "Travel", "Passports").unwrap();
+        assert_eq!(store.move_folder(&other, "Identity").unwrap(), travel, "same name in the new area: merged");
+        assert_eq!(store.folders().unwrap().len(), 1);
+        assert!(store.list().unwrap().iter().all(|d| d.folder_id.as_deref() == Some(travel.as_str())));
+    }
+
+    #[test]
+    fn renames_documents_and_folders() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir).unwrap();
+        let src = dir.join("scan.pdf");
+        fs::write(&src, b"scan").unwrap();
+        store.import(vec![src.to_string_lossy().to_string()]);
+        let id = store.list().unwrap()[0].id.clone();
+        store.rename_document(&id, "  Passport, renewed ").unwrap();
+        assert_eq!(store.list().unwrap()[0].title, "Passport, renewed");
+        assert!(store.rename_document(&id, " ").is_err());
+
+        let folder = store.file_document(&id, "Identity", "Passports").unwrap();
+        store.file_document(&id, "Identity", "IDs").unwrap();
+        assert!(store.rename_folder(&folder, "ids").is_err(), "names are unique in an area");
+        store.rename_folder(&folder, "Old passports").unwrap();
+        assert!(store.folders().unwrap().iter().any(|f| f.name == "Old passports"));
+    }
+
+    #[test]
     fn imports_once_and_removes() {
         let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
         let store = Store::open(&dir).unwrap();
@@ -694,6 +867,10 @@ mod tests {
                 .len(),
             1,
             "any word, for questions"
+        );
+        assert!(
+            store.search("hola, buenas, gracias", true).unwrap().is_empty(),
+            "greetings and fillers find nothing"
         );
 
         let suggest = |confidence: &str| {
