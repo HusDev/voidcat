@@ -573,10 +573,11 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building Voidcat")
-        .run(|app, event| {
-            // Clicking the Dock icon brings the hidden window back.
-            if let tauri::RunEvent::Reopen { .. } = event {
-                show_window(app);
+        .run(|_app, _event| {
+            // Clicking the Dock icon brings the hidden window back (a macOS-only event; CI builds on Linux).
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {
+                show_window(_app);
             }
         });
 }
