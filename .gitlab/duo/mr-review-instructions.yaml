@@ -9,7 +9,7 @@ instructions:
          numbers, IBANs, emails, phones and amounts in examples must be clearly invented (see `.privacy-allow`).
       2. Any text that can reach a cloud model must go through the `Masker` in `src/lib/privacy.ts` first.
       3. Every OpenRouter model must be created with `provider: { zdr: true, data_collection: "deny" }`.
-      4. The library is not encrypted yet. Flag any UI text or doc that claims it is.
+      4. The library is encrypted. Flag any code that reads or writes stored document files without the vault, or that exposes the library key.
       5. Explain the risk behind each privacy finding in one sentence.
 
   - name: Interface

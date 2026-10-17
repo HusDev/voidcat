@@ -1,11 +1,31 @@
 import { AtSign, Check, ChevronRight, Copy, Cpu, FileArchive, FileText, LoaderCircle, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+import { useNavigate } from "react-router";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { type Exchange, PLACEHOLDER } from "../lib/ask";
+import type { Exchange } from "../lib/ask";
 import { downloadZip, openDocument } from "../lib/library";
 import type { Bundle } from "../lib/tools";
-import { Private, useVeil } from "../lib/veil";
+import { PLACEHOLDER, Private, useVeil } from "../lib/veil";
+
+/** Links in answers: a Voidcat screen ("#/settings", from @help) opens in the app, a web page in the browser. */
+function AnswerLink({ href, children }: { href?: string; children?: ReactNode }) {
+  const navigate = useNavigate();
+  if (href?.startsWith("#/"))
+    return (
+      <a href={href} onClick={(ev) => (ev.preventDefault(), navigate(href.slice(1)))} className="text-link">
+        {children}
+      </a>
+    );
+  if (href?.startsWith("https://"))
+    return (
+      <a href={href} onClick={(ev) => (ev.preventDefault(), openUrl(href))} className="text-link">
+        {children}
+      </a>
+    );
+  return <>{children}</>;
+}
 
 /** A conversation in Ask (or a document's own chat): questions, the review step, answers, sources and zips. */
 
@@ -36,7 +56,7 @@ function Sent({ e, open }: { e: Exchange; open?: boolean }) {
           Answered on this Mac · {e.model.id} · nothing left the computer
         </summary>
         <pre data-selectable className="m-0 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-b-lg bg-code p-3.5 font-mono text-[12px] leading-relaxed text-rail-ink">
-          {veil.on ? <MaskedText text={e.masked} /> : e.plain}
+          {veil.on ? <MaskedText text={veil.hide(e.masked)} /> : e.plain}
         </pre>
       </details>
     );
@@ -181,14 +201,31 @@ export function ChatThread({
             </div>
           ) : (
             <div className="flex flex-col gap-3">
+              {e.thinking ? (
+                <details className="group rounded-lg border border-line bg-ground/60">
+                  <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-[12.5px] text-ink-2 hover:text-ink">
+                    <ChevronRight aria-hidden className="size-3.5 transition-transform group-open:rotate-90" />
+                    {e.state === "sending" && !e.answer ? (
+                      <>
+                        <LoaderCircle aria-hidden className="size-3.5 animate-spin" /> Thinking…
+                      </>
+                    ) : (
+                      "Thought it through"
+                    )}
+                  </summary>
+                  <div data-selectable className="max-h-72 overflow-y-auto whitespace-pre-wrap border-t border-line px-3 py-2 text-[12.5px] leading-relaxed text-ink-2">
+                    {veil.on ? veil.hide(e.rawThinking ?? "") : e.thinking}
+                  </div>
+                </details>
+              ) : null}
               {e.answer ? (
                 <div data-selectable className={`md-page leading-relaxed text-ink ${text}`}>
-                  <Markdown remarkPlugins={[remarkGfm]}>{veil.on ? e.raw : e.answer}</Markdown>
+                  <Markdown remarkPlugins={[remarkGfm]} components={{ a: AnswerLink }}>{veil.on ? veil.hide(e.raw) : e.answer}</Markdown>
                 </div>
               ) : null}
               {e.answer && e.state === "done" && !veil.on ? (
                 <CopyAnswer text={e.answer} />
-              ) : e.state === "sending" && !e.answer ? (
+              ) : e.state === "sending" && !e.answer && !e.thinking ? (
                 <span className="flex items-center gap-2 text-sm text-ink-2">
                   <LoaderCircle aria-hidden className="size-4 animate-spin" /> Thinking…
                 </span>

@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, Pencil, Eye, EyeOff, FileText, Folder as FolderIcon, FolderOpen, Inbox, Library, Lightbulb, Link2, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
+import { CalendarDays, ChevronRight, Pencil, Eye, EyeOff, FileText, Folder as FolderIcon, FolderOpen, Inbox, Library, Lightbulb, Link2, LockKeyhole, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
 import { type DragEvent, type MouseEvent, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { AREAS } from "../lib/extract";
@@ -402,13 +402,17 @@ export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: nu
       </div>
 
       <div className="flex items-center gap-1 border-t border-white/5 pt-2.5">
+        <span title="Your documents and everything Voidcat learned from them are encrypted, with the key in this Mac's Keychain." className="flex min-w-0 flex-1 items-center gap-1.5 pl-2 text-[12px] text-rail-faint">
+          <LockKeyhole aria-hidden className="size-3.5 shrink-0" />
+          <span className="truncate">Encrypted</span>
+        </span>
         <button
           type="button"
           onClick={veil.toggle}
           aria-pressed={veil.on}
           aria-label={veil.on ? "Show private details" : "Hide private details"}
           title={`${veil.on ? "Show" : "Hide"} private details (⌘⇧H)`}
-          className={`grid size-8.5 place-items-center rounded-lg ${veil.on ? "bg-private text-[#0b0b0f]" : "text-rail-mute hover:bg-rail-2 hover:text-white"}`}
+          className={`grid size-8.5 shrink-0 place-items-center rounded-lg ${veil.on ? "bg-private text-[#0b0b0f]" : "text-rail-mute hover:bg-rail-2 hover:text-white"}`}
         >
           {veil.on ? <EyeOff aria-hidden className="size-4.5" /> : <Eye aria-hidden className="size-4.5" />}
         </button>
@@ -416,14 +420,10 @@ export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: nu
           to="/settings"
           aria-label="Settings"
           title="Settings"
-          className={({ isActive }) => `grid size-8.5 place-items-center rounded-lg ${isActive ? "bg-rail-2 text-white" : "text-rail-mute hover:bg-rail-2 hover:text-white"}`}
+          className={({ isActive }) => `grid size-8.5 shrink-0 place-items-center rounded-lg ${isActive ? "bg-rail-2 text-white" : "text-rail-mute hover:bg-rail-2 hover:text-white"}`}
         >
           <Settings aria-hidden className="size-4.5" />
         </NavLink>
-        <span className="ml-auto flex items-center gap-1.5 pr-1.5 text-[11.5px] text-rail-faint">
-          <Logo size={12} glow={false} />
-          Stored only on this Mac
-        </span>
       </div>
     </nav>
   );

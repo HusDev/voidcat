@@ -2,8 +2,8 @@ import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOption
 import { Check, ChevronDown, Copy, Cpu, KeyRound, Plug, Plus, Unplug, Workflow } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type CloudModel, defaultModel, listModels, saveModel, savedModel } from "../lib/cloud";
-import { LOCAL_MODEL, OLLAMA } from "../lib/extract";
 import { type AiApp, type McpSetup, LIBRARY_CHANGED, connectApp, getSecret, hasLibrary, listAiApps, mcpSetup, removeAiApp, removeSecret, setAiAppLevel, setSecret } from "../lib/library";
+import { LocalModelSetup } from "../components/LocalModelSetup";
 import { LEVELS, type Level, appName } from "../lib/mcp";
 
 const card = "flex flex-col gap-3 rounded-xl border border-line bg-card p-4.5";
@@ -137,24 +137,16 @@ function CloudCard() {
 }
 
 function LocalCard() {
-  const [running, setRunning] = useState<boolean | null>(null);
-  useEffect(() => {
-    fetch(`${OLLAMA}/api/tags`)
-      .then((r) => setRunning(r.ok))
-      .catch(() => setRunning(false));
-  }, []);
   return (
     <article className={card}>
       <div className="flex items-center gap-2">
         <Cpu aria-hidden className="size-4.5 text-ink-2" />
-        <span className="font-semibold">Local model · Ollama</span>
-        <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${running ? "bg-ok-soft text-ok" : "bg-private-soft text-private-ink"}`}>
-          {running === null ? "Checking…" : running ? "Running" : "Not running"}
-        </span>
+        <span className="font-semibold">Local model</span>
       </div>
       <p className="m-0 text-[13px] text-ink-2">
-        Files documents and finds facts on this Mac with <span className="font-mono">{LOCAL_MODEL}</span>. Sees everything, unmasked, because nothing leaves the computer.
+        Reads your documents, files them and finds facts on this Mac. It sees everything, unmasked, because nothing leaves the computer.
       </p>
+      <LocalModelSetup />
     </article>
   );
 }

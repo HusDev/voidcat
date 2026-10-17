@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { dateKind } from "./calendar";
-import { LOCAL_MODEL, OLLAMA, askLocal, pagesText } from "./extract";
+import { OLLAMA, askLocal, pagesText, readingModel } from "./extract";
 import { pagePicture } from "./reader";
 import { type Fact, LIBRARY_CHANGED, announceChange, documentPages, hasLibrary, listDocuments, listFacts } from "./library";
 import { parseDate } from "./privacy";
@@ -154,7 +154,7 @@ async function looksSigned(picture: Uint8Array, place: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: LOCAL_MODEL,
+      model: readingModel(),
       stream: false,
       think: false,
       format: z.toJSONSchema(Seen),

@@ -21,8 +21,8 @@ fn unique(name: &str, taken: &mut HashSet<String>) -> String {
     candidate
 }
 
-/// Writes `files` (name in the zip, stored path) into a new zip at `to`.
-pub fn write(to: &str, files: Vec<(String, String)>) -> Result<(), String> {
+/// Writes `files` (name in the zip, contents) into a new zip at `to`.
+pub fn write(to: &str, files: Vec<(String, Vec<u8>)>) -> Result<(), String> {
     if !to.to_lowercase().ends_with(".zip") {
         return Err("The file must end in .zip.".into());
     }
@@ -32,8 +32,7 @@ pub fn write(to: &str, files: Vec<(String, String)>) -> Result<(), String> {
     let mut zip = ZipWriter::new(File::create(to).map_err(|e| e.to_string())?);
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
     let mut taken = HashSet::new();
-    for (name, stored) in files {
-        let bytes = std::fs::read(&stored).map_err(|e| format!("{name} could not be read: {e}"))?;
+    for (name, bytes) in files {
         zip.start_file(unique(&name, &mut taken), options).map_err(|e| e.to_string())?;
         zip.write_all(&bytes).map_err(|e| e.to_string())?;
     }
@@ -50,12 +49,9 @@ mod tests {
     fn zips_files_under_unique_names() {
         let dir = std::env::temp_dir().join(format!("voidcat-zip-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
-        let (a, b) = (dir.join("a"), dir.join("b"));
-        std::fs::write(&a, b"first").unwrap();
-        std::fs::write(&b, b"second").unwrap();
         let out = dir.join("papers.zip");
         let p = |x: &std::path::PathBuf| x.to_string_lossy().to_string();
-        write(&p(&out), vec![("scan.pdf".into(), p(&a)), ("Scan.pdf".into(), p(&b))]).unwrap();
+        write(&p(&out), vec![("scan.pdf".into(), b"first".to_vec()), ("Scan.pdf".into(), b"second".to_vec())]).unwrap();
 
         let mut zip = zip::ZipArchive::new(File::open(&out).unwrap()).unwrap();
         let names: Vec<String> = zip.file_names().map(String::from).collect();

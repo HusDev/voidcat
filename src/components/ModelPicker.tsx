@@ -1,7 +1,8 @@
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from "@headlessui/react";
-import { Check, ChevronDown, Cloud, Cpu, Plus } from "lucide-react";
+import { Brain, Check, ChevronDown, Cloud, Cpu, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import type { AskModel, LocalModel } from "../lib/models";
+import { type AskModel, type LocalModel, alwaysThinks, canThink, setThinkFirst, thinkFirst } from "../lib/models";
 
 const same = (a: AskModel | null, b: AskModel) => a?.provider === b.provider && a.id === b.id;
 
@@ -26,18 +27,18 @@ export function ModelPicker({
   if (none)
     return (
       <Link to="/connections" className="inline-flex items-center gap-1.5 rounded-full bg-private-soft px-3 py-1 text-[12.5px] font-semibold text-private-ink hover:underline">
-        <Plus aria-hidden className="size-3.5" /> Add a model provider
+        <Plus aria-hidden className="size-3.5" /> Set up a model
       </Link>
     );
 
   return (
     <Listbox value={value} onChange={(m) => m && onChange(m)} by={(a, b) => !!a && !!b && a.provider === b.provider && a.id === b.id}>
-      <ListboxButton className="inline-flex max-w-72 items-center gap-1.5 rounded-full bg-card px-2.5 py-1 font-mono text-[12px] text-ink-2 hover:text-ink">
+      <ListboxButton className="inline-flex min-w-0 max-w-64 items-center gap-1.5 rounded-full bg-ground px-2.5 py-1 font-mono text-[12px] text-ink-2 hover:text-ink">
         {value?.provider === "local" ? <Cpu aria-hidden className="size-3.5 shrink-0" /> : <Cloud aria-hidden className="size-3.5 shrink-0" />}
         <span className="truncate">{value?.id ?? "Choose a model"}</span>
         <ChevronDown aria-hidden className="size-3.5 shrink-0" />
       </ListboxButton>
-      <ListboxOptions anchor="bottom start" className="z-20 mt-1 w-72 rounded-xl border border-line bg-card p-1.5 shadow-lg outline-none">
+      <ListboxOptions anchor="top start" className="z-30 mb-1 w-72 rounded-xl border border-line bg-card p-1.5 shadow-lg outline-none">
         <div className={heading}>On this Mac · Ollama</div>
         {local?.length ? (
           local.map((m) => {
@@ -78,5 +79,42 @@ export function ModelPicker({
         </Link>
       </ListboxOptions>
     </Listbox>
+  );
+}
+
+/** "Think first" for a model on this Mac that can reason before answering; hidden for every other model. */
+export function ThinkFirst({ model }: { model: AskModel | null }) {
+  const [on, setOn] = useState(thinkFirst);
+  const [can, setCan] = useState(false);
+  useEffect(() => {
+    setCan(false);
+    if (model?.provider === "local") canThink(model.id).then(setCan);
+  }, [model?.provider, model?.id]);
+  if (!can) return null;
+  if (model && alwaysThinks(model.id))
+    return (
+      <span title="This model reasons before every answer and can't be told not to; its reasoning shows in the box above the answer." className="inline-flex items-center gap-1.5 rounded-full bg-ground px-2.5 py-1 text-[12px] text-ink-2">
+        <Brain aria-hidden className="size-3.5" />
+        Always thinks
+      </span>
+    );
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => {
+        setThinkFirst(!on);
+        setOn(!on);
+      }}
+      title={on ? "Reasons before answering: better answers, slower start" : "Answers straight away: faster, less careful"}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] ${on ? "bg-accent-soft text-ink" : "bg-ground text-ink-2 hover:text-ink"}`}
+    >
+      <Brain aria-hidden className="size-3.5" />
+      Think first
+      <span aria-hidden className={`relative h-3.5 w-6 rounded-full transition-colors ${on ? "bg-accent" : "bg-line-strong"}`}>
+        <span className={`absolute top-0.5 size-2.5 rounded-full bg-card transition-[left] ${on ? "left-3" : "left-0.5"}`} />
+      </span>
+    </button>
   );
 }

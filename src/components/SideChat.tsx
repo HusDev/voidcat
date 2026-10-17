@@ -1,5 +1,5 @@
 import { ArrowUp, FileText, LoaderCircle } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { type Exchange, type Mention, needsReview, prepare, run } from "../lib/ask";
 import { type Document, announceChats, saveChat } from "../lib/library";
@@ -7,6 +7,34 @@ import { Masker } from "../lib/privacy";
 import { useAskModel } from "../lib/useAskModel";
 import { Private } from "../lib/veil";
 import { ChatThread } from "./ChatThread";
+import { ModelPicker, ThinkFirst } from "./ModelPicker";
+
+/**
+ * The height that fits the panel between where it sits and the bottom of the window. The page header pushes it down
+ * at the top of the page and it rises when stuck while scrolling, so it is measured again on scroll and resize.
+ */
+function useFitHeight(ref: RefObject<HTMLElement | null>) {
+  const [height, setHeight] = useState(480);
+  useEffect(() => {
+    let frame = 0;
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const top = ref.current?.getBoundingClientRect().top;
+        if (top !== undefined) setHeight(Math.max(320, Math.round(window.innerHeight - top - 24)));
+      });
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    document.addEventListener("scroll", fit, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", fit);
+      document.removeEventListener("scroll", fit, true);
+    };
+  }, [ref]);
+  return height;
+}
 
 /**
  * A chat in a side panel, beside a document or your profile. It works like Ask (same models, review step, tools) but
@@ -43,7 +71,9 @@ export function SideChat({
   const following = useRef(true);
   const input = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
-  const { model, needsSetup } = useAskModel();
+  const { model, choose, local, cloudModel, needsSetup } = useAskModel();
+  const panel = useRef<HTMLElement>(null);
+  const height = useFitHeight(panel);
 
   useEffect(() => {
     setThread([]);
@@ -85,7 +115,7 @@ export function SideChat({
   };
 
   return (
-    <aside aria-label={title} className="sticky top-0 flex h-[calc(100vh-10rem)] max-w-[440px] min-w-0 flex-[1_1_340px] flex-col self-start overflow-hidden rounded-xl border border-line bg-card">
+    <aside ref={panel} style={{ height }} aria-label={title} className="sticky top-0 flex max-w-[440px] min-w-0 flex-[1_1_340px] flex-col self-start overflow-hidden rounded-xl border border-line bg-card">
       <header className="flex flex-col gap-1 border-b border-line px-4 py-3">
         <span className="text-[15px] font-semibold">{title}</span>
         <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] text-private-ink">{reads}</span>
@@ -133,7 +163,7 @@ export function SideChat({
             ev.preventDefault();
             ask();
           }}
-          className="flex items-end gap-1.5 rounded-xl border border-line-strong bg-card p-1.5 focus-within:border-ink-2"
+          className="flex flex-col gap-1 rounded-xl border border-line-strong bg-card p-1.5 focus-within:border-ink-2"
         >
           <label htmlFor={`side-question-${resetKey}`} className="sr-only">
             Your question
@@ -151,20 +181,23 @@ export function SideChat({
               }
             }}
             placeholder={placeholder}
-            className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-[14px] outline-none [field-sizing:content]"
+            className="max-h-32 min-h-9 w-full resize-none bg-transparent px-2 py-1.5 text-[14px] outline-none [field-sizing:content]"
           />
-          <button type="submit" disabled={!draft.trim() || busy || !model} aria-label="Ask" className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-on-accent hover:bg-accent-strong disabled:opacity-30">
+          <div className="flex items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+              <ModelPicker value={model} onChange={choose} local={local} cloudModel={cloudModel} />
+              <ThinkFirst model={model} />
+            </div>
+            <button type="submit" disabled={!draft.trim() || busy || !model} aria-label="Ask" className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-on-accent hover:bg-accent-strong disabled:opacity-30">
             {busy ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <ArrowUp aria-hidden className="size-4" />}
-          </button>
-        </form>
-        <div className="flex items-center gap-2 px-1 text-[11.5px] text-ink-2">
-          {model && <span className="truncate font-mono">{model.id}</span>}
-          {chatId && (
-            <button type="button" onClick={() => navigate(`/ask?chat=${chatId}`)} className="ml-auto shrink-0 text-link hover:underline">
-              Continue in Ask
             </button>
-          )}
-        </div>
+          </div>
+        </form>
+        {chatId && (
+          <button type="button" onClick={() => navigate(`/ask?chat=${chatId}`)} className="ml-auto shrink-0 px-1 text-[11.5px] text-link hover:underline">
+            Continue in Ask
+          </button>
+        )}
       </footer>
     </aside>
   );

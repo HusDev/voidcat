@@ -67,11 +67,11 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - Phase 5, Observability, README automation section, a full run for the demo video (under 3 min, invented data only).
    - **State on 17 Oct 2026:** phases 1–2 merged and green. Only the Triage custom flow is in the AI Catalog and enabled; Privacy Guard, Pipeline Doctor, Health Reporter and Release still need pasting in (AI › Flows › New flow, sources in `.gitlab/duo/flows/`) and their triggers switching on (Triage's "issue created" trigger didn't fire either). No flow session had ever succeeded: the runtime image lacked `curl` for downloading duo-cli (fixed in `agent-config.yml`, which is read from `main`). Observability is a group setting, switched on in the UI. Issue #3 (Rename button in the folder view) is the small real task for the full loop: Triage → Developer flow → MR → Code Review → merge → tag `v0.1.0` → release.
    - **Demo video:** `bun run demo` opens an empty library in `~/Library/Application Support/dev.hus.voidcat-demo/` (`VOIDCAT_DIR`); drop in `demo/documents/` (all invented). See `demo/README.md`.
-2. **OpenAI privacy-filter model** (Transformers.js/ONNX) to catch names the rules miss.
-3. **Encrypt the library** (SQLCipher); only then may the UI say "encrypted".
+2. (done 17 Oct) **OpenAI privacy-filter model**: Settings → "Catch names the rules miss"; not in the MCP server.
+3. (done 17 Oct) **Encrypted library**: SQLCipher database + AES-256-GCM files, key in the Keychain; MCP answers through the running app. Plain backup kept at `~/Library/Application Support/dev.hus.voidcat.backup-2026-10-17-before-encryption` (delete once happy).
 4. **Polish:**
    - a Rename-folder button in the folder view;
-   - background reminders when the app is closed;
+   - (done 17 Oct) reminders when the window is closed: menu bar cat, Open at login;
    - (done 17 Oct) `docType` description now says "never a folder, area or person name"; filing no longer shows folders in the first step anyway.
 
 ## How Hussein likes to work
@@ -82,6 +82,8 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - Explain in plain words; no jargon in the UI.
 
 ## Gotchas
+- The library is encrypted: never read `files/` or `voidcat.db` directly; use `bytes_of` / `contents_of`, and for scripts against a copy use the ignored test `copy_check` (`VOIDCAT_COPY=<dir> cargo test copy_check -- --ignored`, throwaway key, prints counts only).
+- Dev builds are ad-hoc signed: after a Rust rebuild macOS asks again for the "library-key" Keychain item (Always Allow). Refusing shows a dialog and quits.
 - Timing tests take the fastest of three runs (`fastest` in `privacy.test.ts`); a single run failed at random when the machine was busy.
 - **Restart the dev app** after `bun add` (a stale React copy causes "Invalid hook call") and after Rust changes: kill `target/debug/voidcat`, `tauri dev`, and port 1420, then `bun run tauri dev` in the background.
 - Run `bun run build:mcp` before `cargo test` or a fresh `tauri dev` if `src-tauri/binaries/` is empty (Tauri checks the sidecar exists). After changing `mcp/server.ts` or `src/lib/mcp.ts`, rebuild it; apps pick it up the next time they start the server.
@@ -99,4 +101,6 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - **glib 0.18.5, RUSTSEC-2024-0429 (medium):** comes from Tauri's Linux (GTK) dependencies; the macOS app doesn't build it, and Tauri pins this version. Not applicable.
 - **6 × "regular expression with non-literal value" (SAST, medium):** false positives. Three were rewritten as fixed patterns (month names, the guard's copy); the other three build patterns from the user's own values through the standard `RegExp.escape` (ES2025) and keep a `nosemgrep` comment with the reason. The app now needs macOS 15.2+ (Safari 18.2 engine) for `RegExp.escape`.
 - **Found while testing (not flagged by the scanner):** the email pattern took quadratic time on long text without an `@` (0.75 s on 40,000 letters). Fixed by starting matches only at word starts and capping the name part at 64 characters; tests now time every pattern on adversarial input.
+- **Security scan of MR !4 (17 Oct 2026):** `qs` 6.16.0 (uncaught exception in `stringify`, reached only through the MCP SDK's Express parts, which the stdio server doesn't use) pinned to 6.16.1 with `overrides`; `veil.tsx` placeholder pattern rewritten as a literal; `Viewer.tsx` numeric-cell check is one character class (linear), marked `nosemgrep` with the reason; `glib` 0.18.5 is the Linux-only finding above.
+- **Review of MR !5 (18 Oct 2026):** secret detection clean; dependency scanning only `glib` (above). SAST: two `detect-non-literal-fs-filename` findings in `vite.config.ts` (`ortFiles`), false positives (names come from a fixed folder listing; dev/build only), marked `nosemgrep` with the reason. Licenses rechecked: 542 crates and 340 npm packages, all permissive except the MPL-2.0 ones (unmodified) and `sharp`/`@img/sharp-libvips` (LGPL-3.0, optional for Transformers.js in Node, not in the app or the MCP binary). SQLCipher's BSD notice, ONNX Runtime's MIT notice and the fonts' OFL ship in `THIRD-PARTY-NOTICES.md`, bundled with the app (`bundle.resources`).
 - **Licenses:** 301 npm packages and 502 crates, all permissive or weak copyleft (MPL-2.0 files used unmodified, OFL fonts, an LGPL option where MIT is also offered). Nothing conflicts with MIT. `src-tauri/Cargo.toml` now declares `license = "MIT"`.

@@ -10,6 +10,20 @@
  */
 
 export type Kind = "PERSON" | "ID" | "DATE" | "ADDRESS" | "EMAIL" | "PHONE" | "IBAN" | "PRIVATE";
+/** A detail the privacy-filter model found in a text. */
+export type Found = { value: string; kind: Kind };
+
+/** The privacy-filter model's labels, as the masker's kinds. */
+export const FOUND_KIND: Record<string, Kind> = {
+  private_person: "PERSON",
+  private_address: "ADDRESS",
+  private_email: "EMAIL",
+  private_phone: "PHONE",
+  account_number: "ID",
+  private_date: "DATE",
+  private_url: "PRIVATE",
+  secret: "PRIVATE",
+};
 
 export type Masked = { token: string; kind: Kind; original: string; note?: string };
 
@@ -147,6 +161,21 @@ export class Masker {
     this.known.sort((a, b) => Number(a.variant) - Number(b.variant) || b.value.length - a.value.length);
   }
 
+  /**
+   * Adds details the privacy-filter model found in the text (names, addresses… the rules missed). The model already
+   * judged them private, so only very short or already known values are skipped.
+   */
+  learnFound(found: Found[]) {
+    const seen = new Set(this.known.map((k) => k.value.toLowerCase()));
+    for (const f of found) {
+      const value = f.value.trim();
+      if (value.length < 3 || seen.has(value.toLowerCase()) || /^\[[A-Z]+_\d+\]$/.test(value)) continue;
+      this.known.push({ value, kind: f.kind, re: new RegExp(escape(value), "giu"), variant: false });  // nosemgrep: eslint.detect-non-literal-regexp -- value is escaped
+      seen.add(value.toLowerCase());
+    }
+    this.known.sort((a, b) => Number(a.variant) - Number(b.variant) || b.value.length - a.value.length);
+  }
+
   /** `canonical`: the full approved value this text is a form of, so every form shares one placeholder. */
   private tokenFor(found: string, kind: Kind, canonical?: string): string {
     const original = canonical ?? found;
@@ -206,4 +235,47 @@ export class Masker {
       .filter((e) => e.note)
       .map((e) => `${e.token} is ${e.note}.`);
   }
+}
+
+/**
+ * Hide private details, on screen only: values the AI may read (nationality matters for visa rules, a place of birth
+ * for some forms) but a screen recording shouldn't show, plus every word of approved names (a model may write "HUSSEIN"
+ * alone, which the masker, matching whole names, leaves alone).
+ */
+const SCREEN_ONLY = /national|nacionalidad|citizen|ciudadan|country|pa[ií]s|birth ?place|place of birth|lugar de nacimiento|born in|issuing|authority|autoridad|expedid|expedici/i;
+const SEX = /\b(sex|sexo|gender|g[eé]nero)(\W{0,6})(male|female|masculino|femenino|hombre|mujer|[mfx])\b/giu;
+export const HIDDEN = "[HIDDEN]";
+/** Joining words inside names ("de", "bin"): left readable, they say nothing on their own. */
+/** Labels that hold a person's name (not an employer or other organisation, which stay readable). */
+const PERSON_NAME = /\bname\b|names|nombre|surname|apellido|given|forename/i;
+const PARTICLES = new Set(["del", "las", "los", "van", "von", "der", "den", "dos", "das", "bin", "ibn", "bint", "abu", "the", "and"]);
+
+/** "IRAQI" → "IRAQ", "alemana" → "aleman", so the country and the nationality both match. */
+const stem = (w: string) => {
+  const s = w.replace(/(?:ian|ese|ish|an|i|n|a|o)$/i, "");
+  return s.length >= 4 ? s : w;
+};
+
+export function screenHider(facts: KnownFact[], ownNames: string[]): (text: string) => string {
+  const words = new Set<string>();
+  for (const f of facts) {
+    if (!SCREEN_ONLY.test(f.label) || /\d/.test(f.value)) continue;
+    for (const w of f.value.split(/[^\p{L}]+/u)) if (w.length >= 4) words.add(stem(w));
+  }
+  // Exact words (no stem), so a surname doesn't swallow longer words that start like it.
+  const exact = new Set<string>();
+  const nameWords = (v: string) => v.split(/[^\p{L}'’-]+/u).filter((w) => w.length >= 3 && !PARTICLES.has(w.toLowerCase()));
+  for (const f of facts) if (PERSON_NAME.test(f.label) && !/\d/.test(f.value)) for (const w of nameWords(f.value)) exact.add(w);
+  for (const n of ownNames) for (const w of nameWords(n)) exact.add(w);
+  const alts = [...words].sort((a, b) => b.length - a.length).map(escape);
+  const names = [...exact].sort((a, b) => b.length - a.length).map(escape);
+  // nosemgrep: eslint.detect-non-literal-regexp -- every word is escaped
+  const re = alts.length ? new RegExp(`(?<![\\p{L}])(?:${alts.join("|")})\\p{L}*`, "giu") : null;
+  // nosemgrep: eslint.detect-non-literal-regexp -- every word is escaped
+  const nameRe = names.length ? new RegExp(`(?<![\\p{L}])(?:${names.join("|")})(?![\\p{L}])`, "giu") : null;
+  return (text) => {
+    let out = text.replace(SEX, (_m, label: string, sep: string) => `${label}${sep}${HIDDEN}`);
+    if (nameRe) out = out.replace(nameRe, HIDDEN);
+    return re ? out.replace(re, HIDDEN) : out;
+  };
 }

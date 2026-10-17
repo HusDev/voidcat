@@ -5,12 +5,14 @@ mod chats;
 mod docx;
 mod labels;
 mod legacy;
+mod mcp_bridge;
 mod ocr;
 mod opportunities;
 mod people;
 mod secrets;
 mod sheets;
 mod store;
+mod vault;
 
 use store::{Document, Fact, Folder, Hit, Imported, NewFact, Page, Stats, Store, Suggestion};
 use tauri::{Manager, State};
@@ -33,9 +35,10 @@ fn library_stats(store: State<Store>) -> Result<Stats, String> {
 
 #[tauri::command]
 fn open_document(app: tauri::AppHandle, store: State<Store>, id: String) -> Result<(), String> {
-    let path = store.path_of(&id)?;
+    // The stored file is encrypted: the other app gets a decrypted copy, removed when Voidcat next starts.
+    let path = store.plain_copy(&id)?;
     app.opener()
-        .open_path(path, None::<&str>)
+        .open_path(path.to_string_lossy(), None::<&str>)
         .map_err(|e| e.to_string())
 }
 
@@ -82,10 +85,71 @@ fn unchecked_for_labels(store: State<Store>) -> Result<Vec<String>, String> {
     labels::unchecked(&store.db.lock().unwrap())
 }
 
+/// Whether the Ollama app is installed (it runs the local model), so Voidcat can offer "Open Ollama".
+#[tauri::command]
+fn ollama_installed() -> bool {
+    let home = std::env::var_os("HOME").map(std::path::PathBuf::from).unwrap_or_default();
+    ["/Applications/Ollama.app".into(), home.join("Applications/Ollama.app")].iter().any(|p: &std::path::PathBuf| p.exists())
+}
+
+/// This Mac's memory in GB, so the local model choices can say which ones fit.
+#[tauri::command]
+fn mac_memory_gb() -> u64 {
+    std::process::Command::new("sysctl")
+        .args(["-n", "hw.memsize"])
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse::<u64>().ok())
+        .map(|bytes| bytes / 1_073_741_824)
+        .unwrap_or(16)
+}
+
+#[tauri::command]
+fn open_ollama() -> Result<(), String> {
+    std::process::Command::new("open").args(["-a", "Ollama"]).status().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// The library folder, while its key is missing and the recovery key hasn't been entered yet.
+struct Locked(std::path::PathBuf);
+
+#[tauri::command]
+fn library_locked(app: tauri::AppHandle) -> bool {
+    app.try_state::<Locked>().is_some()
+}
+
+/// Opens a locked library with the recovery key: checked against the library first, then saved to the Keychain and
+/// the app restarts normally.
+#[tauri::command]
+fn recover_library(app: tauri::AppHandle, code: String) -> Result<(), String> {
+    let Some(locked) = app.try_state::<Locked>() else { return Ok(()) };
+    let vault = vault::Vault::from_recovery_code(&code)?;
+    if !Store::opens(&locked.0, &vault) {
+        return Err("That recovery key doesn't open this library. Check each group of four and try again.".into());
+    }
+    vault.save()?;
+    app.restart();
+}
+
+/// The recovery key, shown in Settings only when asked for.
+#[tauri::command]
+fn recovery_code(store: State<Store>) -> String {
+    store.recovery_code()
+}
+
+/// Every document, decrypted, in one .zip sorted into its folders.
+#[tauri::command]
+fn export_all(store: State<Store>, path: String) -> Result<usize, String> {
+    let all = store.export_all()?;
+    let count = all.len();
+    bundle::write(&path, all)?;
+    Ok(count)
+}
+
 /// Saves documents as one .zip at the path the user chose in the save dialog.
 #[tauri::command]
 fn save_zip(store: State<Store>, path: String, ids: Vec<String>) -> Result<(), String> {
-    bundle::write(&path, store.files_of(&ids)?)
+    bundle::write(&path, store.contents_of(&ids)?)
 }
 
 /// Moves a folder and its documents to another area (merging with a folder of the same name there).
@@ -387,7 +451,17 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
+        // Closing the window hides it: Voidcat keeps running in the menu bar so calendar reminders still arrive.
+        // ⌘Q or the menu bar's Quit really quits.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
         .setup(|app| {
+            menu_bar(app)?;
             // VOIDCAT_DIR opens another library (a demo with invented documents, say) and leaves the real one and
             // other apps' settings alone.
             let dir = match std::env::var_os("VOIDCAT_DIR") {
@@ -402,12 +476,37 @@ pub fn run() {
                     dir
                 }
             };
-            let store = Store::open(&dir)
+            let vault = match vault::Vault::load(&dir.join(legacy::DB)) {
+                Ok(v) => v,
+                // The key is gone but the library is there: the window opens on "Enter your recovery key".
+                Err(vault::Load::Missing) => {
+                    app.manage(Locked(dir));
+                    return Ok(());
+                }
+                Err(vault::Load::Failed(e)) => {
+                    // Without the key nothing can be opened: say why in a window instead of quietly failing.
+                    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+                    app.dialog().message(e).title("Voidcat can't open your library").kind(MessageDialogKind::Error).blocking_show();
+                    std::process::exit(1);
+                }
+            };
+            let store = Store::open(&dir, vault)
                 .map_err(|e| format!("Could not open the library in {}: {e}", dir.display()))?;
             app.manage(store);
+            // The MCP server reads the library through the app, since only the app holds the key.
+            if let Err(e) = mcp_bridge::start(app.handle().clone(), &dir) {
+                eprintln!("{e}");
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            ollama_installed,
+            mac_memory_gb,
+            open_ollama,
+            library_locked,
+            recover_library,
+            recovery_code,
+            export_all,
             import_files,
             list_documents,
             library_stats,
@@ -472,6 +571,42 @@ pub fn run() {
             profile_choices,
             choose_profile_value
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Voidcat");
+        .build(tauri::generate_context!())
+        .expect("error while building Voidcat")
+        .run(|_app, _event| {
+            // Clicking the Dock icon brings the hidden window back (a macOS-only event; CI builds on Linux).
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {
+                show_window(_app);
+            }
+        });
+}
+
+fn show_window(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
+}
+
+/// The cat in the menu bar: open the window again, or quit for real.
+fn menu_bar(app: &tauri::App) -> tauri::Result<()> {
+    use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+    use tauri::tray::TrayIconBuilder;
+    let open = MenuItem::with_id(app, "open", "Open Voidcat", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit Voidcat", true, Some("CmdOrCtrl+Q"))?;
+    let menu = Menu::with_items(app, &[&open, &PredefinedMenuItem::separator(app)?, &quit])?;
+    TrayIconBuilder::with_id("voidcat")
+        .icon(tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?)
+        .icon_as_template(true)
+        .tooltip("Voidcat")
+        .menu(&menu)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "open" => show_window(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .build(app)?;
+    Ok(())
 }
