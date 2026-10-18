@@ -51,15 +51,15 @@ export const PATTERNS: [Kind, RegExp][] = [
   ["PHONE", /(?:\+\d{1,3}[ .-]?)?\(?\d{2,4}\)?(?:[ .-]?\d{2,4}){2,4}\b/g],
 ];
 
-/** Guesses what kind of detail a fact holds from its label. */
+/** Guesses what kind of detail a fact holds from its label (accents ignored: "Válida hasta" reads as "valida hasta"). */
 export function kindOfLabel(label: string): Kind {
-  const l = label.toLowerCase();
+  const l = label.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
   if (/e-?mail|correo/.test(l)) return "EMAIL";
-  if (/phone|tel[eé]fono|móvil|mobile/.test(l)) return "PHONE";
+  if (/phone|telefono|movil|mobile/.test(l)) return "PHONE";
   if (/iban|account|cuenta/.test(l)) return "IBAN";
-  if (/address|street|domicilio|direcci[oó]n|calle|carrer/.test(l)) return "ADDRESS";
-  if (/date|valid|issued|expir|start|end|born|birth|fecha|caduc/.test(l)) return "DATE";
-  if (/number|n[uú]mero|\bno\b|nie|dni|nif|passport|pasaporte|card|tarjeta|\bid\b|expediente|reference|referencia/.test(l)) return "ID";
+  if (/address|street|domicilio|direccion|calle|carrer/.test(l)) return "ADDRESS";
+  if (/date|valid|issued|expir|start|end|born|birth|fecha|caduc|hasta|vence|vencimiento/.test(l)) return "DATE";
+  if (/number|numero|\bno\b|nie|dni|nif|passport|pasaporte|card|tarjeta|\bid\b|expediente|reference|referencia/.test(l)) return "ID";
   if (/name|nombre|landlord|tenant|employer|owner|person|arrendador|arrendatario|lawyer|abogad|signed|firmado/.test(l)) return "PERSON";
   return "PRIVATE";
 }
@@ -150,7 +150,9 @@ export class Masker {
     const seen = new Set(this.known.map((k) => k.value.toLowerCase()));
     for (const f of facts) {
       const value = f.value.trim();
-      const kind = kindOfLabel(f.label);
+      // A value that reads as a date is a date, whatever the label: dates get a "how far away" note.
+      const labelled = kindOfLabel(f.label);
+      const kind = labelled === "PRIVATE" && parseDate(value) ? "DATE" : labelled;
       if (worthMasking(value, kind) && !seen.has(value.toLowerCase())) {
         this.known.push({ value, kind, re: new RegExp(escape(value), "giu"), variant: false });  // nosemgrep: eslint.detect-non-literal-regexp -- value is escaped
         for (const re of variants(value, kind)) this.known.push({ value, kind, re, variant: true });

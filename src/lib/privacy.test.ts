@@ -91,10 +91,20 @@ describe("privacy layer", () => {
     expect(m.mask("Signed by Pau Ferrer.")).toBe("Signed by [PERSON_1].");
   });
 
+  it("masks a date fact as a date, with its note, whatever its label says", () => {
+    const m = new Masker([{ label: "Válida hasta", value: "01/02/2027" }, { label: "Caduca el", value: "03/05/2027" }], today);
+    const out = m.mask("Válida hasta: 01/02/2027. Caduca el 03/05/2027.");
+    expect(out).toBe("Válida hasta: [DATE_1]. Caduca el [DATE_2].");
+    expect(m.notes()[0]).toMatch(/^\[DATE_1\] is about/);
+  });
+
   it("reads labels and dates", () => {
     expect(kindOfLabel("Landlord")).toBe("PERSON");
     expect(kindOfLabel("Valid to")).toBe("DATE");
     expect(kindOfLabel("Card no.")).toBe("ID");
+    expect(kindOfLabel("Válida hasta")).toBe("DATE");
+    expect(kindOfLabel("Fecha de expedición")).toBe("DATE");
+    expect(kindOfLabel("Teléfono móvil")).toBe("PHONE");
     expect(parseDate("23 Feb 2034")?.getFullYear()).toBe(2034);
     expect(relative(new Date(2026, 9, 20), today)).toBe("about 8 days from now");
   });
