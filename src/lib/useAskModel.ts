@@ -1,10 +1,18 @@
 import { useEffect, useState } from "react";
 import { savedModel } from "./cloud";
 import { getSecret, onMac } from "./library";
+import { VOIDCAT_MODEL } from "../cloud/askCloud";
 import { type AskModel, type LocalModel, listLocalModels, saveAskModel, savedAskModel } from "./models";
+
+/** In a browser, Voidcat Cloud's Gemini answers (masked); there's no Ollama or OpenRouter key there. */
+const BROWSER_MODEL: AskModel = { provider: "voidcat", id: VOIDCAT_MODEL };
 
 /** The model that answers in Ask: the saved choice while it's available, else one on this Mac, else the cloud model. */
 export function useAskModel() {
+  return onMac ? useMacAskModel() : { model: BROWSER_MODEL, choose: () => {}, local: null, cloudModel: null, needsSetup: false };
+}
+
+function useMacAskModel() {
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [local, setLocal] = useState<LocalModel[] | null>(null);
   const [chosen, setChosen] = useState(savedAskModel);

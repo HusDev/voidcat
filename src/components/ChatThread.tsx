@@ -65,7 +65,8 @@ function Sent({ e, open }: { e: Exchange; open?: boolean }) {
       <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-[12.5px] text-ink-2 hover:text-ink">
         <ChevronRight aria-hidden className="size-3.5 transition-transform group-open:rotate-90" />
         <ShieldCheck aria-hidden className="size-3.5 text-private-ink" />
-        {e.state === "review" ? "Will be sent" : "What was sent"} · {e.hidden ? `${e.hidden} private ${e.hidden === 1 ? "detail" : "details"} hidden` : "nothing private"} · zero data retention
+        {e.state === "review" ? "Will be sent" : "What was sent"} · {e.hidden ? `${e.hidden} private ${e.hidden === 1 ? "detail" : "details"} hidden` : "nothing private"} ·{" "}
+        {e.model.provider === "voidcat" ? "Gemini in Belgium, nothing kept" : "zero data retention"}
       </summary>
       <pre data-selectable className="m-0 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-b-lg bg-code p-3.5 font-mono text-[12px] leading-relaxed text-rail-ink">
         <MaskedText text={e.sent} />

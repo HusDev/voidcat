@@ -18,9 +18,7 @@ export const BundleInput = z.object({
 /** Added to the system prompt so the model knows when to use the tool. */
 export const TOOLS_HELP = `You can put documents together for the user: when they ask for documents or files (to download, send, share or collect), call ${BUNDLE} with the D-numbers of the documents that match from the library list and a short name for the zip. Then say in one short sentence which documents you chose. Only use D-numbers that are in the list.`;
 
-/** Today's date for the system prompt, so the model can work out ages and how long ago or until something is. */
-export const todayLine = (now = new Date()) =>
-  `Today is ${now.toLocaleDateString("en-GB", { weekday: "long" })} ${now.getDate()} ${now.toLocaleDateString("en-GB", { month: "long" })} ${now.getFullYear()}. Use it for ages and for how long ago or until a date is; don't say you don't know today's date.`;
+export { todayLine } from "./askPrompt";
 
 export const cloudTools = { [BUNDLE]: tool({ description, inputSchema: BundleInput }) };
 

@@ -178,7 +178,9 @@ export function Ask() {
                 <p className="m-0 text-sm text-ink-2">
                   {model?.provider === "local"
                     ? "A model on this Mac answers. Nothing leaves the computer."
-                    : "Names, IDs, addresses and dates are hidden on this Mac before anything is sent. If a question would send something private, you see it first."}
+                    : model?.provider === "voidcat"
+                      ? "Gemini in Belgium answers. Names, IDs, addresses and dates are hidden in this browser first; if a question would send something private, you see it first."
+                      : "Names, IDs, addresses and dates are hidden on this Mac before anything is sent. If a question would send something private, you see it first."}
                 </p>
               </div>
               {needsSetup ? (

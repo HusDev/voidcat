@@ -12,8 +12,9 @@ import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
+import { SYSTEM as ASK_SYSTEM, todayLine } from "../src/lib/askPrompt";
 import { AREAS, CLOUD, SYSTEM } from "../src/lib/filing";
-import { type Filed, month, parseFiled, parseRequest } from "./read";
+import { type Filed, month, parseAsk, parseFiled, parseRequest, type Turn } from "./read";
 
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT ?? "voidcat-cloud";
 const LOCATION = process.env.VERTEX_LOCATION ?? "europe-west1";
@@ -21,6 +22,7 @@ const MODEL = process.env.MODEL ?? "gemini-2.5-flash";
 const BUCKET = process.env.FILES_BUCKET ?? "voidcat-cloud-files";
 const ORIGINS = (process.env.ALLOWED_ORIGINS ?? "https://voidcat-web-1094942921673.europe-west1.run.app,http://localhost:1430").split(",");
 export const READS_PER_MONTH = Number(process.env.READS_PER_MONTH ?? 300);
+export const ASKS_PER_MONTH = Number(process.env.ASKS_PER_MONTH ?? 1000);
 
 initializeApp({ projectId: PROJECT });
 const db = getFirestore();
@@ -50,22 +52,45 @@ const SCHEMA = {
   required: ["title", "docType", "area", "folder", "facts"],
 };
 
-/** Counts one read for this person this month, or says the month's reads are used up. */
-async function countRead(uid: string): Promise<{ used: number } | null> {
+/** Counts one use ("reads" or "asks") for this person this month, or says the month's allowance is used up. */
+async function count(uid: string, what: "reads" | "asks", limit: number): Promise<{ used: number } | null> {
   const ref = db.collection("usage").doc(uid);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const now = month();
-    const used = snap.exists && snap.get("month") === now ? Number(snap.get("reads") ?? 0) : 0;
-    if (used >= READS_PER_MONTH) return null;
-    tx.set(ref, { month: now, reads: used + 1 });
+    const same = snap.exists && snap.get("month") === now;
+    const used = same ? Number(snap.get(what) ?? 0) : 0;
+    if (used >= limit) return null;
+    tx.set(ref, same ? { [what]: used + 1 } : { month: now, reads: 0, asks: 0, [what]: 1 }, { merge: same });
     return { used: used + 1 };
   });
 }
 
-async function readsUsed(uid: string) {
+async function usage(uid: string) {
   const snap = await db.collection("usage").doc(uid).get();
-  return snap.exists && snap.get("month") === month() ? Number(snap.get("reads") ?? 0) : 0;
+  const same = snap.exists && snap.get("month") === month();
+  return { reads: same ? Number(snap.get("reads") ?? 0) : 0, asks: same ? Number(snap.get("asks") ?? 0) : 0 };
+}
+
+/** Streams Gemini's answer to an Ask conversation, as plain text. Every turn is already masked by the browser. */
+async function answer(messages: Turn[], today: Date): Promise<ReadableStream<Uint8Array>> {
+  const stream = await ai.models.generateContentStream({
+    model: MODEL,
+    contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+    config: { systemInstruction: `${ASK_SYSTEM}\n${todayLine(today)}`, temperature: 0.2 },
+  });
+  const encode = new TextEncoder();
+  return new ReadableStream({
+    async start(out) {
+      try {
+        for await (const chunk of stream) if (chunk.text) out.enqueue(encode.encode(chunk.text));
+      } catch (e) {
+        console.error("ask stream failed:", e instanceof Error ? e.name : "unknown");
+        out.enqueue(encode.encode("\n\n(The answer stopped early. Try again.)"));
+      }
+      out.close();
+    },
+  });
 }
 
 export async function file(text: string, folders: string[]): Promise<Filed> {
@@ -90,6 +115,7 @@ function cors(origin: string | null) {
     "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Max-Age": "3600",
+    "Access-Control-Expose-Headers": "X-Asks-Used, X-Asks-Limit",
     Vary: "Origin",
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
@@ -131,7 +157,8 @@ export async function handle(req: Request): Promise<Response> {
   if (path === "/v1/usage" && req.method === "GET") {
     const uid = await who(req);
     if (!uid) return json({ error: "Sign in to Voidcat Cloud first." }, 401, headers);
-    return json({ used: await readsUsed(uid), limit: READS_PER_MONTH }, 200, headers);
+    const used = await usage(uid);
+    return json({ reads: used.reads, readsLimit: READS_PER_MONTH, asks: used.asks, asksLimit: ASKS_PER_MONTH }, 200, headers);
   }
 
   if (path === "/v1/read" && req.method === "POST") {
@@ -139,7 +166,7 @@ export async function handle(req: Request): Promise<Response> {
     if (!uid) return json({ error: "Sign in to Voidcat Cloud first." }, 401, headers);
     const parsed = parseRequest(await req.json().catch(() => null));
     if (typeof parsed === "string") return json({ error: parsed }, 400, headers);
-    const counted = await countRead(uid);
+    const counted = await count(uid, "reads", READS_PER_MONTH);
     if (!counted) return json({ error: `You've used this month's ${READS_PER_MONTH} cloud reads. Your Mac can still read documents.` }, 429, headers);
     try {
       return json({ filed: await file(parsed.text, parsed.folders), used: counted.used, limit: READS_PER_MONTH }, 200, headers);
@@ -149,6 +176,25 @@ export async function handle(req: Request): Promise<Response> {
       return json({ error: "The cloud couldn't read this document. Try again in a moment." }, 502, headers);
     }
   }
+  if (path === "/v1/ask" && req.method === "POST") {
+    const uid = await who(req);
+    if (!uid) return json({ error: "Sign in to Voidcat Cloud first." }, 401, headers);
+    const parsed = parseAsk(await req.json().catch(() => null));
+    if (typeof parsed === "string") return json({ error: parsed }, 400, headers);
+    const counted = await count(uid, "asks", ASKS_PER_MONTH);
+    if (!counted) return json({ error: `You've asked this month's ${ASKS_PER_MONTH} cloud questions. Your Mac can still answer.` }, 429, headers);
+    try {
+      const body = await answer(parsed.messages, parsed.today);
+      return new Response(body, {
+        status: 200,
+        headers: { ...headers, "Content-Type": "text/plain; charset=utf-8", "X-Asks-Used": String(counted.used), "X-Asks-Limit": String(ASKS_PER_MONTH) },
+      });
+    } catch (e) {
+      console.error("ask failed:", e instanceof Error ? e.name : "unknown");
+      return json({ error: "The cloud couldn't answer. Try again in a moment." }, 502, headers);
+    }
+  }
+
   if (path === "/v1/account" && req.method === "DELETE") {
     const uid = await who(req, true);
     if (!uid) return json({ error: "Sign in to Voidcat Cloud first." }, 401, headers);

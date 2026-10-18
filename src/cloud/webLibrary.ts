@@ -325,8 +325,11 @@ export function openWebLibrary(uid: string, keys: Keys): Promise<WebLibrary> {
     // What the Mac keeps for itself (labels, chats, calendar, contacts, profile, apps): empty here for now.
     list_labels: () => [],
     unchecked_for_labels: () => [],
+    // Conversations aren't kept in the browser yet: Ask works, its history starts fresh each visit.
     list_chats: () => [],
     get_chat: () => null,
+    save_chat: () => undefined,
+    delete_chat: () => undefined,
     list_events: () => [],
     done_event_keys: () => [],
     event_papers: () => [],

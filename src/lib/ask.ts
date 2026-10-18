@@ -1,4 +1,5 @@
 import { type Turn, askCloud } from "./cloud";
+import { askVoidcat } from "../cloud/askCloud";
 import { type Document, type Fact, type Hit, documentPages, getSecret, listDocuments, listFacts, searchLibrary } from "./library";
 import { type AskModel, askLocalModel } from "./models";
 import { aboutYou, contactFacts, listContacts, loadProfile, profileChoices } from "./people";
@@ -175,7 +176,7 @@ export function mergeFacts(facts: Fact[]) {
 }
 
 /** On this Mac, or nothing private in it: no reason to make you confirm before sending. */
-export const needsReview = (e: Exchange) => e.model.provider === "cloud" && PLACEHOLDER.test(e.masked);
+export const needsReview = (e: Exchange) => e.model.provider !== "local" && PLACEHOLDER.test(e.masked);
 
 /** A masker that knows today's facts and contacts, and a saved conversation re-masked with it, so placeholders stay consistent. */
 export async function resume(saved: Exchange[]) {
@@ -214,6 +215,12 @@ export async function run(e: Exchange, earlier: Exchange[], masker: Masker, upda
         const split = splitThinking(text);
         const thinking = [thought.trim(), split.thinking].filter(Boolean).join("\n\n");
         update({ answer: split.answer, raw: masker.mask(split.answer), thinking: thinking || undefined, rawThinking: thinking ? masker.mask(thinking) : undefined });
+      }
+    } else if (e.model.provider === "voidcat") {
+      // A browser: Gemini through voidcat-api, masked both ways; no zip tool there.
+      for await (const chunk of askVoidcat(messages)) {
+        text += chunk;
+        update({ answer: masker.unmask(text), raw: text });
       }
     } else {
       const apiKey = await getSecret("openrouter");
