@@ -265,6 +265,29 @@ pub(crate) fn mime_of(name: &str) -> Option<String> {
     Some(m.to_string())
 }
 
+/// The type of a file whose name doesn't say (no or unknown extension), from its first bytes: PDF and photos.
+pub(crate) fn sniff(bytes: &[u8]) -> Option<String> {
+    let m = if bytes.starts_with(b"%PDF") {
+        "application/pdf"
+    } else if bytes.starts_with(b"\x89PNG") {
+        "image/png"
+    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "image/jpeg"
+    } else if bytes.len() > 12 && &bytes[..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        "image/webp"
+    } else if bytes.len() > 12 && &bytes[4..8] == b"ftyp" && [b"heic", b"heix", b"mif1"].iter().any(|b| &bytes[8..12] == *b) {
+        "image/heic"
+    } else {
+        return None;
+    };
+    Some(m.to_string())
+}
+
+/// A file's type: from its name, else from its contents.
+pub(crate) fn type_of(name: &str, bytes: &[u8]) -> Option<String> {
+    mime_of(name).or_else(|| sniff(bytes))
+}
+
 /// Puts a document in the suggested folder when it exists and the model is sure; otherwise it waits in "to file".
 fn place(tx: &Connection, id: &str, s: &Suggestion) -> Result<(), String> {
     let (folder_area, folder_name) = (s.area.trim(), s.folder.trim());
@@ -377,6 +400,7 @@ impl Store {
             vault,
         };
         store.encrypt_files()?;
+        store.fill_types()?;
         // Copies decrypted for "Open in default app" last until the next start.
         let _ = fs::remove_dir_all(dir.join(OPENED));
         Ok(store)
@@ -404,6 +428,28 @@ impl Store {
             let tmp = format!("{path}.encrypting");
             fs::write(&tmp, &sealed).map_err(|e| e.to_string())?;
             fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+
+    /// Documents whose name didn't tell their type get it from their contents, and are read again.
+    fn fill_types(&self) -> Result<(), String> {
+        let unknown: Vec<(String, String)> = {
+            let db = self.db.lock().unwrap();
+            let mut stmt = db.prepare("select id, stored_path from documents where mime is null").map_err(|e| e.to_string())?;
+            let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(|e| e.to_string())?;
+            rows.collect::<Result<_, _>>().map_err(|e| e.to_string())?
+        };
+        for (id, path) in unknown {
+            let Ok(bytes) = fs::read(&path) else { continue };
+            let Ok(plain) = self.vault.decrypt(bytes) else { continue };
+            if let Some(mime) = sniff(&plain) {
+                self.db
+                    .lock()
+                    .unwrap()
+                    .execute("update documents set mime = ?2, status = 'new', text_method = null where id = ?1 and status != 'filed'", params![id, mime])
+                    .map_err(|e| e.to_string())?;
+            }
         }
         Ok(())
     }
@@ -502,7 +548,7 @@ impl Store {
             }
             let inserted = db.execute(
                 "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path) values (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-                params![id, title_from(&name), name, mime_of(&name), bytes.len() as i64, sha, stored.to_string_lossy()],
+                params![id, title_from(&name), name, type_of(&name, &bytes), bytes.len() as i64, sha, stored.to_string_lossy()],
             );
             match inserted {
                 Ok(_) => match db.query_row(
@@ -898,6 +944,14 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn knows_a_file_by_its_contents_when_the_name_doesnt_say() {
+        assert_eq!(type_of("scan", b"%PDF-1.7 ...").as_deref(), Some("application/pdf"));
+        assert_eq!(type_of("photo", &[0xFF, 0xD8, 0xFF, 0xE0]).as_deref(), Some("image/jpeg"));
+        assert_eq!(type_of("notes.txt", b"%PDF").as_deref(), Some("text/plain"), "the name wins when it says");
+        assert_eq!(type_of("blob", b"hello"), None);
+    }
 
     #[test]
     fn titles_read_like_names() {

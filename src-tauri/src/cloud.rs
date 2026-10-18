@@ -495,7 +495,7 @@ impl Store {
         fs::write(&stored, sealed).map_err(|e| e.to_string())?;
         let inserted = db.execute(
             "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path) values (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![id, crate::store::title_from(&name), name, crate::store::mime_of(&name), plain.len() as i64, sha, stored.to_string_lossy()],
+            params![id, crate::store::title_from(&name), name, crate::store::type_of(&name, &plain), plain.len() as i64, sha, stored.to_string_lossy()],
         );
         if let Err(e) = inserted {
             let _ = fs::remove_file(&stored);
