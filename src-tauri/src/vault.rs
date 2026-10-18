@@ -207,6 +207,15 @@ mod tests {
         assert!(Vault::from_recovery_code("ABCD-EFGH").is_err());
     }
 
+    /// The same values are checked in `src/cloud/vault.test.ts`: the Mac and the browser must derive the same keys
+    /// and write the same recovery key, or a library couldn't move between them.
+    #[test]
+    fn matches_the_browser_vault() {
+        let v = Vault::from_master(&[7; 32]);
+        assert_eq!(v.db_key, "11776c2d26779b5eb27bde41c7199f4b0559b1627484b492e82ababb918f4307");
+        assert_eq!(v.recovery_code(), "A4DQ-OBYH-A4DQ-OBYH-A4DQ-OBYH-A4DQ-OBYH-A4DQ-OBYH-A4DQ-OBYH-A4DQ");
+    }
+
     #[test]
     fn database_and_files_get_different_keys() {
         let v = Vault::from_master(&[7; 32]);
