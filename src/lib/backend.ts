@@ -8,8 +8,13 @@ import { type InvokeArgs, invoke, isTauri } from "@tauri-apps/api/core";
 type Web = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 let web: Web | null = null;
 
-export const setWebBackend = (w: Web | null) => {
+export const setWebBackend = (w: Web) => {
   web = w;
+};
+
+/** Takes `w` away, unless another library has replaced it since (React may open one while closing the last). */
+export const clearWebBackend = (w: Web) => {
+  if (web === w) web = null;
 };
 
 /** The Mac app (Rust, the Keychain, Ollama, the menu bar…), as opposed to a browser. */

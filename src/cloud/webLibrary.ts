@@ -1,6 +1,6 @@
 import { Bytes, collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { deleteObject, getBytes, ref, uploadBytes } from "firebase/storage";
-import { setWebBackend } from "../lib/backend";
+import { clearWebBackend, setWebBackend } from "../lib/backend";
 import { announceChange, type Document, type Fact, type Folder, type Hit, type Page } from "../lib/library";
 import { firebase } from "./firebase";
 import { type Keys, open, openText, seal, sealText } from "./vault";
@@ -327,11 +327,12 @@ export function openWebLibrary(uid: string, keys: Keys): Promise<WebLibrary> {
     return out;
   }
 
-  setWebBackend(async (cmd, args) => {
+  const backend = async (cmd: string, args?: Record<string, unknown>) => {
     const run = commands[cmd];
     if (!run) throw new Error("This works in Voidcat on your Mac for now.");
     return run(args ?? {});
-  });
+  };
+  setWebBackend(backend);
 
   return new Promise((resolve, reject) => {
     let first = true;
@@ -361,7 +362,7 @@ export function openWebLibrary(uid: string, keys: Keys): Promise<WebLibrary> {
           resolve({
             close: () => {
               stop();
-              setWebBackend(null);
+              clearWebBackend(backend);
             },
             upload,
           });
