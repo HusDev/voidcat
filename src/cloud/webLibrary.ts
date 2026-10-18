@@ -93,9 +93,9 @@ export function searchRecords(records: DocRecord[], query: string, any: boolean)
 }
 
 function snippet(text: string, words: string[]) {
-  const folded = fold(text);
-  const at = Math.min(...words.map((w) => folded.search(new RegExp(`(^|[^\\p{L}\\p{N}])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "u"))).filter((i) => i >= 0));
-  const start = Math.max(0, (Number.isFinite(at) ? at : 0) - 60);
+  // Where the first word that starts with a searched word begins (folding keeps lengths for most text).
+  const first = [...fold(text).matchAll(/[\p{L}\p{N}]+/gu)].find((m) => words.some((w) => m[0].startsWith(w)));
+  const start = Math.max(0, (first?.index ?? 0) - 60);
   const piece = text.slice(start, start + 180);
   // Folding keeps lengths for most text; mark whole words that start with a searched word.
   const marked = piece.replace(/[\p{L}\p{N}]+/gu, (w) => (words.some((q) => fold(w).startsWith(q)) ? `[[${w}]]` : w));

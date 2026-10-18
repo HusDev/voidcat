@@ -54,6 +54,7 @@
   },
   "license": "MIT",
   "overrides": {
-    "qs": "^6.16.1"
+    "qs": "^6.16.1",
+    "@grpc/grpc-js": "^1.14.5"
   }
 }

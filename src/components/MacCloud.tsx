@@ -27,12 +27,12 @@ export function MacCloud() {
   const [busy, setBusy] = useState(false);
   const cancel = useRef<(() => void) | null>(null);
   const here = useRef<HTMLElement>(null);
-  const { hash } = useLocation();
+  const { hash: anchor } = useLocation();
   useEffect(() => () => cancel.current?.(), []);
   // The sidebar's cloud status links here.
   useEffect(() => {
-    if (hash === "#cloud") here.current?.scrollIntoView({ block: "start" });
-  }, [hash]);
+    if (anchor === "#cloud") here.current?.scrollIntoView({ block: "start" });
+  }, [anchor]);
 
   if (!macCloud) return null;
 
