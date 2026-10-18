@@ -73,7 +73,7 @@ flowchart LR
 4. For **Read now** and **Ask**, the text is masked in the browser first. voidcat-api checks the sign-in and the monthly limits (300 reads, 1,000 questions) and logs no text.
 5. Changes made in a browser travel back to the Mac as sealed, one-time edits.
 
-Security notes and the latest review: [SECURITY.md](SECURITY.md).
+Security notes and the latest review: [SECURITY.md](SECURITY.md). Carbon per document, measured with SCI: [docs/SUSTAINABILITY.md](docs/SUSTAINABILITY.md).
 
 ## Requirements
 
