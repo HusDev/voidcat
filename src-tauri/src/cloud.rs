@@ -447,6 +447,9 @@ pub enum Applied {
     Done,
     /// Fetch this file from the cloud and pass it to `cloud_import`.
     Import { id: String, file_name: String },
+    /// A browser read this scan with its own OCR and filed it; read the text again on this Mac (Apple Vision reads
+    /// scans far better), keeping the filing and facts.
+    Reread { id: String },
     /// Couldn't apply (the document is gone, a name is taken…); the edit is dropped all the same.
     Skipped { reason: String },
 }
@@ -502,11 +505,15 @@ impl Store {
             }
             Edit::RemoveDocument { id } if self.has_document(&id) => done(self.remove(&id)),
             Edit::Import { id, file_name } if !self.has_document(&id) => Ok(Applied::Import { id, file_name }),
-            Edit::Reading { id, method, pages, title, doc_type, area, folder, facts } if self.has_document(&id) => done((|| {
-                self.save_reading(&id, pages, &method)?;
-                self.save_filing(&id, &title, &area, &doc_type, facts, None)?;
-                self.file_document(&id, &area, &folder).map(|_| ())
-            })()),
+            Edit::Reading { id, method, pages, title, doc_type, area, folder, facts } if self.has_document(&id) => {
+                let scanned = method == "ocr" || method == "pdf-ocr";
+                let applied = done((|| {
+                    self.save_reading(&id, pages, &method)?;
+                    self.save_filing(&id, &title, &area, &doc_type, facts, None)?;
+                    self.file_document(&id, &area, &folder).map(|_| ())
+                })())?;
+                Ok(if scanned && applied == Applied::Done { Applied::Reread { id } } else { applied })
+            }
             _ => done(Ok(())),
         }
     }
@@ -694,6 +701,11 @@ mod tests {
         let read = format!(
             r#"{{"op":"reading","id":"{new_id}","method":"text","pages":["invented note from a browser"],"title":"Note","docType":"note","area":"Other","folder":"Notes","facts":[{{"id":"{fact_id}","label":"Subject","value":"invented note","page":1}}]}}"#
         );
+        assert_eq!(edit(&read), Applied::Done);
+        let scan = format!(
+            r#"{{"op":"reading","id":"{new_id}","method":"pdf-ocr","pages":["noisy"],"title":"Note","docType":"note","area":"Other","folder":"Notes","facts":[]}}"#
+        );
+        assert_eq!(edit(&scan), Applied::Reread { id: new_id.clone() }, "a browser's OCR is read again on the Mac");
         assert_eq!(edit(&read), Applied::Done);
         let (status, folder, fact): (String, String, String) = store
             .db

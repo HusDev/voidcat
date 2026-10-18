@@ -7,6 +7,7 @@ import { deleteObject, getBytes, listAll, ref, uploadBytes } from "firebase/stor
 import { useEffect, useSyncExternalStore } from "react";
 import { announceChange, type Document, LIBRARY_CHANGED, onMac } from "../lib/library";
 import { process } from "../lib/pipeline";
+import { readDocument, saveReading } from "../lib/reader";
 import { cloudConfigured, config, firebase, sendEmailLink, signInWithGoogleToken, signInWithLink, signOutOfCloud } from "./firebase";
 
 /**
@@ -122,7 +123,7 @@ async function syncOnce() {
   set({ phase: status.failed ? "error" : "idle", left: 0, error: status.failed ? `${status.failed} couldn't upload.` : null });
 }
 
-type Applied = { kind: "done" } | { kind: "skipped"; reason: string } | { kind: "import"; id: string; fileName: string };
+type Applied = { kind: "done" } | { kind: "skipped"; reason: string } | { kind: "import"; id: string; fileName: string } | { kind: "reread"; id: string };
 
 /**
  * Changes made in a browser wait as sealed `edit_…` records, named by time. Each is applied here (Rust opens it),
@@ -134,6 +135,7 @@ async function pullEdits(uid: string) {
   const records = collection(db, "users", uid, "records");
   const edits = await getDocs(query(records, orderBy(documentId()), startAt("edit_"), endAt("edit_\uf8ff")));
   const added: Document[] = [];
+  const reread: string[] = [];
   for (const e of edits.docs) {
     try {
       const sealed = (e.get("data") as Bytes).toUint8Array();
@@ -149,12 +151,18 @@ async function pullEdits(uid: string) {
           await deleteDoc(doc(db, "users", uid, "records", `doc_${applied.id}`));
           await deleteObject(ref(storage, `users/${uid}/files/${applied.id}`)).catch(() => {});
         }
-      } else if (applied.kind === "skipped") console.warn("Voidcat Cloud: skipped a browser change:", applied.reason);
+      } else if (applied.kind === "reread") reread.push(applied.id);
+      else if (applied.kind === "skipped") console.warn("Voidcat Cloud: skipped a browser change:", applied.reason);
       await deleteDoc(e.ref);
     } catch (err) {
       // Left for the next sync.
       console.error(err);
     }
+  }
+  // Scans a browser read with Tesseract: Apple Vision reads them again here; the filing and facts stay.
+  for (const id of reread) {
+    const doc_ = (await invoke<Document[]>("list_documents")).find((d) => d.id === id);
+    if (doc_) await saveReading(id, await readDocument(doc_)).catch((err) => console.error(err));
   }
   if (edits.size) announceChange();
   // Files a browser already read ("Read now") are kept as read there; the rest are read on this Mac.
