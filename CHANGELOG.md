@@ -4,8 +4,6 @@ Each version's section becomes its GitLab release notes.
 
 ## Unreleased
 
-- Masking: a fact whose label has accents ("Válida hasta") or no date word is still masked as a date when its value is one, so the AI gets "about 4 months from now" and can answer how long is left.
-
 ## 0.1.0
 
 First version, built for the GitLab Transcend Hackathon.
@@ -35,3 +33,7 @@ First version, built for the GitLab Transcend Hackathon.
 - Your data: Export everything and Delete my account in the browser, plain-words Privacy Policy and Terms, and the browser locks after 30 minutes away (!8).
 - Security: only verified emails reach cloud data, browser edits can't be replayed, `SECURITY.md` (!9).
 - Pipeline: a deploy stage ships the web app and API to Cloud Run on every merge to `main`, through Workload Identity Federation (no stored keys).
+- Website: voidcat.io, with Download for Mac (Apple silicon, not yet signed by Apple) and Voidcat Cloud at app.voidcat.io.
+- Logo: the box cat, a closed box with ears and watchful gold eyes, in the app, its icons and the website.
+- Masking: a fact whose label has accents ("Válida hasta") or no date word is still masked as a date when its value is one, so the AI gets "about 4 months from now" and can answer how long is left.
+
