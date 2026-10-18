@@ -151,3 +151,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 18 Oct 2026 — Landing page look: option B, "match the app" (dark, glowing box cat, centred headline, real app screenshots of the demo documents), picked from three mockups (A clean light, B match the app, C the mask set big). The passport design built first was rejected ("Noooo passport style looks bad").
 - 18 Oct 2026 — Cat eyes stay gold (his: "Ok keep gold"), after comparing with cyan eyes in the placeholder colour.
 - 18 Oct 2026 — Releases (his: "should Duo do the tags and versioning?" → "yeah good"): Duo's Release flow does the versioning (picks the version, bumps it, writes the CHANGELOG section in a merge request); merging is the human approval; the release job on main creates the tag and the GitLab release. Agents never push tags.
+- 18 Oct 2026 — Terms: governing law is Spain (his: "country is Spain").
