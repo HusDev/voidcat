@@ -4,6 +4,7 @@ Every product, design and working decision Hussein made, with the date. When he 
 
 ## Product
 - **What it is:** smart storage for your life's documents. Drop anything in; it's read on your Mac, filed, and its facts extracted. Any AI can use that knowledge without seeing your private data.
+- **Domain: voidcat.io** (he bought it at Namecheap, 18 Oct 2026): voidcat.io = a landing page, app.voidcat.io = Voidcat Cloud in a browser; www redirects to voidcat.io. The old run.app address keeps working.
 - **Name:** **Voidcat**, final (decided 17 Oct 2026: "Voidcat is the final name"). Renamed from SafeBox on 12 Oct 2026, everywhere in the app. Earlier: "SafeBox" for now (other apps already use it); considered SafeDrop, SafeX, SafeXY, DocDrop, LifeBox.
 - **Tagline (200 characters):** "SafeBox is smart storage for your life: drop in any document, it organises it and extracts the facts, and any AI can use your knowledge without ever seeing your private data."
 - **Target users first:** people whose paperwork spans countries (immigrants, expats, international workers); later everyone.
@@ -54,6 +55,7 @@ Every product, design and working decision Hussein made, with the date. When he 
 - **Short answers;** challenge with evidence rather than folding.
 - **Plan, then build one phase at a time.** After each step: checks, commit, **push**, restart the app so he can try it.
 - **Record every decision** in this file, with the date.
+- **No Claude session links anywhere public** (commits, merge requests, issues, docs): never a `Claude-Session:` line or a claude.ai/code/session link. The repo and MRs are public.
 - **GitLab:** work happens in the hackathon workspace project gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase (git remote `showcase`; pipelines and Duo agents run there; public + MIT for the GitLab Transcend hackathon). gitlab.com/hus.dev/voidcat (remote `origin`) stays his private copy; he pushes to it later with a normal `git push origin main`. Full history kept as is, no squash or rewrite (his choice). Hackathon automation: **Supervised** autonomy (agents do the multi-step work; he approves outcomes: assigning an issue to the developer flow, merging, tagging a release), covering all nine lifecycle stages; plan in docs/STATUS.md.
 
 ## Change log
@@ -140,3 +142,5 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 18 Oct 2026 — Ask in the browser (his go: "start ask in the browser"): Voidcat Cloud's Gemini 2.5 Flash in Belgium answers through voidcat-api, every turn masked in the browser and unmasked there, the usual review when something private would be sent, 1,000 questions a month as planned. The zip tool and saved conversations stay Mac-only for now.
 - 18 Oct 2026 — Browser OCR noise (his report: a scanned legalization showed garbled text in "What was sent"): Tesseract gets Arabic too and drops pages it is under 60% sure of; a scan it can't read is left to the Mac; the Mac re-reads every browser-OCR'd scan with Apple Vision when it syncs; "Read again" in the Mac's document tab re-reads any document's text, keeping its facts.
 - 18 Oct 2026 — In the browser there is no local model (his question: "i have local model why the local model doesn't work on the web"): a web page can't reach the Mac's Ollama, so the "Set up the local model" banner is Mac-only and Connected AIs in a browser explains that Voidcat Cloud's Gemini reads and answers there (masked), while the local model, OpenRouter key and MCP apps stay in the Mac app.
+- 18 Oct 2026 — Domain (his: "i bought this voidcat.io should i add it as a page?", registrar Namecheap): voidcat.io gets a landing page and app.voidcat.io serves the browser app, both on Firebase Hosting (free, HTTPS; app.voidcat.io forwards to the voidcat-web Cloud Run service, so the app and its deploy stay the same).
+- 18 Oct 2026 — No Claude session links (his words: "do not add any claude sessions … why you added this it's public"): removed from MR descriptions !8–!12 and !14 and from the unmerged !14 commit; 12 commits already on main still carry the line in their messages.

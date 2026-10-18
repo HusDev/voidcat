@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voidcat · Smart storage for your life</title>
+    <meta
+      name="description"
+      content="Drop in any document: Voidcat reads it on your Mac, files it and pulls out the facts. Any AI can help, but it only ever sees placeholders for your private details."
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#08080b" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/fonts/outfit.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/styles.css" />
+    <meta property="og:title" content="Voidcat · Smart storage for your life" />
+    <meta property="og:description" content="Your documents, read and filed on your Mac. AI only ever sees the masks." />
+    <meta property="og:image" content="https://voidcat.io/cover.png" />
+    <meta property="og:url" content="https://voidcat.io/" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <header class="top wrap">
+      <a class="brand" href="/" aria-label="Voidcat home">
+        <svg class="cat" viewBox="0 0 200 222" aria-hidden="true">
+          <path class="cat-line" d="M58 214 C18 190 4 150 10 102 L12 10 L66 58 Q100 50 134 58 L188 10 L190 102 C196 150 182 190 142 214" />
+          <path class="cat-eyes" d="M50 124 L80 136 M150 124 L120 136" />
+        </svg>
+        Voidcat
+      </a>
+      <nav class="top-links">
+        <a href="https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase">Source</a>
+        <a class="button small" href="https://app.voidcat.io/">Open Voidcat Cloud</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero wrap">
+        <svg class="hero-cat" viewBox="0 0 200 222" aria-hidden="true">
+          <path class="cat-line" d="M58 214 C18 190 4 150 10 102 L12 10 L66 58 Q100 50 134 58 L188 10 L190 102 C196 150 182 190 142 214" />
+          <path class="cat-eyes" d="M50 124 L80 136 M150 124 L120 136" />
+        </svg>
+        <h1>Your papers, read and filed.<br />AI only sees the masks.</h1>
+        <p class="lead">
+          Drop in any document. Voidcat reads it on your Mac, files it and pulls out the facts. Ask any AI about your
+          life admin: your names, IDs and addresses never leave as themselves.
+        </p>
+        <div class="actions">
+          <a class="button" href="https://app.voidcat.io/">Open Voidcat Cloud</a>
+          <a class="button ghost" href="https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase#install-and-run">Get the Mac app</a>
+        </div>
+        <p class="fine">Free and open source (MIT). The Mac app works offline.</p>
+      </section>
+
+      <section class="wrap mask" aria-labelledby="mask-title">
+        <h2 id="mask-title">What the AI actually gets</h2>
+        <div class="mask-grid">
+          <figure class="card">
+            <figcaption>On your Mac</figcaption>
+            <p>
+              <mark class="real">Lena Ortiz</mark>’s residence card <mark class="real">Y1234567X</mark> expires on
+              <mark class="real">14 March 2027</mark>. Rent of €1,150 goes to <mark class="real">Calle Mayor 12, Valencia</mark>.
+            </p>
+          </figure>
+          <div class="arrow" aria-hidden="true">→</div>
+          <figure class="card sent">
+            <figcaption>Sent to the AI</figcaption>
+            <p>
+              <span class="chip">PERSON_1</span>’s residence card <span class="chip">ID_1</span> expires on
+              <span class="chip">DATE_1</span> <span class="note">(about 5 months from now)</span>. Rent of €1,150 goes to
+              <span class="chip">ADDRESS_1</span>.
+            </p>
+          </figure>
+        </div>
+        <p class="caption">
+          You see this before anything is sent. The answer comes back with placeholders, and the real values are put
+          back on your device. Example data, invented.
+        </p>
+      </section>
+
+      <section class="wrap features" aria-label="What Voidcat does">
+        <article>
+          <h3>Reads everything</h3>
+          <p>PDFs, scans, phone photos, spreadsheets and Word files, read on your Mac with Apple Vision and a local model.</p>
+        </article>
+        <article>
+          <h3>Facts you approve</h3>
+          <p>Dates, ID numbers, amounts and addresses, each highlighted on its page. Nothing counts until you approve it.</p>
+        </article>
+        <article>
+          <h3>Never miss a date</h3>
+          <p>Expiries, renewals, appointments and monthly payments become reminders, and export to your calendar.</p>
+        </article>
+        <article>
+          <h3>Works with your AI</h3>
+          <p>Ask Claude, GPT or a local model, or connect Claude Desktop and Cursor through MCP. Same masking for all.</p>
+        </article>
+      </section>
+
+      <section class="wrap how" aria-labelledby="how-title">
+        <h2 id="how-title">Private by design, not by promise</h2>
+        <ol>
+          <li>
+            <span class="step">1</span>
+            <div>
+              <h3>Locked on your Mac</h3>
+              <p>The library and every file are encrypted with a key in your Mac’s Keychain. A recovery key is the only other way in.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step">2</span>
+            <div>
+              <h3>Locked in the cloud too</h3>
+              <p>Voidcat Cloud is optional and end-to-end encrypted. Google Cloud in Belgium stores only locked bytes; your browser unlocks them with your recovery key.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step">3</span>
+            <div>
+              <h3>Masked before any AI</h3>
+              <p>Rules and an on-device privacy model replace names, IDs, addresses, emails and phone numbers with placeholders. Amounts stay, so the AI can still reason.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="wrap closing">
+        <h2>Bring order to your paperwork.</h2>
+        <div class="actions">
+          <a class="button" href="https://app.voidcat.io/">Open Voidcat Cloud</a>
+          <a class="button ghost" href="https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase#install-and-run">Get the Mac app</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="wrap foot">
+      <span>© 2026 Hussein Saad Hasan Al Khafaji · Built for the GitLab Transcend Hackathon</span>
+      <nav>
+        <a href="https://app.voidcat.io/#/privacy">Privacy</a>
+        <a href="https://app.voidcat.io/#/terms">Terms</a>
+        <a href="https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase/-/blob/main/SECURITY.md">Security</a>
+        <a href="https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase/-/blob/main/docs/SUSTAINABILITY.md">Sustainability</a>
+        <a href="mailto:husdev@proton.me">Contact</a>
+      </nav>
+    </footer>
+  </body>
+</html>

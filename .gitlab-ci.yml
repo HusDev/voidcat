@@ -154,11 +154,28 @@ deploy-web:
   needs: [web-build]
   environment:
     name: production
-    url: https://voidcat-web-1094942921673.europe-west1.run.app
+    url: https://app.voidcat.io
   script:
     - gcloud run deploy voidcat-web --source build/web --region "$GCP_REGION" --allow-unauthenticated --port 8080 --cpu 1 --memory 256Mi --max-instances 3 --quiet
 
 # voidcat-api ("Read now in the cloud"): the API's code and the shared filing instructions, run as voidcat-api@.
+# voidcat.io (landing page in site/) and app.voidcat.io (forwards to voidcat-web) on Firebase Hosting, only when they change.
+deploy-hosting:
+  stage: deploy
+  image: oven/bun:1.3
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: [site/**/*, firebase.json, .firebaserc, scripts/deploy-hosting.ts]
+  id_tokens:
+    GCP_ID_TOKEN:
+      aud: https://iam.googleapis.com/projects/1094942921673/locations/global/workloadIdentityPools/gitlab/providers/gitlab-com
+  environment:
+    name: website
+    url: https://voidcat.io
+  script:
+    - bun scripts/deploy-hosting.ts
+
 deploy-api:
   extends: .gcp
   stage: deploy

@@ -9,7 +9,7 @@ Smart storage for your life. Drop in any document: Voidcat reads it, files it an
 
 Built for the GitLab Transcend Hackathon (October 2026).
 
-**Try Voidcat Cloud:** https://voidcat-web-1094942921673.europe-west1.run.app
+**Website:** https://voidcat.io · **Try Voidcat Cloud:** https://app.voidcat.io
 
 ## Why
 
@@ -37,7 +37,7 @@ Your important papers (residence permits, leases, payslips, tax forms) are scatt
 - **Your library in a browser.** Folders, documents, search and fact review; drop in new files; changes reach your Mac.
 - **Read now.** A file added in the browser is read there (OCR included), masked there, and only the masked text goes to Gemini in Belgium to file it. Your Mac re-reads scans with Apple Vision when it syncs.
 - **Ask in the browser.** Gemini answers from masked context; the real values are put back in your browser.
-- **Your data, your call.** Export everything as a zip, delete your account in one step, plain-words [Privacy Policy](https://voidcat-web-1094942921673.europe-west1.run.app/#/privacy) and [Terms](https://voidcat-web-1094942921673.europe-west1.run.app/#/terms). The browser locks after 30 minutes away.
+- **Your data, your call.** Export everything as a zip, delete your account in one step, plain-words [Privacy Policy](https://app.voidcat.io/#/privacy) and [Terms](https://app.voidcat.io/#/terms). The browser locks after 30 minutes away.
 
 ## How the cloud keeps your papers private
 
