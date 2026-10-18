@@ -1,6 +1,6 @@
 import { Building2, Check, Copy, EyeOff, LoaderCircle, Pencil, ScanSearch, Search, UserRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { LIBRARY_CHANGED, hasLibrary, listDocuments, openDocument } from "../lib/library";
+import { LIBRARY_CHANGED, onMac, listDocuments, openDocument } from "../lib/library";
 import {
   CATEGORIES,
   CATEGORY_NAMES,
@@ -281,7 +281,7 @@ export function Contacts() {
         </label>
       </header>
 
-      {(unscanned.length > 0 || scanning) && hasLibrary && (
+      {(unscanned.length > 0 || scanning) && onMac && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-accent/40 bg-accent-soft/40 px-4 py-3 text-[13.5px]">
           {scanning ? (
             <>

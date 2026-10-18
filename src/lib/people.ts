@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { call as invoke } from "./backend";
 import { useSyncExternalStore } from "react";
 import { z } from "zod";
 import { askLocal, pagesText } from "./extract";

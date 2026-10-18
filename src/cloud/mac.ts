@@ -2,10 +2,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { User } from "firebase/auth";
-import { Bytes, collection, deleteDoc, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { deleteObject, listAll, ref, uploadBytes } from "firebase/storage";
+import { Bytes, collection, deleteDoc, doc, documentId, endAt, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, startAt, updateDoc } from "firebase/firestore";
+import { deleteObject, getBytes, listAll, ref, uploadBytes } from "firebase/storage";
 import { useEffect, useSyncExternalStore } from "react";
-import { hasLibrary, LIBRARY_CHANGED } from "../lib/library";
+import { announceChange, type Document, LIBRARY_CHANGED, onMac } from "../lib/library";
+import { process } from "../lib/pipeline";
 import { cloudConfigured, config, firebase, sendEmailLink, signInWithGoogleToken, signInWithLink, signOutOfCloud } from "./firebase";
 
 /**
@@ -16,7 +17,7 @@ import { cloudConfigured, config, firebase, sendEmailLink, signInWithGoogleToken
  */
 
 /** This build can sync: the Mac app, with the cloud's settings. */
-export const macCloud = hasLibrary && cloudConfigured;
+export const macCloud = onMac && cloudConfigured;
 
 export type Account = { uid: string; email: string | null; newDocuments: boolean; syncedAt: string | null };
 type Upload = { id: string; title: string; recordHash: string; fileHash: string; file: boolean };
@@ -80,6 +81,7 @@ async function syncOnce() {
   if (!(await signedIn(account.uid))) return set({ phase: "error", error: "Signed out of Voidcat Cloud. Connect again in Settings." });
 
   const { db, storage } = firebase();
+  await pullEdits(account.uid);
   const plan = await invoke<Plan>("cloud_plan");
   let left = plan.upload.length + plan.remove.length;
   set({ phase: left ? "syncing" : "idle", left, error: null });
@@ -119,6 +121,46 @@ async function syncOnce() {
   await refresh();
   set({ phase: status.failed ? "error" : "idle", left: 0, error: status.failed ? `${status.failed} couldn't upload.` : null });
 }
+
+type Applied = { kind: "done" } | { kind: "skipped"; reason: string } | { kind: "import"; id: string; fileName: string };
+
+/**
+ * Changes made in a browser wait as sealed `edit_…` records, named by time. Each is applied here (Rust opens it),
+ * files added in a browser are fetched and kept, then read on this Mac like a dropped file, and the edit is deleted.
+ * The Mac's next upload then brings every browser up to date.
+ */
+async function pullEdits(uid: string) {
+  const { db, storage } = firebase();
+  const records = collection(db, "users", uid, "records");
+  const edits = await getDocs(query(records, orderBy(documentId()), startAt("edit_"), endAt("edit_\uf8ff")));
+  const added: Document[] = [];
+  for (const e of edits.docs) {
+    try {
+      const sealed = (e.get("data") as Bytes).toUint8Array();
+      const applied = await invoke<Applied>("cloud_apply", { sealed: [...sealed] });
+      if (applied.kind === "import") {
+        const file = new Uint8Array(await inTime(getBytes(ref(storage, `users/${uid}/files/${applied.id}`)), "Downloading"));
+        const doc_ = await invoke<Document | null>("cloud_import", file, {
+          headers: { "x-voidcat-id": applied.id, "x-voidcat-name": hex(new TextEncoder().encode(applied.fileName)), "Content-Type": "application/octet-stream" },
+        });
+        if (doc_) added.push(doc_);
+        else {
+          // Already in the library: the browser's copy goes.
+          await deleteDoc(doc(db, "users", uid, "records", `doc_${applied.id}`));
+          await deleteObject(ref(storage, `users/${uid}/files/${applied.id}`)).catch(() => {});
+        }
+      } else if (applied.kind === "skipped") console.warn("Voidcat Cloud: skipped a browser change:", applied.reason);
+      await deleteDoc(e.ref);
+    } catch (err) {
+      // Left for the next sync.
+      console.error(err);
+    }
+  }
+  if (edits.size) announceChange();
+  if (added.length) process(added);
+}
+
+const hex = (b: Uint8Array) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
 
 let running = false;
 let again = false;

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { call as invoke } from "../lib/backend";
 import { ExternalLink, FolderInput, ListChecks, LoaderCircle, MessageSquareText, Pencil } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";

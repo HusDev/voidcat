@@ -198,12 +198,12 @@ fn migrate(db: &Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
-const COLUMNS: &str = "id, title, file_name, mime, size_bytes, area, doc_type, status, added_at, text_method, page_count, folder_id,
+pub(crate) const COLUMNS: &str = "id, title, file_name, mime, size_bytes, area, doc_type, status, added_at, text_method, page_count, folder_id,
   (select f.area || ' › ' || f.name from folders f where f.id = documents.folder_id), filing, suggested_area, suggested_folder,
   suggested_folder is not null and not exists (select 1 from folders f where f.area = documents.suggested_area collate nocase and f.name = documents.suggested_folder collate nocase),
   suggestion_reason";
 
-fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
+pub(crate) fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
     Ok(Document {
         id: r.get(0)?,
         title: r.get(1)?,
@@ -227,7 +227,7 @@ fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
 }
 
 /// A readable title from a file name: "rental_contract-signed.pdf" → "Rental contract signed".
-fn title_from(name: &str) -> String {
+pub(crate) fn title_from(name: &str) -> String {
     let stem = Path::new(name)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -244,7 +244,7 @@ fn title_from(name: &str) -> String {
     }
 }
 
-fn mime_of(name: &str) -> Option<String> {
+pub(crate) fn mime_of(name: &str) -> Option<String> {
     let ext = Path::new(name).extension()?.to_str()?.to_lowercase();
     let m = match ext.as_str() {
         "pdf" => "application/pdf",

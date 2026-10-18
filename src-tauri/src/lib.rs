@@ -541,6 +541,25 @@ fn cloud_join(app: tauri::AppHandle, store: State<Store>, code: String, check: V
     app.restart();
 }
 
+/// One browser edit (sealed), applied on this Mac.
+#[tauri::command]
+fn cloud_apply(store: State<Store>, sealed: Vec<u8>) -> Result<cloud::Applied, String> {
+    store.cloud_apply(&sealed)
+}
+
+/// A file added in a browser, sent as raw bytes (still sealed) with its id and name in headers.
+#[tauri::command]
+fn cloud_import(store: State<Store>, request: tauri::ipc::Request<'_>) -> Result<Option<Document>, String> {
+    let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).map(str::to_string).ok_or(format!("Missing {name}."));
+    let id = header("x-voidcat-id")?;
+    let name = header("x-voidcat-name")?;
+    let name = String::from_utf8(hex::decode(name).map_err(|_| "Bad file name.")?).map_err(|_| "Bad file name.")?;
+    match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => store.cloud_import(&id, &name, bytes),
+        _ => Err("Send the file as raw bytes.".into()),
+    }
+}
+
 #[tauri::command]
 fn cloud_listen(app: tauri::AppHandle, config: cloud_signin::WebConfig) -> Result<cloud_signin::Listening, String> {
     cloud_signin::listen(app, config)
@@ -691,6 +710,8 @@ pub fn run() {
             cloud_check,
             cloud_opens,
             cloud_join,
+            cloud_apply,
+            cloud_import,
             cloud_listen,
             cloud_stop_listening
         ])

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { addEvent } from "../lib/calendar";
 import { listModels, savedModel } from "../lib/cloud";
-import { LIBRARY_CHANGED, announceChange, getSecret, hasLibrary, listDocuments, listFacts, openDocument } from "../lib/library";
+import { LIBRARY_CHANGED, announceChange, getSecret, onMac as hasLibrary, listDocuments, listFacts, openDocument } from "../lib/library";
 import {
   AREA_NAMES,
   OPP_AREAS,

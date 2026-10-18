@@ -13,35 +13,26 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { type Firestore, getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-/**
- * Voidcat Cloud's Firebase project (voidcat-cloud, Belgium). The web settings come from `.env.local` locally and a CI
- * variable on Cloud Run; they aren't secret, they only say which project to talk to. Sign-in says who you are; it
- * never unlocks anything (that is the recovery key's job).
- */
+import { cloudConfigured, config } from "./config";
 
-export const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string | undefined,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID as string | undefined,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string | undefined,
-};
-
-/** Voidcat Cloud is available when its settings are present (in the browser, and on the Mac to sync to it). */
-export const cloudConfigured = !!(config.apiKey && config.projectId && config.appId);
+export { cloudConfigured, config };
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
+let db: Firestore | null = null;
 export function firebase() {
   if (!cloudConfigured) throw new Error("Voidcat Cloud isn't configured in this build.");
   app ??= initializeApp(config);
   // In the Mac app there are no sign-in pop-ups (sign-in happens in the browser, see `mac.ts`), so auth starts
   // without the pop-up helper, which would load Google's scripts into the window.
   auth ??= isTauri() ? initializeAuth(app, { persistence: indexedDBLocalPersistence }) : getAuth(app);
-  return { app, auth, db: getFirestore(app), storage: getStorage(app) };
+  // A browser keeps a copy of the (sealed) records in IndexedDB, so the library opens fast and works offline; it's
+  // only ever unlocked in memory.
+  db ??= isTauri() ? getFirestore(app) : initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+  return { app, auth, db, storage: getStorage(app) };
 }
 
 export const signInWithGoogle = () => signInWithPopup(firebase().auth, new GoogleAuthProvider());

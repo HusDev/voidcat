@@ -5,9 +5,10 @@ import { Logo } from "../components/Logo";
 import { createLibrary, forgetThisBrowser, libraryState, unlockLibrary } from "./account";
 import { emailLinkReturn, finishEmailLink, firebase, sendEmailLink, signInWithGoogle, signOutOfCloud } from "./firebase";
 import type { Keys } from "./vault";
+import { openWebLibrary, type WebLibrary } from "./webLibrary";
 
 /** The signed-in, unlocked cloud library the app runs on in a browser. */
-export type CloudSession = { user: User; keys: Keys; signOut: () => Promise<void>; forget: () => Promise<void> };
+export type CloudSession = { user: User; keys: Keys; library: WebLibrary; signOut: () => Promise<void>; forget: () => Promise<void> };
 const CloudContext = createContext<CloudSession | null>(null);
 export const useCloud = () => useContext(CloudContext);
 
@@ -26,6 +27,45 @@ function Screen({ title, children }: { title: string; children: ReactNode }) {
       </div>
     </main>
   );
+}
+
+/** Loads and unlocks the records, then shows the app on them. */
+function OpenLibrary({ user, keys, children }: { user: User; keys: Keys; children: ReactNode }) {
+  const [library, setLibrary] = useState<WebLibrary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let open: WebLibrary | null = null;
+    let gone = false;
+    openWebLibrary(user.uid, keys).then(
+      (l) => {
+        if (gone) return l.close();
+        open = l;
+        setLibrary(l);
+      },
+      (e) => setError(e instanceof Error ? e.message : String(e)),
+    );
+    return () => {
+      gone = true;
+      open?.close();
+    };
+  }, [user.uid, keys]);
+  if (!library)
+    return (
+      <Screen title="Opening your library">
+        {error ? <p className="m-0 text-[13.5px] text-danger">{error}</p> : <LoaderCircle aria-hidden className="size-5 animate-spin text-ink-2" />}
+      </Screen>
+    );
+  const session: CloudSession = {
+    user,
+    keys,
+    library,
+    signOut: () => signOutOfCloud(),
+    forget: async () => {
+      await forgetThisBrowser(user.uid);
+      await signOutOfCloud();
+    },
+  };
+  return <CloudContext.Provider value={session}>{children}</CloudContext.Provider>;
 }
 
 /**
@@ -79,18 +119,7 @@ export function CloudGate({ children }: { children: ReactNode }) {
     }
   };
 
-  if (step.kind === "ready" && user) {
-    const session: CloudSession = {
-      user,
-      keys: step.keys,
-      signOut: () => signOutOfCloud(),
-      forget: async () => {
-        await forgetThisBrowser(user.uid);
-        await signOutOfCloud();
-      },
-    };
-    return <CloudContext.Provider value={session}>{children}</CloudContext.Provider>;
-  }
+  if (step.kind === "ready" && user) return <OpenLibrary user={user} keys={step.keys}>{children}</OpenLibrary>;
 
   const err = error && <p className="m-0 text-[13.5px] text-danger">{error}</p>;
 

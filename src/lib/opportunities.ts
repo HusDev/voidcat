@@ -1,5 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { invoke } from "@tauri-apps/api/core";
+import { call as invoke } from "./backend";
 import { Output, generateText } from "ai";
 import { z } from "zod";
 import type { Document, Fact } from "./library";

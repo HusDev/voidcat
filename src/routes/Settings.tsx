@@ -3,7 +3,7 @@ import { Archive, BellRing, Cloud, Check, Copy, EyeOff, KeyRound, LoaderCircle, 
 import { useEffect, useState } from "react";
 import { useCloud } from "../cloud/CloudGate";
 import { MacCloud } from "../components/MacCloud";
-import { exportEverything, hasLibrary, recoveryCode } from "../lib/library";
+import { exportEverything, onMac as hasLibrary, recoveryCode } from "../lib/library";
 import { MODEL_SIZE, setNameCheck, useNameCheck } from "../lib/nameCheck";
 import { type Theme, useTheme } from "../lib/theme";
 import { useVeil } from "../lib/veil";
@@ -182,7 +182,7 @@ export function Settings() {
     <div className="flex max-w-3xl flex-col gap-6">
       <header className="flex flex-col gap-1">
         <h1 className="m-0 text-[30px] font-light tracking-tight">Settings</h1>
-        <span className="text-sm text-ink-2">Saved on this Mac.</span>
+        <span className="text-sm text-ink-2">{hasLibrary ? "Saved on this Mac." : "Saved in this browser."}</span>
       </header>
 
       <section aria-labelledby="appearance" className="flex flex-col gap-3">
@@ -272,8 +272,9 @@ export function Settings() {
       <CloudAccount />
       <MacCloud />
 
-      <YourData />
+      {hasLibrary && <YourData />}
 
+      {hasLibrary && (
       <section aria-labelledby="reminders" className="flex flex-col gap-3">
         <h2 id="reminders" className="m-0 text-[15px] font-semibold">
           Reminders
@@ -299,6 +300,7 @@ export function Settings() {
           </button>
         </div>
       </section>
+      )}
     </div>
   );
 }

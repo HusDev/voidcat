@@ -2,7 +2,7 @@ import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOption
 import { Check, ChevronDown, Copy, Cpu, KeyRound, Plug, Plus, Unplug, Workflow } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type CloudModel, defaultModel, listModels, saveModel, savedModel } from "../lib/cloud";
-import { type AiApp, type McpSetup, LIBRARY_CHANGED, connectApp, getSecret, hasLibrary, listAiApps, mcpSetup, removeAiApp, removeSecret, setAiAppLevel, setSecret } from "../lib/library";
+import { type AiApp, type McpSetup, LIBRARY_CHANGED, connectApp, getSecret, onMac as hasLibrary, listAiApps, mcpSetup, removeAiApp, removeSecret, setAiAppLevel, setSecret } from "../lib/library";
 import { LocalModelSetup } from "../components/LocalModelSetup";
 import { LEVELS, type Level, appName } from "../lib/mcp";
 

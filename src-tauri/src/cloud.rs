@@ -6,7 +6,7 @@
 use crate::store::Store;
 use crate::vault::Vault;
 use rusqlite::{OptionalExtension, params};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
 
@@ -415,6 +415,104 @@ impl Store {
     }
 }
 
+/// A change made in a browser, left in the cloud as a sealed `edit_…` record for the Mac to apply (then deleted).
+#[derive(Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", rename_all_fields = "camelCase")]
+enum Edit {
+    SettleFact { fact_id: String, status: String, value: Option<String> },
+    RenameDocument { id: String, title: String },
+    FileDocument { id: String, area: String, name: String },
+    RenameFolder { area: String, from: String, to: String },
+    RemoveDocument { id: String },
+    /// A file added in the browser: the Mac fetches it, keeps it and reads it.
+    Import { id: String, file_name: String },
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+pub enum Applied {
+    Done,
+    /// Fetch this file from the cloud and pass it to `cloud_import`.
+    Import { id: String, file_name: String },
+    /// Couldn't apply (the document is gone, a name is taken…); the edit is dropped all the same.
+    Skipped { reason: String },
+}
+
+impl Store {
+    fn has_document(&self, id: &str) -> bool {
+        self.db.lock().unwrap().query_row("select 1 from documents where id = ?1", [id], |_| Ok(())).is_ok()
+    }
+
+    /// Applies one browser edit. Problems don't stop the sync: the edit is skipped and the browser's copy is
+    /// replaced by the Mac's on the next upload.
+    pub fn cloud_apply(&self, sealed: &[u8]) -> Result<Applied, String> {
+        let edit: Edit = match serde_json::from_slice(&self.vault.open_record(sealed)?) {
+            Ok(e) => e,
+            Err(e) => return Ok(Applied::Skipped { reason: format!("Unknown change: {e}") }),
+        };
+        let done = |r: Result<(), String>| Ok(r.map_or_else(|reason| Applied::Skipped { reason }, |_| Applied::Done));
+        match edit {
+            Edit::SettleFact { fact_id, status, value } => done(self.settle_fact(&fact_id, &status, value)),
+            Edit::RenameDocument { id, title } if self.has_document(&id) => done(self.rename_document(&id, &title)),
+            Edit::FileDocument { id, area, name } if self.has_document(&id) => done(self.file_document(&id, &area, &name).map(|_| ())),
+            Edit::RenameFolder { area, from, to } => {
+                let folder: Option<String> = self
+                    .db
+                    .lock()
+                    .unwrap()
+                    .query_row("select id from folders where area = ?1 collate nocase and name = ?2 collate nocase", [&area, &from], |r| r.get(0))
+                    .optional()
+                    .map_err(|e| e.to_string())?;
+                match folder {
+                    Some(f) => done(self.rename_folder(&f, &to)),
+                    None => done(Err(format!("No folder {area} › {from}."))),
+                }
+            }
+            Edit::RemoveDocument { id } if self.has_document(&id) => done(self.remove(&id)),
+            Edit::Import { id, file_name } if !self.has_document(&id) => Ok(Applied::Import { id, file_name }),
+            _ => done(Ok(())),
+        }
+    }
+
+    /// Keeps a file added in a browser. It arrives sealed with the files key, which is how the Mac stores files, so
+    /// it's checked and written as it is. The same content twice is one document: then `None`.
+    pub fn cloud_import(&self, id: &str, file_name: &str, sealed: &[u8]) -> Result<Option<crate::store::Document>, String> {
+        let plain = self.vault.decrypt(sealed.to_vec())?;
+        if !crate::vault::is_encrypted(sealed) {
+            return Err("The file wasn't locked.".into());
+        }
+        let sha = hash(&plain);
+        if uuid::Uuid::parse_str(id).is_err() {
+            return Err("Not a document id.".into());
+        }
+        let db = self.db.lock().unwrap();
+        if db.query_row("select 1 from documents where sha256 = ?1 or id = ?2", params![sha, id], |_| Ok(())).is_ok() {
+            return Ok(None);
+        }
+        let name = Path::new(file_name).file_name().and_then(|n| n.to_str()).unwrap_or("file").to_string();
+        let ext = Path::new(&name).extension().and_then(|e| e.to_str()).map(|e| format!(".{}", e.to_lowercase())).unwrap_or_default();
+        let stored = self.files.join(format!("{id}{ext}"));
+        fs::write(&stored, sealed).map_err(|e| e.to_string())?;
+        let inserted = db.execute(
+            "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path) values (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![id, crate::store::title_from(&name), name, crate::store::mime_of(&name), plain.len() as i64, sha, stored.to_string_lossy()],
+        );
+        if let Err(e) = inserted {
+            let _ = fs::remove_file(&stored);
+            return Err(e.to_string());
+        }
+        // The file is in the cloud already; only the record (once read) has to go up.
+        db.execute(
+            "insert or replace into cloud_sync (document_id, keep, file_hash, uploaded_at) values (?1, 1, ?2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))",
+            params![id, sha],
+        )
+        .map_err(|e| e.to_string())?;
+        db.query_row(&format!("select {} from documents where id = ?1", crate::store::COLUMNS), [id], crate::store::row_to_document)
+            .map(Some)
+            .map_err(|e| e.to_string())
+    }
+}
+
 pub fn opens(vault: &Vault, check: &[u8]) -> bool {
     vault.open_record(check).is_ok_and(|p| p == CHECK)
 }
@@ -521,6 +619,42 @@ mod tests {
         assert!(store.cloud_plan().unwrap().upload.is_empty(), "the same account: nothing to send again");
         store.cloud_connect("uid-2", None).unwrap();
         assert_eq!(store.cloud_plan().unwrap().upload.len(), 1, "another account gets everything");
+    }
+
+    #[test]
+    fn applies_browser_edits_and_imports_browser_files() {
+        let (_dir, store, id) = library(3);
+        let edit = |json: &str| store.cloud_apply(&store.vault.seal_record(json.as_bytes()).unwrap()).unwrap();
+
+        assert_eq!(edit(&format!(r#"{{"op":"rename_document","id":"{id}","title":"Rental contract"}}"#)), Applied::Done);
+        assert_eq!(edit(&format!(r#"{{"op":"file_document","id":"{id}","area":"Home","name":"Rental"}}"#)), Applied::Done);
+        assert_eq!(edit(r#"{"op":"rename_folder","area":"Home","from":"rental","to":"Lease"}"#), Applied::Done);
+        let doc: (String, String) = store
+            .db
+            .lock()
+            .unwrap()
+            .query_row("select d.title, f.name from documents d join folders f on f.id = d.folder_id", [], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap();
+        assert_eq!(doc, ("Rental contract".into(), "Lease".into()));
+        assert!(matches!(edit(r#"{"op":"rename_document","id":"gone","title":"x"}"#), Applied::Done), "a removed document is no problem");
+        assert!(matches!(edit(r#"{"op":"something_new"}"#), Applied::Skipped { .. }));
+
+        let new_id = uuid::Uuid::new_v4().to_string();
+        let asked = edit(&format!(r#"{{"op":"import","id":"{new_id}","fileName":"note.txt"}}"#));
+        assert_eq!(asked, Applied::Import { id: new_id.clone(), file_name: "note.txt".into() });
+        let sealed = store.vault.encrypt(b"invented note from a browser").unwrap();
+        assert!(store.cloud_import(&new_id, "note.txt", &sealed).unwrap().is_some());
+        assert_eq!(store.bytes_of(&new_id).unwrap(), b"invented note from a browser");
+        assert!(store.cloud_import(&uuid::Uuid::new_v4().to_string(), "copy.txt", &sealed).unwrap().is_none(), "same content: a duplicate");
+        assert!(store.cloud_import(&uuid::Uuid::new_v4().to_string(), "x.txt", b"plain").is_err(), "must arrive locked");
+
+        store.cloud_connect("uid-1", None).unwrap();
+        let plan = store.cloud_plan().unwrap();
+        let imported = plan.upload.iter().find(|u| u.id == new_id).unwrap();
+        assert!(!imported.file, "its file is in the cloud already");
+
+        assert_eq!(edit(&format!(r#"{{"op":"remove_document","id":"{new_id}"}}"#)), Applied::Done);
+        assert!(store.bytes_of(&new_id).is_err());
     }
 
     #[test]

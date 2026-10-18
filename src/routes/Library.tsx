@@ -1,7 +1,8 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Download, Eye, FileText, FolderInput, FolderSync, LoaderCircle, Pencil, Search, Sparkles, Trash2, Upload } from "lucide-react";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { type DragEvent, Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useCloud } from "../cloud/CloudGate";
 import { Link, useSearchParams } from "react-router";
 import { useCloudStatus } from "../cloud/mac";
 import { CloudCardMark, CloudToggle } from "../components/CloudMark";
@@ -22,6 +23,7 @@ import {
   formatDay,
   formatSize,
   hasLibrary,
+  onMac,
   importFiles,
   listDocuments,
   fileInFolder,
@@ -66,8 +68,7 @@ function Snippet({ text }: { text: string }) {
 
 export function Library() {
   // Connected to Voidcat Cloud with new documents going up: the drop zone says so.
-  const cloud = useCloudStatus();
-  const cloudOn = !!cloud.account?.newDocuments;
+  const cloudOn = !!useCloudStatus().account?.newDocuments;
   const [docs, setDocs] = useState<Document[]>([]);
   const [facts, setFacts] = useState<Fact[]>([]);
   const [pending, setPending] = useState<Fact[]>([]);
@@ -115,7 +116,7 @@ export function Library() {
   useEffect(() => {
     refresh();
     window.addEventListener(LIBRARY_CHANGED, refresh);
-    if (!hasLibrary) return () => window.removeEventListener(LIBRARY_CHANGED, refresh);
+    if (!onMac) return () => window.removeEventListener(LIBRARY_CHANGED, refresh);
     // Tauri delivers dropped files with their paths, which the browser's own drop event can't.
     const off = getCurrentWebview().onDragDropEvent((e) => {
       // Files from Finder carry paths; a document dragged inside the app doesn't, and isn't an upload.
@@ -163,9 +164,44 @@ export function Library() {
   };
 
   const choose = async () => {
+    if (!onMac) return picker.current?.click();
     const picked = await open({ multiple: true, filters: [{ name: "Documents", extensions: fileTypes }] });
     if (picked) add(Array.isArray(picked) ? picked : [picked]);
   };
+
+  // In a browser: files are locked here and uploaded; the Mac reads and files them on its next sync.
+  const picker = useRef<HTMLInputElement>(null);
+  const cloud = useCloud();
+  const upload = async (files: File[]) => {
+    if (!cloud || !files.length) return;
+    setNotice(`Locking and uploading ${files.length} ${files.length === 1 ? "file" : "files"}…`);
+    const r = await cloud.library.upload(files);
+    setNotice(
+      [
+        r.added && `Added ${r.added} ${r.added === 1 ? "document" : "documents"}. Your Mac reads and files ${r.added === 1 ? "it" : "them"} when Voidcat is open there`,
+        r.duplicates.length && `${r.duplicates.length} already in your library`,
+        r.failed.length && `${r.failed.length} couldn't be added (${r.failed.map(([n, why]) => `${n}: ${why}`).join(", ")})`,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    );
+  };
+  const browserDrop = onMac
+    ? {}
+    : {
+        onDragOver: (e: DragEvent) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          setDragging(true);
+        },
+        onDragLeave: () => setDragging(false),
+        onDrop: (e: DragEvent) => {
+          if (!e.dataTransfer.files.length) return;
+          e.preventDefault();
+          setDragging(false);
+          upload([...e.dataTransfer.files]);
+        },
+      };
 
   const factsOf = (id: string) => facts.filter((f) => f.documentId === id);
   /** A future expiry date from the document's approved facts (a passport's "valid until"). */
@@ -308,6 +344,7 @@ export function Library() {
       ) : (
         <>
           <section
+            {...browserDrop}
             aria-label="Drop files"
             className={`flex items-center gap-4.5 rounded-xl border-2 border-dashed px-6 py-5 transition-colors ${dragging ? "border-accent bg-accent-soft" : "border-accent/40 bg-accent-soft/40"}`}
           >
@@ -315,8 +352,13 @@ export function Library() {
             <div className="flex flex-col gap-0.5">
               <span className="font-semibold">{dragging ? "Let go to add" : "Drop any document here"}</span>
               <span className="text-[13.5px] text-ink-2">
-                PDF, photo, scan or email. It's read and filed on this Mac;{" "}
-                {cloudOn ? "a locked copy goes to Voidcat Cloud." : "nothing is uploaded."}
+                {onMac ? (
+                  <>
+                    PDF, photo, scan or email. It's read and filed on this Mac; {cloudOn ? "a locked copy goes to Voidcat Cloud." : "nothing is uploaded."}
+                  </>
+                ) : (
+                  "PDF, photo, scan or email. It's locked in this browser before upload; your Mac reads and files it."
+                )}
               </span>
             </div>
             <button
@@ -329,6 +371,19 @@ export function Library() {
             </button>
           </section>
 
+          {!onMac && (
+            <input
+              ref={picker}
+              type="file"
+              multiple
+              hidden
+              accept={fileTypes.map((t) => `.${t}`).join(",")}
+              onChange={(e) => {
+                upload([...(e.currentTarget.files ?? [])]);
+                e.currentTarget.value = "";
+              }}
+            />
+          )}
           {!hasLibrary && <p className="m-0 text-sm text-private-ink">This is the browser preview. Open the desktop app to add documents.</p>}
           {notice && (
             <p role="status" className="m-0 text-sm text-ink-2">
@@ -617,7 +672,7 @@ export function Library() {
                         >
                           <Eye aria-hidden className="size-4" /> Open
                         </button>
-                        {d.status !== "filed" && !busy(step) && (
+                        {d.status !== "filed" && !busy(step) && onMac && (
                           <button
                             type="button"
                             onClick={() => process([d])}

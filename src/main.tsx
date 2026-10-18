@@ -4,7 +4,7 @@ import { HashRouter } from "react-router";
 import App from "./App";
 import { CloudGate } from "./cloud/CloudGate";
 import { cloudConfigured } from "./cloud/firebase";
-import { hasLibrary, libraryLocked } from "./lib/library";
+import { libraryLocked, onMac } from "./lib/library";
 import { applyTheme, savedTheme } from "./lib/theme";
 import { TabsProvider } from "./lib/tabs";
 import { VeilProvider } from "./lib/veil";
@@ -15,7 +15,7 @@ import "./index.css";
 applyTheme(savedTheme());
 
 /** In a browser with the cloud set up, the app runs on a signed-in, unlocked cloud library; on the Mac, on the local one. */
-const Shell = ({ children }: { children: React.ReactNode }) => (!hasLibrary && cloudConfigured ? <CloudGate>{children}</CloudGate> : <>{children}</>);
+const Shell = ({ children }: { children: React.ReactNode }) => (!onMac && cloudConfigured ? <CloudGate>{children}</CloudGate> : <>{children}</>);
 
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
