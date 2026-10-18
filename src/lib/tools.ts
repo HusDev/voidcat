@@ -16,7 +16,7 @@ export const BundleInput = z.object({
 });
 
 /** Added to the system prompt so the model knows when to use the tool. */
-export const TOOLS_HELP = `You can put documents together for the user: when they ask for documents or files (to download, send, share or collect), call ${BUNDLE} with the D-numbers of the documents that match from the library list and a short name for the zip. Then say in one short sentence which documents you chose. Only use D-numbers that are in the list.`;
+export const TOOLS_HELP = `You can put documents together for the user: when they ask for documents or files (to download, send, share or collect), call ${BUNDLE} with the D-numbers of the documents that match from the library list and a short name for the zip. Then say in one short sentence which documents you chose. Only use D-numbers that are in the list. The zip only exists if you call ${BUNDLE}: never say you made, bundled or zipped anything without calling it.`;
 
 export { todayLine } from "./askPrompt";
 

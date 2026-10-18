@@ -21,7 +21,7 @@ vi.mock("./extract", () => ({
   })),
 }));
 
-const { buildProfile, contactFacts, initials, reachable } = await import("./people");
+const { buildProfile, contactFacts, initials, likelyOwner, reachable } = await import("./people");
 
 const fact = (id: string, label: string, value: string): Fact => ({ id, documentId: "d", documentTitle: "Doc", documentMime: null, label, value, page: 1, status: "approved" });
 
@@ -58,5 +58,23 @@ describe("people", () => {
   it("makes initials from words", () => {
     expect(initials("Carla Ruiz Martín")).toBe("CR");
     expect(initials("  banco  sabadell ")).toBe("BS");
+  });
+});
+
+describe("likelyOwner", () => {
+  const at = (id: string, doc: string, label: string, value: string): Fact => ({ ...fact(id, label, value), documentId: doc });
+  it("picks the name approved in the most documents", () => {
+    const facts = [
+      at("a", "tie", "Nombre", "Lena Ortiz Brandt"),
+      at("b", "lease1", "Nombre de la arrendataria", "Lena Ortiz Brandt"),
+      at("c", "lease2", "Nombre de la arrendataria", "Lena Ortiz Brandt"),
+      at("d", "lease1", "Nombre del arrendador", "Marc Vidal Soler"),
+      at("e", "lease2", "Nombre del arrendador", "Marc Vidal Soler"),
+      at("f", "dentist", "Doctor's name", "Dr. Pau Riera"),
+    ];
+    expect(likelyOwner(facts)).toBe("a");
+  });
+  it("names nobody from a single document", () => {
+    expect(likelyOwner([at("a", "tie", "Name", "Lena Ortiz Brandt")])).toBeNull();
   });
 });

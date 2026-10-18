@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeFacts, scopeIds, splitThinking } from "./ask";
+import { claimsZip, mergeFacts, scopeIds, splitThinking } from "./ask";
 import { alwaysThinks } from "./models";
 
 const docs = [
@@ -46,5 +46,13 @@ describe("mergeFacts", () => {
     expect(
       mergeFacts([fact("Full name", "Lena Ortiz", "Passport", 1), fact("Full name", "LENA ORTIZ", "Lease", 2), fact("Surname", "Ortiz", "Passport", 1)]),
     ).toEqual(["- Full name: Lena Ortiz (Passport, p. 1; Lease, p. 2)", "- Surname: Ortiz (Passport, p. 1)"]);
+  });
+});
+
+describe("claimsZip", () => {
+  it("spots an answer that says a zip was made", () => {
+    expect(claimsZip("I've bundled your rental contracts (D1 and D2) into a zip file named 'Rental papers'.")).toBe(true);
+    expect(claimsZip("Here is Rental papers.zip")).toBe(true);
+    expect(claimsZip("You pay 1,150 euros between the 1st and the 5th.")).toBe(false);
   });
 });
