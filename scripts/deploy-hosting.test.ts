@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import firebase from "../firebase.json";
-import { restConfig } from "./deploy-hosting";
+import { restConfig, trusted } from "./deploy-hosting";
 
 describe("restConfig", () => {
   it("turns firebase.json headers and rewrites into Firebase Hosting's REST shape", () => {
@@ -24,5 +24,15 @@ describe("restConfig", () => {
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(restConfig(app).rewrites).toEqual([{ glob: "**", run: { serviceId: "voidcat-web", region: "europe-west1" } }]);
+  });
+});
+
+describe("trusted", () => {
+  it("lets the token go only to Firebase Hosting", () => {
+    expect(trusted("https://firebasehosting.googleapis.com/v1beta1/sites/x/versions")).toBeTruthy();
+    expect(trusted("https://upload-firebasehosting.googleapis.com/upload/sites/x/versions/1/files/abc")).toBeTruthy();
+    expect(() => trusted("https://evil.example/upload")).toThrow();
+    expect(() => trusted("https://firebasehosting.googleapis.com.evil.example/")).toThrow();
+    expect(() => trusted("http://firebasehosting.googleapis.com/")).toThrow();
   });
 });

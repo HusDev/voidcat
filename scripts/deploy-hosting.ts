@@ -16,6 +16,8 @@ const PROJECT = "voidcat-cloud";
 const POOL = "projects/1094942921673/locations/global/workloadIdentityPools/gitlab/providers/gitlab-com";
 const DEPLOYER = "gitlab-deploy@voidcat-cloud.iam.gserviceaccount.com";
 const API = "https://firebasehosting.googleapis.com/v1beta1";
+/** The only places the access token may go: the Hosting API and its upload host. */
+const HOSTS = ["https://firebasehosting.googleapis.com/", "https://upload-firebasehosting.googleapis.com/"];
 
 type Header = { source: string; headers: { key: string; value: string }[] };
 type Rewrite = { source: string; run: { serviceId: string; region: string } };
@@ -60,6 +62,12 @@ export function restConfig(entry: Entry) {
   };
 }
 
+/** Refuses any address outside Firebase Hosting, so a bad API answer can never send the token elsewhere. */
+export function trusted(url: string): string {
+  if (!HOSTS.some((host) => url.startsWith(host)) || url.includes("..")) throw new Error(`refusing to send the token to ${url}`);
+  return url;
+}
+
 async function filesOf(entry: Entry): Promise<Map<string, Uint8Array<ArrayBuffer>>> {
   const files = new Map<string, Uint8Array<ArrayBuffer>>();
   if (entry.ignore?.includes("**")) return files;
@@ -74,7 +82,8 @@ async function filesOf(entry: Entry): Promise<Map<string, Uint8Array<ArrayBuffer
 
 async function deploy(entry: Entry, site: string, token: string) {
   const call = async (url: string, init: RequestInit = {}) => {
-    const res = await fetch(url, {
+    // nosemgrep: nodejs_scan.javascript-ssrf-rule-node_ssrf -- every address passes trusted() (Firebase Hosting hosts only)
+    const res = await fetch(trusted(url), {
       ...init,
       headers: { Authorization: `Bearer ${token}`, "x-goog-user-project": PROJECT, "Content-Type": "application/json", ...init.headers },
     });
@@ -84,6 +93,7 @@ async function deploy(entry: Entry, site: string, token: string) {
 
   const version = (await call(`${API}/sites/${site}/versions`, { method: "POST", body: JSON.stringify({ config: restConfig(entry) }) }))
     .name as string;
+  if (!/^sites\/[a-z0-9-]+\/versions\/[a-z0-9]+$/.test(version)) throw new Error(`unexpected version name: ${version}`);
   const files = await filesOf(entry);
   const hashes = new Map([...files].map(([path, gz]) => [path, createHash("sha256").update(gz).digest("hex")]));
   if (files.size) {
@@ -91,7 +101,8 @@ async function deploy(entry: Entry, site: string, token: string) {
     const needed = new Set((populated.uploadRequiredHashes as string[] | undefined) ?? []);
     for (const [path, hash] of hashes) {
       if (!needed.has(hash)) continue;
-      const res = await fetch(`${populated.uploadUrl}/${hash}`, {
+      // nosemgrep: nodejs_scan.javascript-ssrf-rule-node_ssrf -- uploadUrl passes trusted() (Firebase Hosting hosts only)
+      const res = await fetch(trusted(`${populated.uploadUrl}/${hash}`), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/octet-stream" },
         body: files.get(path)!,
