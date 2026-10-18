@@ -104,7 +104,7 @@ Issues and merge requests are welcome. Run the checks above before opening a mer
 
 ## Author
 
-Hussein Hasan ([@hus.dev](https://gitlab.com/hus.dev)).
+Hussein Saad Hasan Al Khafaji ([@hus.dev](https://gitlab.com/hus.dev)).
 
 ## License
 

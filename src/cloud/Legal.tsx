@@ -9,7 +9,7 @@ import { Logo } from "../components/Logo";
 
 export const LEGAL_PAGES = ["#/privacy", "#/terms"] as const;
 const UPDATED = "18 October 2026";
-const OPERATOR = "Hussein S. Hasan";
+const OPERATOR = "Hussein Saad Hasan Al Khafaji";
 const CONTACT = "husdev@proton.me";
 const LAW = "[COUNTRY]";
 
