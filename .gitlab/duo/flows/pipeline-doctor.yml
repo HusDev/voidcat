@@ -23,7 +23,6 @@ components:
       - "create_commit"
       - "create_merge_request_note"
       - "create_issue"
-    max_cycles: 60
     ui_log_events: ["on_agent_final_answer", "on_tool_execution_success", "on_tool_execution_failed"]
 prompts:
   - prompt_id: "voidcat_pipeline_doctor"

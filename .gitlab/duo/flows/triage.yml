@@ -1,5 +1,5 @@
-# Voidcat Triage (plan stage). Trigger: work item created.
-# Source copy: paste this into AI › Flows › New flow, then enable it on the project with that trigger.
+# Voidcat Triage (plan stage). Triggers: mention @ai-voidcat-triage-gitlab-ai-hackathon in an issue, or assign the
+# issue to it (GitLab flows have no "issue created" trigger). Source copy of the AI Catalog flow: keep both the same.
 version: "v1"
 environment: ambient
 components:
@@ -20,7 +20,6 @@ components:
       - "get_repository_file"
       - "list_repository_tree"
       - "gitlab_blob_search"
-    max_cycles: 40
     ui_log_events: ["on_agent_final_answer", "on_tool_execution_success", "on_tool_execution_failed"]
 prompts:
   - prompt_id: "voidcat_triage"
@@ -36,7 +35,7 @@ prompts:
         1. Read it, and search for duplicates among open issues. If it duplicates one, say so in your comment.
         2. Add labels with update_issue (keep existing ones): one type (type::bug, type::feature, type::chore),
            one area (area::library, area::facts, area::privacy, area::ask, area::calendar, area::contacts,
-           area::mcp, area::ci, area::ui) and one priority (priority::high, priority::medium, priority::low).
+           area::mcp, area::cloud, area::ci, area::ui) and one priority (priority::high, priority::medium, priority::low).
            Privacy and data-loss bugs are always priority::high.
         3. Post one comment with create_issue_note:
            - "Plan": 3-6 concrete steps, naming the files likely to change (check they exist).

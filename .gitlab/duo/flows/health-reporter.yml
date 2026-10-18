@@ -20,7 +20,6 @@ components:
       - "update_issue"
       - "create_issue_note"
       - "list_commits"
-    max_cycles: 40
     ui_log_events: ["on_agent_final_answer", "on_tool_execution_success", "on_tool_execution_failed"]
 prompts:
   - prompt_id: "voidcat_health_reporter"
