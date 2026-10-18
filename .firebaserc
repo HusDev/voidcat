@@ -1,0 +1,11 @@
+{
+  "projects": { "default": "voidcat-cloud" },
+  "targets": {
+    "voidcat-cloud": {
+      "hosting": {
+        "site": ["voidcat-cloud"],
+        "app": ["voidcat-app"]
+      }
+    }
+  }
+}

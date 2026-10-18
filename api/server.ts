@@ -20,7 +20,7 @@ const PROJECT = process.env.GOOGLE_CLOUD_PROJECT ?? "voidcat-cloud";
 const LOCATION = process.env.VERTEX_LOCATION ?? "europe-west1";
 const MODEL = process.env.MODEL ?? "gemini-2.5-flash";
 const BUCKET = process.env.FILES_BUCKET ?? "voidcat-cloud-files";
-const ORIGINS = (process.env.ALLOWED_ORIGINS ?? "https://voidcat-web-1094942921673.europe-west1.run.app,http://localhost:1430").split(",");
+const ORIGINS = (process.env.ALLOWED_ORIGINS ?? "https://app.voidcat.io,https://voidcat-web-1094942921673.europe-west1.run.app,http://localhost:1430").split(",");
 export const READS_PER_MONTH = Number(process.env.READS_PER_MONTH ?? 300);
 export const ASKS_PER_MONTH = Number(process.env.ASKS_PER_MONTH ?? 1000);
 
