@@ -11,7 +11,7 @@ export const LEGAL_PAGES = ["#/privacy", "#/terms"] as const;
 const UPDATED = "18 October 2026";
 const OPERATOR = "Hussein Saad Hasan Al Khafaji";
 const CONTACT = "husdev@proton.me";
-const LAW = "[COUNTRY]";
+const LAW = "Spain";
 
 function Page({ title, children }: { title: string; children: ReactNode }) {
   return (
