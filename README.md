@@ -125,7 +125,7 @@ Supervised autonomy: agents do the steps, a person approves the outcomes (assign
 | govern | `privacy-guard` job blocks personal data; **Privacy Guard** flow reviews masking and privacy rules |
 | package | `mcp-server` builds the MCP server for Apple silicon and Intel Macs; `web-config` and `web-build` build the web app |
 | deploy | `deploy-web` and `deploy-api` ship Voidcat Cloud to Cloud Run on every merge to `main`, signing in to Google through Workload Identity Federation (no stored keys) |
-| release | **Release** flow prepares the changelog merge request; on a `v*` tag the pipeline publishes packages and a GitLab release |
+| release | **Release** flow picks the version and prepares the changelog merge request; merging it is the approval, and the `release` job on main tags the version and publishes the MCP builds and a GitLab release |
 | configure | Agent runtime, review rules and flow sources versioned in `.gitlab/duo/` |
 | monitor | **Health Reporter** flow posts each `main` pipeline's numbers to a "Pipeline health" issue |
 
