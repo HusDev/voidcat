@@ -302,6 +302,28 @@ function McpCard() {
   );
 }
 
+/**
+ * In a browser: the Mac's local model, its OpenRouter key and other apps (MCP) live on the Mac, which the browser
+ * can't reach; Voidcat Cloud's Gemini reads and answers here, always masked.
+ */
+function BrowserCard() {
+  return (
+    <div className={`${card} max-w-2xl`}>
+      <span className="flex items-center gap-2 text-[15px] font-semibold">
+        <Workflow aria-hidden className="size-4.5 text-ink-2" /> In this browser: Voidcat Cloud
+      </span>
+      <p className="m-0 text-[13.5px] text-ink-2">
+        Gemini in Belgium reads new files ("Read now") and answers in Ask. Names, IDs, addresses and dates are hidden in this browser before anything
+        leaves.
+      </p>
+      <p className="m-0 text-[13.5px] text-ink-2">
+        Your local model, your own OpenRouter key and other AI apps (Claude Desktop, Cursor) work in Voidcat on your Mac. A web page can't use a model
+        running on your Mac, and anything you add here syncs to the Mac, which reads it with your local model when Voidcat is open there.
+      </p>
+    </div>
+  );
+}
+
 export function Connections() {
   return (
     <div className="flex max-w-4xl flex-col gap-5">
@@ -309,11 +331,15 @@ export function Connections() {
         <h1 className="m-0 text-[30px] font-light tracking-tight">Connected AIs</h1>
         <span className="text-sm text-ink-2">Which AIs can use your library, and what each one sees.</span>
       </header>
-      <div className="grid gap-3.5 lg:grid-cols-2">
-        <CloudCard />
-        <LocalCard />
-        <McpCard />
-      </div>
+      {hasLibrary ? (
+        <div className="grid gap-3.5 lg:grid-cols-2">
+          <CloudCard />
+          <LocalCard />
+          <McpCard />
+        </div>
+      ) : (
+        <BrowserCard />
+      )}
     </div>
   );
 }

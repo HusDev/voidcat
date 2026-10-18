@@ -1,3 +1,4 @@
+import { onMac } from "../lib/library";
 import { Check, Cpu, Download, ExternalLink, LoaderCircle, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -154,10 +155,11 @@ export function LocalModelSetup() {
   );
 }
 
-/** On the Library while the local model isn't set up: without it nothing gets read or filed. */
+/** On the Mac's Library while the local model isn't set up: without it nothing gets read or filed. */
 export function LocalModelBanner() {
   const { state } = useOllamaSetup();
-  if (state === "checking" || state === "ready") return null;
+  // A browser can't reach the Mac's local model; there, Voidcat Cloud reads and answers (masked).
+  if (!onMac || state === "checking" || state === "ready") return null;
   return (
     <Link to="/connections" className="flex items-center gap-3 rounded-xl border border-line-strong bg-card px-4 py-3 text-[13.5px] hover:border-ink-2">
       <Cpu aria-hidden className="size-4.5 shrink-0 text-ink-2" />
