@@ -96,6 +96,9 @@ pub struct Fact {
 
 #[derive(serde::Deserialize)]
 pub struct NewFact {
+    /// Given when the fact was made elsewhere (a browser's "Read now"), so changes to it from there still find it.
+    #[serde(default)]
+    id: Option<String>,
     label: String,
     value: String,
     page: Option<i64>,
@@ -731,7 +734,7 @@ impl Store {
             }
             tx.execute(
                 "insert into facts (id, document_id, label, value, page) values (?1, ?2, ?3, ?4, ?5)",
-                params![uuid::Uuid::new_v4().to_string(), id, f.label.trim(), f.value.trim(), f.page],
+                params![f.id.filter(|i| uuid::Uuid::parse_str(i).is_ok()).unwrap_or_else(|| uuid::Uuid::new_v4().to_string()), id, f.label.trim(), f.value.trim(), f.page],
             )
             .map_err(|e| e.to_string())?;
         }
@@ -971,7 +974,7 @@ mod tests {
         store.import(vec![src.to_string_lossy().to_string()]);
         let id = store.list().unwrap()[0].id.clone();
         store
-            .save_filing(&id, "Equity grant", "Travel", "grant", vec![NewFact { label: "Initial grant".into(), value: "6000".into(), page: Some(1) }], None)
+            .save_filing(&id, "Equity grant", "Travel", "grant", vec![NewFact { id: None, label: "Initial grant".into(), value: "6000".into(), page: Some(1) }], None)
             .unwrap();
         store.file_document(&id, "Travel", "Passports").unwrap();
         let fact = store.facts("pending").unwrap()[0].id.clone();
@@ -1089,6 +1092,7 @@ mod tests {
                 "Home",
                 "rental_contract",
                 vec![NewFact {
+                    id: None,
                     label: "Rent".into(),
                     value: "€1,150 a month".into(),
                     page: Some(1),
@@ -1143,6 +1147,7 @@ mod tests {
                 "Home",
                 "rental_contract",
                 vec![NewFact {
+                    id: None,
                     label: "Rent".into(),
                     value: "€1,150 a month".into(),
                     page: Some(1),

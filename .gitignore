@@ -26,3 +26,4 @@ dist-ssr
 # MCP server binary, built by `bun run build:mcp`
 src-tauri/binaries/
 build/
+api/node_modules/

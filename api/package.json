@@ -1,0 +1,10 @@
+{
+  "name": "voidcat-api",
+  "private": true,
+  "type": "module",
+  "description": "Voidcat Cloud's API on Cloud Run: files masked document text with Gemini on Vertex AI.",
+  "dependencies": {
+    "@google/genai": "2.27.0",
+    "firebase-admin": "14.5.0"
+  }
+}
