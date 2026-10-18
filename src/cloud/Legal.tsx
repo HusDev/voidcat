@@ -3,14 +3,14 @@ import { Logo } from "../components/Logo";
 
 /**
  * Voidcat Cloud's Privacy Policy and Terms, in plain words, at #/privacy and #/terms (readable without signing in).
- * Who runs the service, how to reach them and which law applies are placeholders until Hussein fills them in; a
- * lawyer checks both pages before payments start.
+ * The operator and contact address are published on purpose; which law applies is still a placeholder. A lawyer
+ * checks both pages before payments start.
  */
 
 export const LEGAL_PAGES = ["#/privacy", "#/terms"] as const;
 const UPDATED = "18 October 2026";
-const OPERATOR = "[OPERATOR NAME]";
-const CONTACT = "[CONTACT EMAIL]";
+const OPERATOR = "Hussein S. Hasan";
+const CONTACT = "husdev@proton.me";
 const LAW = "[COUNTRY]";
 
 function Page({ title, children }: { title: string; children: ReactNode }) {
