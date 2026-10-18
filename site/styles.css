@@ -1,4 +1,5 @@
-/* voidcat.io: the app's dark look (rail colours, white line cat with gold eyes, cyan for private values). */
+/* voidcat.io: the app's own dark look. Glowing box cat, Outfit headlines, real screenshots of the app at work,
+   cyan only for masked values. */
 @font-face {
   font-family: "Outfit";
   src: url("/fonts/outfit.woff2") format("woff2");
@@ -11,14 +12,20 @@
   font-weight: 400 700;
   font-display: swap;
 }
+@font-face {
+  font-family: "Plex Mono";
+  src: url("/fonts/plex-mono.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
 
 :root {
   --bg: #08080b;
   --bg-2: #121119;
-  --line: rgb(255 255 255 / 0.08);
+  --line: rgb(255 255 255 / 0.1);
   --ink: #f5f5f7;
-  --ink-2: #a1a1aa;
-  --ink-3: #6e6c7a;
+  --ink-2: #b4b4bd;
+  --ink-3: #8a8896;
   --void: #e9e7f2;
   --eye: #f5b83d;
   --private: #5eead4;
@@ -32,135 +39,101 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  scrollbar-color: #2a2a33 var(--bg);
 }
 
 body {
   margin: 0;
-  background: radial-gradient(ellipse 80% 50% at 50% 0%, #1c1c22 0%, var(--bg) 70%) no-repeat, var(--bg);
+  background: radial-gradient(ellipse 80% 48rem at 50% 0%, #1d1d25 0%, var(--bg) 70%) no-repeat, var(--bg);
   color: var(--ink);
-  font: 400 17px/1.6 "Instrument Sans", system-ui, -apple-system, sans-serif;
+  font: 400 1.0625rem/1.6 "Instrument Sans", system-ui, -apple-system, sans-serif;
+}
+
+::selection {
+  background: var(--private);
+  color: #0b0b0f;
 }
 
 a {
   color: inherit;
+  text-underline-offset: 3px;
 }
 
-h1,
-h2,
-h3 {
-  font-family: "Outfit", system-ui, sans-serif;
-  font-weight: 300;
-  line-height: 1.15;
-  margin: 0;
+:focus-visible {
+  outline: 2px solid var(--eye);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.skip {
+  position: absolute;
+  left: 16px;
+  top: -60px;
+  background: var(--ink);
+  color: #0b0b0f;
+  padding: 10px 16px;
+  border-radius: 8px;
+  z-index: 10;
+}
+.skip:focus {
+  top: 12px;
 }
 
 .wrap {
-  width: min(1080px, 100% - 32px);
+  width: min(1180px, 100% - 32px);
   margin-inline: auto;
 }
 
-/* Header */
-.top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-block: 20px;
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font: 400 20px "Outfit", sans-serif;
-  text-decoration: none;
-}
+/* the box cat */
 .cat {
-  width: 24px;
-  height: 27px;
+  display: block;
+  overflow: visible;
 }
-.cat-line {
+.cat-box {
   fill: none;
   stroke: var(--void);
-  stroke-width: 13;
+  stroke-width: 30;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .cat-eyes {
   stroke: var(--eye);
-  stroke-width: 13;
+  stroke-width: 32;
   stroke-linecap: round;
 }
-.top-links {
+
+/* header */
+.top {
   display: flex;
   align-items: center;
-  gap: 20px;
-  font-size: 15px;
+  justify-content: space-between;
+  padding-block: 22px;
 }
-.top-links a:not(.button) {
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font: 500 1.35rem "Outfit", sans-serif;
+  text-decoration: none;
+}
+.brand .cat {
+  width: 26px;
+}
+.top nav {
+  display: flex;
+  gap: clamp(16px, 3vw, 32px);
+  font-size: 1rem;
+}
+.top nav a {
   color: var(--ink-2);
   text-decoration: none;
 }
-.top-links a:not(.button):hover {
+.top nav a:hover {
   color: var(--ink);
 }
 
-/* Buttons: white on black, like the app's primary actions */
-.button {
-  display: inline-block;
-  padding: 12px 22px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: #0b0b0f;
-  font-weight: 600;
-  text-decoration: none;
-  border: 1px solid var(--ink);
-  transition: background 0.15s;
-}
-.button:hover {
-  background: #ffffff;
-}
-.button.ghost {
-  background: transparent;
-  color: var(--ink);
-  border-color: rgb(255 255 255 / 0.25);
-}
-.button.ghost:hover {
-  border-color: var(--ink);
-}
-.button.small {
-  padding: 7px 16px;
-  font-size: 14px;
-}
-.button:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--eye);
-  outline-offset: 3px;
-}
-
-/* Hero */
-.hero {
-  text-align: center;
-  padding: 56px 0 72px;
-}
-.hero-cat {
-  width: 104px;
-  height: 115px;
-  filter: drop-shadow(0 0 10px rgb(233 231 242 / 0.5));
-  margin-bottom: 32px;
-}
-.hero-cat .cat-line,
-.hero-cat .cat-eyes {
-  stroke-width: 10;
-}
-h1 {
-  font-size: clamp(36px, 6vw, 64px);
-  letter-spacing: -0.01em;
-}
-.lead {
-  max-width: 620px;
-  margin: 24px auto 0;
-  color: var(--ink-2);
-  font-size: 19px;
-}
+/* buttons */
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -168,157 +141,278 @@ h1 {
   gap: 12px;
   margin-top: 32px;
 }
-.fine {
-  margin-top: 16px;
+.button {
+  display: inline-block;
+  padding: 15px 28px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 1.05rem;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.1s;
+}
+.button:active {
+  transform: scale(0.98);
+}
+.button.primary {
+  background: var(--ink);
+  color: #0b0b0f;
+}
+.button.primary:hover {
+  background: #fff;
+}
+.button.ghost {
+  border: 1px solid rgb(255 255 255 / 0.28);
+  color: var(--ink);
+}
+.button.ghost:hover {
+  border-color: var(--ink);
+}
+.meta {
+  margin: 16px 0 0;
   color: var(--ink-3);
-  font-size: 14px;
+  font-size: 0.95rem;
 }
 
-/* The masking example */
-section h2 {
-  font-size: clamp(28px, 4vw, 40px);
+h1,
+h2,
+h3 {
+  font-family: "Outfit", sans-serif;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+/* hero */
+.hero {
   text-align: center;
-  margin-bottom: 32px;
+  padding-top: clamp(16px, 4vw, 40px);
 }
-.mask {
-  padding-block: 48px;
+.hero-cat {
+  width: clamp(72px, 8vw, 100px);
+  margin: 0 auto;
+  filter: drop-shadow(0 0 14px rgb(233 231 242 / 0.45));
 }
-.mask-grid {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: stretch;
-  gap: 16px;
+h1 {
+  margin-top: 28px;
+  font-size: clamp(2.6rem, 6.4vw, 5rem);
+  line-height: 1.04;
 }
-.card {
-  margin: 0;
-  padding: 24px;
-  background: var(--bg-2);
+h1 span {
+  display: block;
+}
+.lead {
+  max-width: 40rem;
+  margin: 22px auto 0;
+  color: var(--ink-2);
+  font-size: clamp(1.1rem, 1.6vw, 1.3rem);
+}
+.hero-shot {
+  margin: clamp(40px, 6vw, 64px) auto 0;
+  max-width: 1080px;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-bottom: 0;
+  box-shadow: 0 -24px 60px rgb(0 0 0 / 0.5);
+  max-height: 560px;
 }
-.card figcaption {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ink-3);
-  margin-bottom: 12px;
+.hero-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
-.card p {
+
+/* how it works: alternating text and real screenshots */
+.how {
+  padding-block: clamp(72px, 10vw, 128px) 0;
+}
+.how > h2,
+.privacy > h2,
+.mask > h2 {
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  line-height: 1.1;
+  max-width: 22ch;
+}
+.step {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: center;
+  margin-top: clamp(48px, 7vw, 88px);
+}
+.step-flip .step-text {
+  order: 2;
+}
+.step h3 {
+  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+  font-weight: 400;
+}
+.step p {
+  margin: 14px 0 0;
+  color: var(--ink-2);
+  max-width: 34rem;
+}
+.shot {
   margin: 0;
-  font-size: 18px;
-  line-height: 1.9;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #f3f3f6;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.45);
 }
-.card.sent {
-  border-color: rgb(94 234 212 / 0.3);
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
-mark.real {
-  background: rgb(255 255 255 / 0.1);
-  color: var(--ink);
-  padding: 1px 4px;
-  border-radius: 5px;
+.shot-strip {
+  padding: 4px;
+}
+.shot-card {
+  max-width: 360px;
+  justify-self: center;
+  padding: 18px;
+  border-radius: 20px;
+}
+
+/* the mask, set in type */
+.mask {
+  padding-block: clamp(80px, 11vw, 140px) 0;
+}
+.masked {
+  margin: 28px 0 0;
+  font: 300 clamp(1.7rem, 3.6vw, 3rem) / 1.45 "Outfit", sans-serif;
+  letter-spacing: -0.01em;
+  max-width: 30ch;
+  max-width: 1100px;
+}
+.masked .v {
   white-space: nowrap;
+}
+.masked s {
+  color: var(--ink-3);
+  text-decoration-thickness: 3px;
+  text-decoration-color: var(--ink-2);
 }
 .chip {
   display: inline-block;
-  background: var(--private-soft);
+  font: 500 0.6em/1.5 "Plex Mono", ui-monospace, monospace;
   color: var(--private);
-  border: 1px solid rgb(94 234 212 / 0.35);
-  padding: 0 6px;
-  border-radius: 6px;
-  white-space: nowrap;
-  font: 500 14px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
-}
-.note {
-  color: var(--ink-3);
-  font-size: 15px;
-}
-.arrow {
-  align-self: center;
-  color: var(--ink-3);
-  font-size: 28px;
+  background: var(--private-soft);
+  border: 1.5px solid rgb(94 234 212 / 0.5);
+  border-radius: 8px;
+  padding: 0 10px;
+  vertical-align: 0.15em;
 }
 .caption {
-  text-align: center;
-  color: var(--ink-3);
-  font-size: 14px;
-  max-width: 620px;
-  margin: 20px auto 0;
-}
-
-/* Features */
-.features {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  padding-block: 48px;
-}
-.features article {
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-}
-.features h3,
-.how h3 {
-  font-size: 20px;
-  font-weight: 400;
-  margin-bottom: 8px;
-}
-.features p,
-.how p {
-  margin: 0;
+  margin: 26px 0 0;
   color: var(--ink-2);
-  font-size: 15px;
+  max-width: 44rem;
 }
 
-/* How it stays private */
-.how {
-  padding-block: 48px;
+/* privacy facts: two columns of hairline rows, no cards */
+.privacy {
+  padding-block: clamp(80px, 11vw, 140px) 0;
 }
-.how ol {
-  list-style: none;
-  padding: 0;
-  margin: 0 auto;
-  max-width: 720px;
+.facts {
+  margin: 40px 0 0;
   display: grid;
-  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(32px, 6vw, 80px);
 }
-.how li {
-  display: flex;
-  gap: 18px;
+.facts div {
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
 }
-.step {
-  flex: none;
+.facts dt {
+  font: 400 1.3rem "Outfit", sans-serif;
+}
+.facts dd {
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  max-width: 34rem;
+}
+
+/* download */
+.download {
+  margin-top: clamp(80px, 11vw, 140px);
+  padding: clamp(40px, 6vw, 72px);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: radial-gradient(ellipse at 50% 0%, #1d1d25 0%, var(--bg-2) 70%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(32px, 6vw, 72px);
+  align-items: center;
+}
+.download-main .cat {
+  width: 56px;
+}
+.download h2 {
+  margin-top: 22px;
+  font-size: clamp(2rem, 3.6vw, 2.8rem);
+}
+.download-main p {
+  margin: 12px 0 0;
+  color: var(--ink-2);
+}
+.download .actions {
+  justify-content: flex-start;
+  margin-top: 26px;
+}
+.install {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  display: grid;
+  gap: 22px;
+}
+.install li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 52px;
+  color: var(--ink-2);
+}
+.install li strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.install li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: -2px;
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 1px solid rgb(255 255 255 / 0.25);
+  border: 1px solid rgb(255 255 255 / 0.28);
   display: grid;
   place-items: center;
-  font: 400 15px "Outfit", sans-serif;
+  font: 400 1rem "Outfit", sans-serif;
+  color: var(--ink);
 }
 
-/* Closing and footer */
-.closing {
-  text-align: center;
-  padding: 64px 0 80px;
-}
-.closing h2 {
-  margin-bottom: 0;
-}
+/* footer */
 .foot {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px 24px;
+  margin-top: clamp(56px, 8vw, 96px);
   padding-block: 28px 40px;
   border-top: 1px solid var(--line);
   color: var(--ink-3);
-  font-size: 14px;
+  font-size: 0.95rem;
 }
 .foot nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 18px;
 }
 .foot a {
   color: var(--ink-2);
@@ -328,31 +422,39 @@ mark.real {
   color: var(--ink);
 }
 
-@media (max-width: 900px) {
-  .features {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 860px) {
+  .step,
+  .download {
+    grid-template-columns: minmax(0, 1fr);
   }
-}
-@media (max-width: 720px) {
-  .mask-grid {
-    grid-template-columns: 1fr;
+  .step-flip .step-text {
+    order: 0;
   }
-  .arrow {
-    transform: rotate(90deg);
-    justify-self: center;
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .top-links a:not(.button) {
-    display: none;
+  .masked .v {
+    white-space: normal;
   }
 }
 @media (max-width: 520px) {
-  .features {
-    grid-template-columns: 1fr;
+  .top nav a:not(:last-child) {
+    display: none;
   }
-  .hero {
-    padding-top: 32px;
+  .actions .button {
+    width: 100%;
+    text-align: center;
   }
-  .card p {
-    font-size: 16px;
+  .hero-shot {
+    max-height: 340px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .button {
+    transition: none;
   }
 }

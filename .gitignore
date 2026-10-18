@@ -27,3 +27,7 @@ dist-ssr
 src-tauri/binaries/
 build/
 api/node_modules/
+
+# Impeccable working files (screenshots, mocks); the surface briefs are committed
+.impeccable/*
+!.impeccable/surfaces/

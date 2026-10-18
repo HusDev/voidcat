@@ -15,7 +15,15 @@ describe("restConfig", () => {
       cleanUrls: true,
       headers: [{ glob: "**", headers: { "X-Content-Type-Options": "nosniff" } }],
       rewrites: [{ glob: "**", run: { serviceId: "voidcat-web", region: "europe-west1" } }],
+      redirects: [],
     });
+  });
+
+  it("sends /download/mac to the Mac download", () => {
+    const [site] = firebase.hosting;
+    const [r] = restConfig(site as unknown as Parameters<typeof restConfig>[0]).redirects;
+    expect(r).toMatchObject({ glob: "/download/mac", statusCode: 302 });
+    expect(r.location).toMatch(/^https:\/\/firebasestorage\.googleapis\.com\/.+Voidcat-.+\.dmg/);
   });
 
   it("keeps the landing page locked down and sends the app to Cloud Run", () => {
