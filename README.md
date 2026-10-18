@@ -5,37 +5,82 @@
 
 ![Voidcat](docs/cover.png)
 
-Smart storage for your life. Drop in any document: Voidcat reads it on your Mac, files it and pulls out the facts. Any AI can use your knowledge, but personal details are masked before anything leaves.
+Smart storage for your life. Drop in any document: Voidcat reads it, files it and pulls out the facts. Any AI can use your knowledge, but personal details are masked before anything leaves. Your library lives encrypted on your Mac, and optionally in **Voidcat Cloud**, end-to-end encrypted, so you can open it in any browser.
 
 Built for the GitLab Transcend Hackathon (October 2026).
 
-## What it does
-
-- **Encrypted on your Mac.** The library database (SQLCipher) and every stored document (AES-256-GCM) are encrypted with a key kept in the macOS Keychain.
-- **Reads documents on your Mac.** PDFs, photos, scans, spreadsheets and Word files are read locally (Apple Vision OCR and a local model through Ollama). Nothing is uploaded to do this.
-- **Files them.** Each document gets a title, an area and a folder; you confirm when it isn't sure.
-- **Pulls out facts for you to approve.** Dates, ID numbers, amounts and addresses go to an inbox with the source page highlighted.
-- **Calendar and reminders.** Expiry dates, appointments, renewals and monthly payments from the facts you approved, with Mac notifications and `.ics` export.
-- **Ask any AI, safely.** Questions go to a cloud model only after a privacy filter swaps names, IDs and addresses for placeholders like `[PERSON_1]`; the answer is put back together on your Mac. Zero data retention is required on every request.
-- **Everything in tabs.** Screens and documents open in tabs inside the app; facts are marked on the page, with approve and reject beside it.
-- **Local or cloud models.** Pick an Ollama model on your Mac (nothing leaves) or a cloud model (masked), keep a chat history, and type @ to ask about one document, folder or area. Ask for "my rental papers as a zip" and it gathers them.
-- **Labels.** Expired, ended, duplicate, unsigned, incomplete and not useful documents are flagged, and copies of the same document are grouped.
-- **Encrypted on your Mac.** The library database (SQLCipher) and every stored document (AES-256-GCM) are encrypted with a key kept in the macOS Keychain.
-- **Catches names the rules miss.** Optionally, OpenAI's privacy-filter model runs on your Mac and masks extra names and addresses before anything goes to a cloud model.
-- **MCP server.** While Voidcat is open (it stays in the menu bar), Claude Desktop, Cursor or Claude Code can use your library through MCP, with per-app access levels and the same masking.
-- **Contacts and Me.** People and organisations found in your documents, and a profile of you built from approved facts, each value linked to its source.
-- **Opportunities.** Benefits, deadlines and savings that apply to you, found from your masked facts.
+**Try Voidcat Cloud:** https://voidcat-web-1094942921673.europe-west1.run.app
 
 ## Why
 
-Your important papers (residence permits, leases, payslips, tax forms) are scattered across folders and email. AI assistants could help, but uploading these documents means handing over your most private data. Voidcat keeps the documents and the reading on your machine and only ever shares masked facts.
+Your important papers (residence permits, leases, payslips, tax forms) are scattered across folders and email. AI assistants could help, but uploading these documents means handing over your most private data. Voidcat keeps the reading on your devices, keeps every copy locked, and only ever shares masked text with an AI.
+
+## What it does
+
+**On your Mac (free, works offline)**
+
+- **Encrypted.** The library database (SQLCipher) and every stored document (AES-256-GCM) are encrypted with a key kept in the macOS Keychain. A recovery key (13 groups of four) is the only other way in.
+- **Reads documents locally.** PDFs, photos, scans, spreadsheets and Word files, with Apple Vision OCR and a local model through Ollama (set up from inside the app, no Terminal).
+- **Files them** into areas and folders, and **pulls out facts** (dates, ID numbers, amounts, addresses) for you to approve, with the source page highlighted.
+- **Calendar and reminders** for expiry dates, appointments, renewals and monthly payments, with Mac notifications and `.ics` export.
+- **Ask any AI, safely.** A local model sees your real values and nothing leaves; a cloud model (OpenRouter, zero data retention) only gets text where names, IDs and addresses are placeholders like `[PERSON_1]`. Type @ to ask about one document, folder or area; ask for "my rental papers as a zip" and it gathers them.
+- **Catches names the rules miss** with OpenAI's privacy-filter model running on your Mac (optional).
+- **Labels** expired, ended, duplicate, unsigned, incomplete and not useful documents.
+- **Contacts and Me**: people found in your documents, and a profile of you built from approved facts.
+- **MCP server**: Claude Desktop, Cursor or Claude Code can use your library through MCP, with per-app access levels and the same masking.
+- **Hide private details** on screen with ⌘⇧H, for screen sharing.
+
+**Voidcat Cloud (optional, in any browser)**
+
+- **End-to-end encrypted.** Everything is locked on your device before upload; Google Cloud stores only locked bytes. Signing in (email link or Google) says who you are; only your recovery key opens the library.
+- **Mac sync.** Connect your Mac in Settings; choose per document whether it's **In the cloud** or **only on this Mac**, with marks on every file.
+- **Your library in a browser.** Folders, documents, search and fact review; drop in new files; changes reach your Mac.
+- **Read now.** A file added in the browser is read there (OCR included), masked there, and only the masked text goes to Gemini in Belgium to file it. Your Mac re-reads scans with Apple Vision when it syncs.
+- **Ask in the browser.** Gemini answers from masked context; the real values are put back in your browser.
+- **Your data, your call.** Export everything as a zip, delete your account in one step, plain-words [Privacy Policy](https://voidcat-web-1094942921673.europe-west1.run.app/#/privacy) and [Terms](https://voidcat-web-1094942921673.europe-west1.run.app/#/terms). The browser locks after 30 minutes away.
+
+## How the cloud keeps your papers private
+
+```mermaid
+flowchart LR
+  subgraph Mac["Your Mac"]
+    K[Keychain master key] --> D[Derived keys]
+    L[(Encrypted library)] --> S[Seal each record]
+  end
+  subgraph GCP["Google Cloud · europe-west1"]
+    F[(Firestore: sealed records)]
+    B[(Cloud Storage: sealed files)]
+    API[voidcat-api on Cloud Run]
+    G[Gemini 2.5 Flash on Vertex AI]
+    W[voidcat-web on Cloud Run]
+  end
+  subgraph Browser["Your browser"]
+    R[Recovery key, typed once] --> BK[Same keys, not exportable]
+    O[Open records in memory]
+    M[Mask private details]
+  end
+  S -- locked --> F
+  S -- locked --> B
+  F -- locked --> O
+  B -- locked --> O
+  M -- masked text only --> API --> G
+  W -- serves the app --> Browser
+```
+
+1. One random master key, created on your Mac (or in your first browser). The database, file and record keys are derived from it.
+2. The Mac seals each document as one record (details, facts, page text) plus its already-encrypted file. Firestore and Cloud Storage only ever see sealed bytes, under rules that let each person reach only their own items, and only with a verified email.
+3. A browser derives the same keys from the recovery key and keeps them as non-exportable keys. Records are opened in memory and never stored unlocked.
+4. For **Read now** and **Ask**, the text is masked in the browser first. voidcat-api checks the sign-in and the monthly limits (300 reads, 1,000 questions) and logs no text.
+5. Changes made in a browser travel back to the Mac as sealed, one-time edits.
+
+Security notes and the latest review: [SECURITY.md](SECURITY.md). Carbon per document, measured with SCI: [docs/SUSTAINABILITY.md](docs/SUSTAINABILITY.md).
 
 ## Requirements
 
 - macOS (Apple Silicon recommended)
 - [Bun](https://bun.sh) 1.3+ and [Rust](https://rustup.rs)
-- [Ollama](https://ollama.com) with the local model: `ollama pull qwen3.5:9b`
-- Optional: an [OpenRouter](https://openrouter.ai) key for cloud models (stored in the macOS Keychain)
+- [Ollama](https://ollama.com) for the local model (Voidcat walks you through it)
+- Optional: an [OpenRouter](https://openrouter.ai) key for cloud models on the Mac (stored in the macOS Keychain)
 
 ## Install and run
 
@@ -43,27 +88,29 @@ Your important papers (residence permits, leases, payslips, tax forms) are scatt
 bun install
 bun run build:mcp     # builds the MCP server the app ships with
 bun run tauri dev     # the desktop app
-bun run dev           # the interface alone, in a browser (no library)
+bun run demo          # the desktop app on an empty demo library (invented documents in demo/documents)
 ```
+
+The browser version needs a Firebase web config in `.env.local` (`VITE_FIREBASE_*`), then `bunx vite --port 1430`.
 
 ## Usage
 
 1. Drop documents onto the Library, or use **Choose files**.
 2. Approve or correct the facts in **Facts to approve**.
 3. Open **Ask** to question your library; you see exactly what will be sent before it goes.
-4. In **Connected AIs**, add Voidcat to Claude Desktop or Cursor, or copy the Claude Code command.
-5. Press ⌘⇧H anywhere to hide private details on screen.
+4. In **Settings → Voidcat Cloud**, connect your Mac to open your library in a browser.
+5. In **Connected AIs**, add Voidcat to Claude Desktop or Cursor, or copy the Claude Code command.
+6. Press ⌘⇧H anywhere to hide private details on screen.
 
 ## Checks
 
 ```bash
 bun run typecheck
 bun run lint
-bun run test                       # TypeScript tests
+bun run test                       # TypeScript tests (app, cloud, API)
 cd src-tauri && cargo test         # Rust tests (run build:mcp first)
+bun run privacy                    # the privacy guard
 ```
-
-The GitLab pipeline runs typecheck, lint, tests and build on every push and merge request.
 
 ## GitLab automation
 
@@ -74,9 +121,10 @@ Supervised autonomy: agents do the steps, a person approves the outcomes (assign
 | plan | **Triage** flow labels new issues and comments a plan |
 | create | GitLab's **Developer** flow turns an approved issue into a merge request |
 | verify | `verify` and `rust-test` jobs; **Pipeline Doctor** flow explains failures and pushes small fixes |
-| secure | SAST, secret detection and dependency scanning |
+| secure | SAST, secret detection and dependency scanning on every merge request |
 | govern | `privacy-guard` job blocks personal data; **Privacy Guard** flow reviews masking and privacy rules |
-| package | `mcp-server` job builds the MCP server for Apple silicon and Intel Macs |
+| package | `mcp-server` builds the MCP server for Apple silicon and Intel Macs; `web-config` and `web-build` build the web app |
+| deploy | `deploy-web` and `deploy-api` ship Voidcat Cloud to Cloud Run on every merge to `main`, signing in to Google through Workload Identity Federation (no stored keys) |
 | release | **Release** flow prepares the changelog merge request; on a `v*` tag the pipeline publishes packages and a GitLab release |
 | configure | Agent runtime, review rules and flow sources versioned in `.gitlab/duo/` |
 | monitor | **Health Reporter** flow posts each `main` pipeline's numbers to a "Pipeline health" issue |
@@ -85,18 +133,21 @@ Flow sources are in `.gitlab/duo/flows/`; the rules agents follow are in `AGENTS
 
 ## Stack
 
-Tauri 2 (Rust: SQLite via rusqlite with FTS5, Apple Vision OCR, macOS Keychain) · React · React Router · Vite · Tailwind CSS v4 · Headless UI · Lucide · Zod · TypeScript · Bun · unpdf · Ollama · Vercel AI SDK + OpenRouter (zero data retention) · MCP SDK · Vitest
+**Mac app:** Tauri 2 (Rust: SQLCipher via rusqlite with FTS5, AES-256-GCM, Apple Vision OCR, macOS Keychain) · React · React Router · Vite · Tailwind CSS v4 · Headless UI · Lucide · Zod · TypeScript · Bun · unpdf · Ollama · Vercel AI SDK + OpenRouter (zero data retention) · Transformers.js (privacy filter) · MCP SDK · Vitest
+
+**Voidcat Cloud (Google Cloud, europe-west1):** Cloud Run (web app on nginx, API on Bun) · Firestore · Cloud Storage · Firebase Authentication · Vertex AI (Gemini 2.5 Flash) · Workload Identity Federation · WebCrypto · Tesseract.js (OCR in the browser)
 
 ## Roadmap
 
-- Get the local model from inside Voidcat (Ollama still installed separately)
-- A browser demo with invented documents
+- Paid plans with Stripe (€4 a month or €40 a year, 14-day trial); until then the cloud is free to try
+- Saved conversations and the "make a zip" tool in the browser
+- Firebase App Check and server-side storage limits
 
 See `docs/STATUS.md` for what's built and what's next.
 
 ## Support
 
-Open an issue in this project.
+Open an issue in this project. Security problems: see [SECURITY.md](SECURITY.md).
 
 ## Contributing
 
@@ -112,4 +163,4 @@ Hussein Saad Hasan Al Khafaji ([@hus.dev](https://gitlab.com/hus.dev)).
 
 ## Project status
 
-Early and under active development during the hackathon. The screens use made-up example data.
+Under active development during the hackathon. Screenshots and the demo library use made-up example data.
