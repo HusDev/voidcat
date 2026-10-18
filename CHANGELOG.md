@@ -4,6 +4,11 @@ Each version's section becomes its GitLab release notes.
 
 ## Unreleased
 
+- Ask: a local model that says it made a zip without calling the tool is asked once more, and the answer never claims a zip that wasn't made.
+- Privacy: labels like "NIE de la arrendataria" are read as IDs again (the "end" inside "arrendataria" made them dates).
+- Calendar: a date with a time in the same value ("12 November 2026 at 10:30") now shows up.
+- Me: when the model doesn't name the owner, the name approved in the most documents is used, so the owner leaves Contacts.
+
 ## 0.1.0
 
 First version, built for the GitLab Transcend Hackathon.

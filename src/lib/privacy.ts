@@ -58,7 +58,8 @@ export function kindOfLabel(label: string): Kind {
   if (/phone|telefono|movil|mobile/.test(l)) return "PHONE";
   if (/iban|account|cuenta/.test(l)) return "IBAN";
   if (/address|street|domicilio|direccion|calle|carrer/.test(l)) return "ADDRESS";
-  if (/date|valid|issued|expir|start|end|born|birth|fecha|caduc|hasta|vence|vencimiento/.test(l)) return "DATE";
+  // Whole words for the English ones: "arrendataria" and "arrendador" contain "end" but are people, not dates.
+  if (/\bdates?\b|\bvalid|\bissued?\b|\bexpir|\bstart|\bends?\b|\bborn\b|\bbirth|fecha|caduc|hasta|vence|vencimiento/.test(l)) return "DATE";
   if (/number|numero|\bno\b|nie|dni|nif|passport|pasaporte|card|tarjeta|\bid\b|expediente|reference|referencia/.test(l)) return "ID";
   if (/name|nombre|landlord|tenant|employer|owner|person|arrendador|arrendatario|lawyer|abogad|signed|firmado/.test(l)) return "PERSON";
   return "PRIVATE";
@@ -75,6 +76,19 @@ export function parseDate(s: string): Date | null {
   if (m && m[2] in MONTHS) return new Date(+m[3], MONTHS[m[2]], +m[1]);
   m = t.match(/^([a-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})$/);
   if (m && m[1] in MONTHS) return new Date(+m[3], MONTHS[m[1]], +m[2]);
+  return null;
+}
+
+/** The first date written anywhere in a value, such as "12 November 2026 at 10:30" or "Cita: 03/05/2027, 9:00". */
+export function dateIn(s: string): Date | null {
+  const whole = parseDate(s);
+  if (whole) return whole;
+  for (const [kind, re] of PATTERNS) {
+    if (kind !== "DATE") continue;
+    const found = new RegExp(re.source, "i").exec(s);  // nosemgrep: eslint.detect-non-literal-regexp -- one of our own patterns
+    const date = found && parseDate(found[0]);
+    if (date) return date;
+  }
   return null;
 }
 

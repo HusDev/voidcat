@@ -150,6 +150,11 @@ export async function prepare(question: string, model: AskModel, masker: Masker,
   };
 }
 
+/** An answer that says a zip was made ("I've bundled…", "into a zip file"), which only the tool can do. */
+export const claimsZip = (answer: string) => /\b(bundled|zipped|\.zip\b|zip file|into a zip)/i.test(answer);
+const NO_ZIP_YET = `You didn't call ${BUNDLE}, so no zip exists yet. Call it now with the D-numbers of the documents you meant.`;
+export const NO_ZIP_MADE = "_No zip was made this time. Ask again and I'll put the files together._";
+
 /**
  * Thinking models (qwen3 and others) may write their reasoning into the answer, between <think> tags or with only the
  * closing tag. That part goes in the thinking box, the rest is the answer.
@@ -205,9 +210,14 @@ export async function run(e: Exchange, earlier: Exchange[], masker: Masker, upda
     let text = "";
     if (local) {
       let thought = "";
+      let bundled = false;
       for await (const chunk of askLocalModel(e.model.id, messages)) {
         if ("call" in chunk) {
-          if (chunk.call.name === BUNDLE) update({ bundle: resolveBundle(chunk.call.input, e.catalog ?? []) ?? undefined });
+          const bundle = chunk.call.name === BUNDLE ? resolveBundle(chunk.call.input, e.catalog ?? []) : null;
+          if (bundle) {
+            bundled = true;
+            update({ bundle });
+          }
           continue;
         }
         if ("thinking" in chunk) thought += chunk.thinking;
@@ -215,6 +225,23 @@ export async function run(e: Exchange, earlier: Exchange[], masker: Masker, upda
         const split = splitThinking(text);
         const thinking = [thought.trim(), split.thinking].filter(Boolean).join("\n\n");
         update({ answer: split.answer, raw: masker.mask(split.answer), thinking: thinking || undefined, rawThinking: thinking ? masker.mask(thinking) : undefined });
+      }
+      // Small local models sometimes say they made a zip without calling the tool: ask once more, and never let
+      // the answer claim a zip that doesn't exist.
+      const answer = splitThinking(text).answer;
+      if (!bundled && e.catalog?.length && claimsZip(answer)) {
+        const nudge: Turn[] = [...messages, { role: "assistant", content: answer }, { role: "user", content: NO_ZIP_YET }];
+        for await (const chunk of askLocalModel(e.model.id, nudge)) {
+          const bundle = "call" in chunk && chunk.call.name === BUNDLE ? resolveBundle(chunk.call.input, e.catalog) : null;
+          if (bundle) {
+            bundled = true;
+            update({ bundle });
+          }
+        }
+        if (!bundled) {
+          const honest = `${answer}\n\n${NO_ZIP_MADE}`;
+          update({ answer: honest, raw: masker.mask(honest) });
+        }
       }
     } else if (e.model.provider === "voidcat") {
       // A browser: Gemini through voidcat-api, masked both ways; no zip tool there.

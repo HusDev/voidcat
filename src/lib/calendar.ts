@@ -1,6 +1,6 @@
 import { call as invoke } from "./backend";
 import type { Document, Fact } from "./library";
-import { kindOfLabel, parseDate } from "./privacy";
+import { dateIn, kindOfLabel } from "./privacy";
 
 /**
  * The calendar: every date in the user's approved facts, plus dates worked out from them (renewals, monthly payments)
@@ -93,7 +93,7 @@ export function eventsFromFacts(facts: Fact[], docs: Document[], today: Date): C
     }
 
     if (kindOfLabel(f.label) !== "DATE") continue;
-    const date = parseDate(f.value);
+    const date = dateIn(f.value);
     const meaning = dateKind(f.label);
     if (!date || !meaning) continue;
 

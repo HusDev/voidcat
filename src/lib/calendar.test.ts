@@ -8,7 +8,7 @@ const doc = (id: string, title: string, docType: string, folderName: string | nu
   ({ id, title, docType, folderName, fileName: `${id}.pdf`, mime: "application/pdf", sizeBytes: 1, area: null, status: "filed", addedAt: "", textMethod: null, pageCount: 1, folderId: null, filing: null, suggestedArea: null, suggestedFolder: null, suggestedNew: false, suggestionReason: null }) as Document;
 const fact = (id: string, documentId: string, documentTitle: string, label: string, value: string): Fact => ({ id, documentId, documentTitle, documentMime: null, label, value, page: 1, status: "approved" });
 
-const docs = [doc("tie", "Residence card (TIE)", "residence_card"), doc("lease", "Rental contract, Robles 214", "rental_contract"), doc("cita", "Cita previa padrón", "appointment")];
+const docs = [doc("tie", "Residence card (TIE)", "residence_card"), doc("lease", "Rental contract, Robles 214", "rental_contract"), doc("cita", "Cita previa padrón", "appointment"), doc("dentist", "Appointment reminder", "appointment")];
 
 describe("calendar", () => {
   it("reads monthly due days in Spanish and English", () => {
@@ -36,6 +36,7 @@ describe("calendar", () => {
       fact("f6", "cita", "Cita previa padrón", "Hora", "10:20"),
       fact("f7", "cita", "Cita previa padrón", "Oficina", "OAC Sant Martí"),
       fact("f8", "lease", "Rental contract, Robles 214", "Start date", "1 de marzo de 2026"),
+      fact("f9", "dentist", "Appointment reminder", "Date of appointment", "12 November 2026 at 10:30"),
     ];
     const events = eventsFromFacts(facts, docs, today);
     const by = (key: string) => events.find((e) => e.key === key);
@@ -45,6 +46,8 @@ describe("calendar", () => {
     expect(by("fact:f2")).toBeUndefined();
     expect(by("fact:f8")).toBeUndefined(); // in the past
     expect(by("fact:f5")).toMatchObject({ kind: "appointment", time: "10:20", place: "OAC Sant Martí" });
+    // a date and time in one value
+    expect(by("fact:f9")).toMatchObject({ date: "2026-11-12", kind: "appointment", time: "10:30" });
     const rent = events.filter((e) => e.kind === "payment");
     expect(rent.map((e) => e.date)).toEqual(["2026-11-05", "2026-12-05"]);
     expect(rent[0].title).toBe("Pay rent · 1.150 €/mes");

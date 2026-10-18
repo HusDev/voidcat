@@ -105,6 +105,12 @@ describe("privacy layer", () => {
     expect(kindOfLabel("Válida hasta")).toBe("DATE");
     expect(kindOfLabel("Fecha de expedición")).toBe("DATE");
     expect(kindOfLabel("Teléfono móvil")).toBe("PHONE");
+    // "arrEND..." is a person, not a date
+    expect(kindOfLabel("NIE de la arrendataria")).toBe("ID");
+    expect(kindOfLabel("Nombre del arrendador")).toBe("PERSON");
+    expect(kindOfLabel("End date")).toBe("DATE");
+    expect(kindOfLabel("Date of appointment")).toBe("DATE");
+    expect(kindOfLabel("Expiry")).toBe("DATE");
     expect(parseDate("23 Feb 2034")?.getFullYear()).toBe(2034);
     expect(relative(new Date(2026, 9, 20), today)).toBe("about 8 days from now");
   });
