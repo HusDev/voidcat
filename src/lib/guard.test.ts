@@ -14,6 +14,7 @@ describe("privacy guard", () => {
     expect(await findLeaks("NIE Z7654321K", allow, none)).toEqual([]);
     expect(await findLeaks("write to someone@example.com or noreply@anthropic.com", none, none)).toEqual([]);
     expect(await findLeaks('"icons/128x128@2x.png"', none, none)).toEqual([]);
+    expect(await findLeaks("deploy-bot@my-project.iam.gserviceaccount.com", none, none)).toEqual([]);
   });
 
   it("finds watched words by hash, whatever the accents, case or punctuation", async () => {
