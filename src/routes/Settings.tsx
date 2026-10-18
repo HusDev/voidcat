@@ -1,6 +1,7 @@
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { Archive, BellRing, Check, Copy, EyeOff, KeyRound, LoaderCircle, Monitor, Moon, ScanFace, Sun } from "lucide-react";
+import { Archive, BellRing, Cloud, Check, Copy, EyeOff, KeyRound, LoaderCircle, Monitor, Moon, ScanFace, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useCloud } from "../cloud/CloudGate";
 import { exportEverything, hasLibrary, recoveryCode } from "../lib/library";
 import { MODEL_SIZE, setNameCheck, useNameCheck } from "../lib/nameCheck";
 import { type Theme, useTheme } from "../lib/theme";
@@ -144,6 +145,32 @@ function YourData() {
   );
 }
 
+/** In the browser: the cloud account this library is opened with. */
+function CloudAccount() {
+  const cloud = useCloud();
+  if (!cloud) return null;
+  return (
+    <section aria-labelledby="cloud-account" className="flex flex-col gap-3">
+      <h2 id="cloud-account" className="m-0 text-[15px] font-semibold">
+        Cloud account
+      </h2>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-card px-4 py-3.5">
+        <Cloud aria-hidden className="size-4.5 shrink-0 text-ink-2" />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-[14px] font-semibold">{cloud.user.email}</span>
+          <span className="text-[12.5px] text-ink-2">Your library is locked before it leaves this browser. Sign out keeps this browser unlocked for next time; Forget removes its key.</span>
+        </span>
+        <button type="button" onClick={cloud.signOut} className="shrink-0 rounded-lg border border-line-strong px-3 py-1.5 text-[13px] font-semibold hover:border-ink-2">
+          Sign out
+        </button>
+        <button type="button" onClick={cloud.forget} className="shrink-0 rounded-lg border border-line-strong px-3 py-1.5 text-[13px] font-semibold text-danger hover:border-danger">
+          Forget this browser
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export function Settings() {
   const [theme, setTheme] = useTheme();
   const veil = useVeil();
@@ -240,6 +267,8 @@ export function Settings() {
           </button>
         </div>
       </section>
+
+      <CloudAccount />
 
       <YourData />
 

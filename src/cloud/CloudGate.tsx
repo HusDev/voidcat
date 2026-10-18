@@ -1,9 +1,9 @@
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { Check, Copy, KeyRound, LoaderCircle, LogIn } from "lucide-react";
+import { Check, Copy, KeyRound, LoaderCircle, LogIn, Mail } from "lucide-react";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { Logo } from "../components/Logo";
 import { createLibrary, forgetThisBrowser, libraryState, unlockLibrary } from "./account";
-import { firebase, signInWithGoogle, signOutOfCloud } from "./firebase";
+import { emailLinkReturn, finishEmailLink, firebase, sendEmailLink, signInWithGoogle, signOutOfCloud } from "./firebase";
 import type { Keys } from "./vault";
 
 /** The signed-in, unlocked cloud library the app runs on in a browser. */
@@ -11,7 +11,7 @@ export type CloudSession = { user: User; keys: Keys; signOut: () => Promise<void
 const CloudContext = createContext<CloudSession | null>(null);
 export const useCloud = () => useContext(CloudContext);
 
-type Step = { kind: "loading" } | { kind: "signed-out" } | { kind: "new" } | { kind: "show-code"; code: string; keys: Keys } | { kind: "locked" } | { kind: "ready"; keys: Keys };
+type Step = { kind: "loading" } | { kind: "signed-out" } | { kind: "email-sent"; email: string } | { kind: "confirm-email" } | { kind: "new" } | { kind: "show-code"; code: string; keys: Keys } | { kind: "locked" } | { kind: "ready"; keys: Keys };
 
 const button =
   "inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-[14px] font-semibold text-on-accent hover:bg-accent-strong disabled:opacity-40";
@@ -40,13 +40,22 @@ export function CloudGate({ children }: { children: ReactNode }) {
   const [code, setCode] = useState("");
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [email, setEmail] = useState("");
+
+  // Back from a sign-in email: finish signing in, or ask for the address when the link was opened elsewhere.
+  useEffect(() => {
+    const back = emailLinkReturn();
+    if (!back) return;
+    if (back.email) finishEmailLink(back.email).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    else setStep({ kind: "confirm-email" });
+  }, []);
 
   useEffect(
     () =>
       onAuthStateChanged(firebase().auth, async (u) => {
         setUser(u);
         setError(null);
-        if (!u) return setStep({ kind: "signed-out" });
+        if (!u) return setStep((s) => (s.kind === "confirm-email" || s.kind === "email-sent" ? s : { kind: "signed-out" }));
         try {
           const s = await libraryState(u.uid);
           setStep(s.kind === "none" ? { kind: "new" } : s.kind === "locked" ? { kind: "locked" } : { kind: "ready", keys: s.keys });
@@ -87,15 +96,89 @@ export function CloudGate({ children }: { children: ReactNode }) {
 
   if (step.kind === "loading") return <Screen title="Voidcat"><LoaderCircle aria-hidden className="size-5 animate-spin text-ink-2" /></Screen>;
 
+  const emailField = (
+    <>
+      <label htmlFor="cloud-email" className="sr-only">
+        Email address
+      </label>
+      <input
+        id="cloud-email"
+        type="email"
+        required
+        autoComplete="email"
+        value={email}
+        onChange={(e) => setEmail(e.currentTarget.value)}
+        placeholder="you@example.com"
+        className="w-full rounded-xl border border-line-strong bg-card px-4 py-2.5 text-[15px] outline-none focus:border-ink-2"
+      />
+    </>
+  );
+
   if (step.kind === "signed-out")
     return (
       <Screen title="Your papers, locked">
         <p className="m-0 text-[14.5px] text-ink-2">
           Voidcat keeps your documents encrypted on your devices. The cloud only ever stores them locked. Sign in to open your library in this browser.
         </p>
-        <button type="button" disabled={busy} onClick={() => act(async () => void (await signInWithGoogle()))} className={button}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            act(async () => {
+              await sendEmailLink(email.trim());
+              setStep({ kind: "email-sent", email: email.trim() });
+            });
+          }}
+          className="flex w-full flex-col gap-2.5"
+        >
+          {emailField}
+          <button type="submit" disabled={busy || !email.includes("@")} className={button}>
+            {busy ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <Mail aria-hidden className="size-4" />} Email me a sign-in link
+          </button>
+        </form>
+        <span className="flex w-full items-center gap-3 text-[12.5px] text-ink-2">
+          <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
+        </span>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => act(async () => void (await signInWithGoogle()))}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-line-strong bg-card px-5 py-2.5 text-[14px] font-semibold hover:border-ink-2 disabled:opacity-40"
+        >
           <LogIn aria-hidden className="size-4" /> Sign in with Google
         </button>
+        <p className="m-0 text-[12px] text-ink-2">The email link keeps your Google account out of it. Either way, nobody but you can open your documents.</p>
+        {err}
+      </Screen>
+    );
+
+  if (step.kind === "email-sent")
+    return (
+      <Screen title="Check your email">
+        <p className="m-0 text-[14.5px] text-ink-2">
+          We sent a sign-in link to <b className="text-ink">{step.email}</b>. Open it in this browser to continue. It works once and expires after a while; check spam if it isn't there.
+        </p>
+        <button type="button" onClick={() => setStep({ kind: "signed-out" })} className="text-[13px] text-ink-2 underline">
+          Use a different email
+        </button>
+      </Screen>
+    );
+
+  if (step.kind === "confirm-email")
+    return (
+      <Screen title="Confirm your email">
+        <p className="m-0 text-[14.5px] text-ink-2">This link was opened in a different browser. Type the email it was sent to, so we know it's you.</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            act(() => finishEmailLink(email.trim()));
+          }}
+          className="flex w-full flex-col gap-2.5"
+        >
+          {emailField}
+          <button type="submit" disabled={busy || !email.includes("@")} className={button}>
+            Sign in
+          </button>
+        </form>
         {err}
       </Screen>
     );
