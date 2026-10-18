@@ -6,7 +6,7 @@ import type { Reading } from "../lib/reader";
 
 /**
  * Reads a document's text inside the browser, like `reader.ts` does on the Mac: PDFs with a text layer directly,
- * scans and photos with Tesseract (OCR running in this browser; the engine is served from this site, only the
+ * scans and photos with Tesseract (pages it isn't sure of are left empty rather than sent as noise) (OCR running in this browser; the engine is served from this site, only the
  * language data comes from jsDelivr), text files as they are. Nothing leaves the browser. Word and spreadsheets are
  * read on the Mac.
  */
@@ -16,10 +16,10 @@ const MAX_SCANNED_PAGES = 20;
 const letters = (s: string) => s.replace(/[^\p{L}]/gu, "").length;
 
 let ocr: Promise<OcrWorker> | null = null;
-/** One OCR worker for English and Spanish, made on first use. */
+/** One OCR worker for English, Spanish and Arabic, made on first use. */
 function ocrWorker() {
   ocr ??= import("tesseract.js").then(({ createWorker }) =>
-    createWorker(["eng", "spa"], 1, { workerPath: "/ocr/worker.min.js", corePath: "/ocr/", workerBlobURL: false }),
+    createWorker(["eng", "spa", "ara"], 1, { workerPath: "/ocr/worker.min.js", corePath: "/ocr/", workerBlobURL: false }),
   );
   ocr.catch(() => {
     ocr = null;
@@ -27,9 +27,13 @@ function ocrWorker() {
   return ocr;
 }
 
+/** Below this (Tesseract's own 0–100 confidence) a page reads as noise: better nothing than garbage sent to Gemini. */
+export const MIN_OCR_CONFIDENCE = 60;
+
+/** A page's text, or "" when Tesseract isn't sure enough of it (stamps, handwriting, a script it doesn't know). */
 async function ocrImage(image: Blob) {
   const { data } = await (await ocrWorker()).recognize(image);
-  return data.text.trim();
+  return data.confidence >= MIN_OCR_CONFIDENCE ? data.text.trim() : "";
 }
 
 async function pageImage(pdf: Awaited<ReturnType<typeof getDocumentProxy>>, n: number) {

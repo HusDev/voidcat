@@ -62,7 +62,12 @@ export async function readNow(doc: Document, user: User) {
   try {
     set(doc.id, { stage: "reading", note: "Reading the text in this browser…" });
     const reading = await readInBrowser(doc, (note) => set(doc.id, { stage: "reading", note }));
-    if (!reading.pages.join("").trim()) throw new Error("No text was found in this file.");
+    if (!reading.pages.join("").trim())
+      throw new Error(
+        reading.method === "ocr" || reading.method === "pdf-ocr"
+          ? "This scan is too hard to read in the browser. Your Mac reads it with Apple's text recognition when Voidcat is open there."
+          : "No text was found in this file.",
+      );
 
     set(doc.id, { stage: "masking", note: "Hiding private details in this browser (the privacy model loads once)…" });
     const approved: Fact[] = await listFacts("approved");

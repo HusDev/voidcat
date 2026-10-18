@@ -1,5 +1,6 @@
 import { call as invoke } from "../lib/backend";
-import { ExternalLink, FolderInput, ListChecks, LoaderCircle, MessageSquareText, Pencil } from "lucide-react";
+import { ExternalLink, FolderInput, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText } from "lucide-react";
+import { readDocument, saveReading } from "../lib/reader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { useParams } from "react-router";
@@ -24,6 +25,7 @@ import {
   isSpreadsheet,
   listFacts,
   listFolders,
+  onMac,
   openInDefaultApp,
   readSheets,
   renameDocument,
@@ -421,6 +423,7 @@ export function Viewer() {
         >
           <FolderInput aria-hidden className="size-4" /> Move
         </button>
+        {onMac && <ReadAgain doc={doc} />}
         <button
           type="button"
           onClick={() => openInDefaultApp(doc.id)}
@@ -459,5 +462,34 @@ export function Viewer() {
         <Blurred>{body}</Blurred>
       )}
     </div>
+  );
+}
+
+/**
+ * Reads the document's text again on this Mac (Apple Vision for scans and photos), e.g. after a browser's OCR got a
+ * scan wrong. The filing and facts stay as they are.
+ */
+function ReadAgain({ doc }: { doc: Document }) {
+  const [state, setState] = useState<"idle" | "reading" | "done" | string>("idle");
+  return (
+    <button
+      type="button"
+      disabled={state === "reading"}
+      title={typeof state === "string" && !["idle", "reading", "done"].includes(state) ? state : "Read the text again on this Mac; the facts stay"}
+      onClick={async () => {
+        setState("reading");
+        try {
+          await saveReading(doc.id, await readDocument(doc));
+          announceChange();
+          setState("done");
+        } catch (e) {
+          setState(`Couldn't read it again: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }}
+      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2 disabled:opacity-50"
+    >
+      {state === "reading" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <ScanText aria-hidden className="size-4" />}
+      {state === "reading" ? "Reading…" : state === "done" ? "Read again ✓" : "Read again"}
+    </button>
   );
 }

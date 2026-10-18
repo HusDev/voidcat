@@ -38,3 +38,27 @@ export function parseFiled(raw: string): Filed {
 
 export const month = (now = new Date()) => now.toISOString().slice(0, 7);
 
+
+export type Turn = { role: "user" | "assistant"; content: string };
+const MAX_TURNS = 40;
+const MAX_ASK_CHARS = 200_000;
+
+/** An Ask conversation from a browser: masked turns ending with the question, and the browser's date. */
+export function parseAsk(body: unknown): { messages: Turn[]; today: Date } | string {
+  if (!body || typeof body !== "object") return "Send JSON.";
+  const { messages, today } = body as Record<string, unknown>;
+  if (!Array.isArray(messages) || !messages.length) return "No question.";
+  if (messages.length > MAX_TURNS) return "This conversation is too long; start a new one.";
+  const turns: Turn[] = [];
+  let total = 0;
+  for (const m of messages) {
+    const { role, content } = (m ?? {}) as Record<string, unknown>;
+    if ((role !== "user" && role !== "assistant") || typeof content !== "string" || !content.trim()) return "Each turn needs a role and some text.";
+    total += content.length;
+    turns.push({ role, content });
+  }
+  if (total > MAX_ASK_CHARS) return "This conversation is too long; start a new one.";
+  if (turns[turns.length - 1].role !== "user") return "The last turn must be your question.";
+  const day = typeof today === "string" && /^\d{4}-\d{2}-\d{2}$/.test(today) ? new Date(`${today}T12:00:00Z`) : new Date();
+  return { messages: turns, today: Number.isNaN(day.getTime()) ? new Date() : day };
+}

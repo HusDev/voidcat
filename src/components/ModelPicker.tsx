@@ -23,6 +23,16 @@ export function ModelPicker({
   /** The chosen OpenRouter model, or null without a key. */
   cloudModel: string | null;
 }) {
+  if (value?.provider === "voidcat")
+    return (
+      <span
+        title="Voidcat Cloud answers with Gemini in Belgium. Names, IDs, addresses and dates are hidden in this browser first."
+        className="inline-flex items-center gap-1.5 rounded-full bg-ground px-2.5 py-1 font-mono text-[12px] text-ink-2"
+      >
+        <Cloud aria-hidden className="size-3.5 shrink-0" />
+        {value.id} <span className="font-sans text-private-ink">masked</span>
+      </span>
+    );
   const none = !local?.length && !cloudModel;
   if (none)
     return (

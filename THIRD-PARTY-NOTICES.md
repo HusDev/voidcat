@@ -67,7 +67,7 @@ the rules miss" in Settings.
 ## Tesseract.js (OCR in the browser, Voidcat Cloud)
 
 `tesseract.js` and `tesseract.js-core` (the Tesseract OCR engine compiled to WebAssembly), Apache License 2.0:
-https://www.apache.org/licenses/LICENSE-2.0. Served with the web app only. The English and Spanish language data
+https://www.apache.org/licenses/LICENSE-2.0. Served with the web app only. The English, Spanish and Arabic language data
 (`@tesseract.js-data`, Apache License 2.0) isn't bundled: the browser downloads it from jsDelivr the first time it
 reads a scan.
 

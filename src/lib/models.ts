@@ -2,9 +2,12 @@ import type { Turn } from "./cloud";
 import { OLLAMA, readingModel } from "./extract";
 import { TOOLS_HELP, ollamaTools, todayLine } from "./tools";
 
-/** Which model answers in Ask: one on this Mac (Ollama) or a cloud model through OpenRouter. */
+/**
+ * Which model answers in Ask: one on this Mac (Ollama), a cloud model through OpenRouter, or in a browser Voidcat
+ * Cloud's Gemini through voidcat-api. Only "local" sees real values.
+ */
 
-export type AskModel = { provider: "local" | "cloud"; id: string };
+export type AskModel = { provider: "local" | "cloud" | "voidcat"; id: string };
 export type LocalModel = { id: string; size: string };
 
 const KEY = "voidcat.askModel";
@@ -12,7 +15,7 @@ const KEY = "voidcat.askModel";
 export function savedAskModel(): AskModel | null {
   try {
     const m = JSON.parse(localStorage.getItem(KEY) ?? "null");
-    return m && (m.provider === "local" || m.provider === "cloud") && typeof m.id === "string" ? m : null;
+    return m && (m.provider === "local" || m.provider === "cloud" || m.provider === "voidcat") && typeof m.id === "string" ? m : null;
   } catch {
     return null;
   }

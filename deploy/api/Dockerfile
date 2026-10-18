@@ -4,7 +4,7 @@ WORKDIR /app
 COPY api/package.json api/bun.lock ./api/
 RUN cd api && bun install --frozen-lockfile --production
 COPY api/server.ts api/read.ts ./api/
-COPY src/lib/filing.ts ./src/lib/filing.ts
+COPY src/lib/filing.ts src/lib/askPrompt.ts ./src/lib/
 USER bun
 ENV NODE_ENV=production PORT=8080
 EXPOSE 8080
