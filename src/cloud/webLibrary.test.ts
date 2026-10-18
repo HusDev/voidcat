@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyEdit, type DocRecord, folderId, searchRecords, titleFrom, toDocument } from "./webLibrary";
+import { applyEdit, type DocRecord, folderId, searchRecords, titleFrom, toDocument, zipNames } from "./webLibrary";
 
 const lease: DocRecord = {
   kind: "document",
@@ -58,5 +58,15 @@ describe("cloud library in the browser", () => {
 
   it("titles files like the Mac", () => {
     expect(titleFrom("rental_contract-signed.pdf")).toBe("Rental contract signed");
+  });
+
+  it("names exported files by folder, without clashes or unsafe characters", () => {
+    expect(
+      zipNames([
+        { folder: ["Home", "Rental"], fileName: "lease.pdf" },
+        { folder: ["Home", "Rental"], fileName: "lease.pdf" },
+        { folder: null, fileName: "a/b:c.txt" },
+      ]),
+    ).toEqual(["Home/Rental/lease.pdf", "Home/Rental/lease (2).pdf", "Not filed/a b c.txt"]);
   });
 });

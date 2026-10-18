@@ -1,6 +1,8 @@
 import { Cloud, CloudCheck, KeyRound, LoaderCircle, LogIn, Mail } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { Link, useLocation } from "react-router";
+import { WEB } from "../cloud/config";
 import {
   deleteCloudCopy,
   disconnectThisMac,
@@ -126,6 +128,14 @@ export function MacCloud() {
             <span className="text-[12px] text-ink-2">Both open your browser; once you're signed in, it hands you back to Voidcat.</span>
           </div>
           <div className="pl-7.5">{err}</div>
+          <p className="m-0 flex gap-4 pl-7.5 text-[12px] text-ink-2">
+            <button type="button" onClick={() => openUrl(`${WEB}/#/privacy`)} className="underline">
+              Privacy Policy
+            </button>
+            <button type="button" onClick={() => openUrl(`${WEB}/#/terms`)} className="underline">
+              Terms
+            </button>
+          </p>
         </div>
       )}
 
@@ -199,6 +209,7 @@ export function MacCloud() {
           </div>
           <p className="m-0 px-4 py-3 text-[12px] text-ink-2">
             Disconnecting stops syncing; everything stays on this Mac and the cloud copy stays for your browsers. Deleting removes every locked copy from the cloud.
+            To close the account itself, use Settings → Cloud account → Delete my account in a browser.
           </p>
           {err && <div className="px-4 py-3">{err}</div>}
         </div>

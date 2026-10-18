@@ -1,5 +1,6 @@
 import { Bytes, collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { deleteObject, getBytes, ref, uploadBytes } from "firebase/storage";
+import { zipSync } from "fflate";
 import { clearWebBackend, setWebBackend } from "../lib/backend";
 import { announceChange, type Document, type Fact, type Folder, type Hit, type Page } from "../lib/library";
 import { firebase } from "./firebase";
@@ -162,7 +163,24 @@ export type WebLibrary = {
   close: () => void;
   /** Adds files from this browser (see `upload` below). */
   upload: (files: File[]) => Promise<{ added: number; duplicates: string[]; failed: [string, string][] }>;
+  /** Every document, unlocked, as one zip sorted into Area/Folder (see `exportZip` below). */
+  exportZip: (progress?: (done: number, total: number) => void) => Promise<{ zip: Uint8Array; count: number }>;
 };
+
+/** "Area/Folder/file.pdf" (or "Not filed/…"), with " (2)" before the extension when a name repeats. */
+export function zipNames(docs: Pick<DocRecord, "folder" | "fileName">[]) {
+  const used = new Set<string>();
+  return docs.map((d) => {
+    const clean = (s: string) => s.replace(/[\\/:*?"<>|]+/g, " ").trim() || "file";
+    const dir = d.folder ? `${clean(d.folder[0])}/${clean(d.folder[1])}` : "Not filed";
+    const name = clean(d.fileName);
+    const dot = name.lastIndexOf(".");
+    let path = `${dir}/${name}`;
+    for (let n = 2; used.has(path.toLowerCase()); n++) path = dot > 0 ? `${dir}/${name.slice(0, dot)} (${n})${name.slice(dot)}` : `${dir}/${name} (${n})`;
+    used.add(path.toLowerCase());
+    return path;
+  });
+}
 
 /** Opens the signed-in account's cloud library for this browser. Resolves once the records have loaded. */
 export function openWebLibrary(uid: string, keys: Keys): Promise<WebLibrary> {
@@ -376,6 +394,19 @@ export function openWebLibrary(uid: string, keys: Keys): Promise<WebLibrary> {
   };
   setWebBackend(backend);
 
+  /** Unlocks every file here, one by one, and zips them; nothing unlocked leaves the browser except as your download. */
+  async function exportZip(progress: (done: number, total: number) => void = () => {}) {
+    const docs = all();
+    const names = zipNames(docs);
+    const entries: Record<string, Uint8Array> = {};
+    for (const [i, d] of docs.entries()) {
+      progress(i, docs.length);
+      entries[names[i]] = new Uint8Array(await bytes(d.id));
+    }
+    progress(docs.length, docs.length);
+    return { zip: zipSync(entries, { level: 6 }), count: docs.length };
+  }
+
   return new Promise((resolve, reject) => {
     let first = true;
     const stop = onSnapshot(
@@ -407,6 +438,7 @@ export function openWebLibrary(uid: string, keys: Keys): Promise<WebLibrary> {
               clearWebBackend(backend);
             },
             upload,
+            exportZip,
           });
         }
       },
