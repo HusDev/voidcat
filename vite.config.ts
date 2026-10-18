@@ -12,6 +12,7 @@ import fs from "node:fs";
  * worker and engine (the LSTM builds; the worker picks one by what the browser supports).
  */
 function vendorFiles(prefix: string, dir: string, pattern: RegExp) {
+  // nosemgrep: eslint.detect-non-literal-fs-filename -- dir is one of the fixed node_modules folders named below; build time only
   const files: string[] = fs.readdirSync(dir).filter((f: string) => pattern.test(f));
   return {
     name: `vendor-${prefix}-${dir}`,
