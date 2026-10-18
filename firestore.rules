@@ -16,8 +16,14 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.check is bytes
         && request.resource.data.check.size() <= 256;
-      // The check never changes once made (no key rotation yet); deleting the account goes through the server.
-      allow update, delete: if false;
+      // A new check only when a Mac takes over an empty cloud library with its own key; deleting the account goes
+      // through the server.
+      allow update: if owner(uid)
+        && request.resource.data.keys().hasOnly(['createdAt', 'check'])
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.check is bytes
+        && request.resource.data.check.size() <= 256;
+      allow delete: if false;
 
       match /records/{id} {
         allow read: if owner(uid);

@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, Pencil, Eye, EyeOff, FileText, Folder as FolderIcon, FolderOpen, Inbox, Library, Lightbulb, Link2, LockKeyhole, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
+import { CalendarDays, Check, ChevronRight, Cloud, CloudCheck, Pencil, Eye, EyeOff, FileText, Folder as FolderIcon, FolderOpen, Inbox, Library, Lightbulb, Link2, LockKeyhole, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
 import { type DragEvent, type MouseEvent, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { AREAS } from "../lib/extract";
@@ -19,7 +19,9 @@ import {
   renameFolder,
 } from "../lib/library";
 import { Private, useVeil } from "../lib/veil";
+import { keepInCloud } from "../cloud/mac";
 import { Logo } from "./Logo";
+import { CloudRowMark, CloudStatusButton, useCloudMark } from "./CloudMark";
 import { RenameInput } from "./RenameInput";
 
 const link = ({ isActive }: { isActive: boolean }) =>
@@ -255,6 +257,7 @@ function Folders() {
                               <span className="min-w-0 flex-1 truncate">
                                 <Private>{d.title}</Private>
                               </span>
+                              <CloudRowMark id={d.id} />
                             </button>
                             <RenamePencil label={`Rename ${d.title}`} onClick={() => setRenaming(`doc:${d.id}`)} />
                           </div>
@@ -285,6 +288,29 @@ function RenamePencil({ label, onClick }: { label: string; onClick: () => void }
       className="grid size-5 shrink-0 place-items-center rounded text-rail-faint opacity-0 hover:bg-white/10 hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
     >
       <Pencil aria-hidden className="size-3" />
+    </button>
+  );
+}
+
+/** "Keep in the cloud" with a tick, once this Mac syncs; off keeps the document only on this Mac. */
+function KeepInCloudItem({ id, onDone }: { id: string; onDone: () => void }) {
+  const mark = useCloudMark(id);
+  if (!mark) return null;
+  const on = mark !== "local";
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={on}
+      onClick={() => {
+        onDone();
+        keepInCloud(id, !on);
+      }}
+      className={item}
+    >
+      {on ? <CloudCheck aria-hidden className="size-3.5" /> : <Cloud aria-hidden className="size-3.5" />}
+      <span className="flex-1">Keep in the cloud</span>
+      {on && <Check aria-hidden className="size-3.5" />}
     </button>
   );
 }
@@ -326,6 +352,7 @@ function TreeMenu({
           <button type="button" role="menuitem" onClick={run(() => onRename(menu.key))} className={item}>
             <Pencil aria-hidden className="size-3.5" /> Rename
           </button>
+          <KeepInCloudItem id={doc.id} onDone={onClose} />
           <span className="mt-1 border-t border-white/10 px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-widest text-rail-faint">Move to</span>
           <div className="flex max-h-56 flex-col overflow-y-auto">
             {folders
@@ -421,6 +448,7 @@ export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: nu
         <Folders />
       </div>
 
+      <CloudStatusButton />
       <div className="flex items-center gap-1 border-t border-white/5 pt-2.5">
         <span title="Your documents and everything Voidcat learned from them are encrypted, with the key in this Mac's Keychain." className="flex min-w-0 flex-1 items-center gap-1.5 pl-2 text-[12px] text-rail-faint">
           <LockKeyhole aria-hidden className="size-3.5 shrink-0" />

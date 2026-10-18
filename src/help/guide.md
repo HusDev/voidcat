@@ -99,5 +99,15 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - For **chat**, the model menu in the chat box in [Ask](#/ask) lists every model installed in Ollama, plus your cloud model.
 - Cloud models need an OpenRouter key, added in [Connected AIs](#/connections). The key is kept in your Keychain.
 
+## Voidcat Cloud
+- Voidcat Cloud lets you open your library in a browser. Connect this Mac in [Settings](#/settings) → Voidcat Cloud: type your email and click **Email me a sign-in link** (open the link on this Mac), or click **Sign in with Google**. Both open your browser and hand you back to Voidcat.
+- Everything is locked on your Mac before it leaves; the cloud only keeps locked copies. Your Mac's recovery key opens the cloud library too.
+- Once connected, the bottom of the sidebar says **Voidcat Cloud** and when it last synced. Click it to go to Settings.
+- Each document shows where it is: a grey cloud with a tick means **In the cloud**, an arrow means it's uploading, a red cloud means it **Couldn't upload** (click **Try again** on its card). Documents you keep **Only on this Mac** have no mark in the sidebar.
+- To keep one document only on this Mac, turn off **In the cloud** in its tab, use the cloud button on its card in the [Library](#/), or right-click it in the sidebar and untick **Keep in the cloud**. Its cloud copy is deleted; nothing changes on the Mac.
+- **New documents go to the cloud** (Settings → Voidcat Cloud) decides what happens to documents you add later.
+- **Disconnect this Mac** stops syncing and keeps the cloud copy for your browsers. **Delete the cloud copy** removes every locked copy from the cloud.
+- If your account already has a cloud library started somewhere else, Voidcat asks for that library's recovery key to join it. Your Mac then uses that key, and its old recovery key stops working.
+
 ## Settings
-- [Settings](#/settings) has: Appearance (Auto, Light, Dark), Privacy (Hide private details, Catch names the rules miss), Your data (Export everything, Recovery key) and Reminders (Open Voidcat when you log in).
+- [Settings](#/settings) has: Appearance (Auto, Light, Dark), Privacy (Hide private details, Catch names the rules miss), Voidcat Cloud (connect this Mac, New documents go to the cloud), Your data (Export everything, Recovery key) and Reminders (Open Voidcat when you log in).

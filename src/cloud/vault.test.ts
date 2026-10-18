@@ -30,4 +30,11 @@ describe("browser vault", () => {
     await expect(open(keys.files, sealed)).rejects.toThrow();
     expect((await seal(keys.files, new Uint8Array([1, 2]))).length).toBe(6 + 12 + 2 + 16);
   });
+
+  it("opens a record the Mac sealed (the same hex is pinned in vault.rs)", async () => {
+    const keys = await keysFrom(seven);
+    const sealed = new Uint8Array("564341540100ce21f680e3a7516ceccc87bf7f18cebcc539dd09036aaaa5eb7b9c3482bf8ec5b409548e140db2716e9992389a1a".match(/../g)!.map((h) => parseInt(h, 16)));
+    expect(await openText(keys.records, sealed)).toBe("hello from the Mac");
+    await expect(open(keys.files, sealed)).rejects.toThrow();
+  });
 });

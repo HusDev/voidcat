@@ -12,8 +12,8 @@ use std::{
 
 pub struct Store {
     pub db: Mutex<Connection>,
-    files: PathBuf,
-    vault: crate::vault::Vault,
+    pub(crate) files: PathBuf,
+    pub(crate) vault: crate::vault::Vault,
 }
 
 #[derive(Serialize)]
@@ -370,6 +370,7 @@ impl Store {
         db.execute_batch(crate::labels::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::apps::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::people::SCHEMA).map_err(|e| e.to_string())?;
+        db.execute_batch(crate::cloud::SCHEMA).map_err(|e| e.to_string())?;
         let store = Store {
             db: Mutex::new(db),
             files,

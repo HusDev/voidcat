@@ -16,6 +16,8 @@ const NONCE: usize = 12;
 pub struct Vault {
     master: [u8; 32],
     files: Aes256Gcm,
+    /// Locks what goes to Voidcat Cloud as records (a document's details, facts and pages); the browser derives the same.
+    records: Aes256Gcm,
     /// For SQLCipher's `pragma key = "x'…'"`: 32 bytes as hex, used as the raw key.
     pub db_key: String,
 }
@@ -27,6 +29,7 @@ impl Vault {
         Vault {
             master: *master,
             files: Aes256Gcm::new_from_slice(&files_key).expect("a 32-byte key"),
+            records: Aes256Gcm::new_from_slice(&derive(b"records")).expect("a 32-byte key"),
             db_key: hex::encode(derive(b"database")),
         }
     }
@@ -82,13 +85,7 @@ impl Vault {
     }
 
     pub fn encrypt(&self, plain: &[u8]) -> Result<Vec<u8>, String> {
-        let nonce = Nonce::<Aes256Gcm>::generate();
-        let sealed = self.files.encrypt(&nonce, plain).map_err(|_| "Couldn't encrypt the file.".to_string())?;
-        let mut out = Vec::with_capacity(MAGIC.len() + NONCE + sealed.len());
-        out.extend_from_slice(MAGIC);
-        out.extend_from_slice(&nonce);
-        out.extend_from_slice(&sealed);
-        Ok(out)
+        seal(&self.files, plain)
     }
 
     /// A stored file's contents. Files from before encryption are returned as they are.
@@ -96,15 +93,36 @@ impl Vault {
         if !is_encrypted(&data) {
             return Ok(data);
         }
-        let rest = &data[MAGIC.len()..];
-        if rest.len() < NONCE {
-            return Err("This file is damaged.".into());
-        }
-        let nonce = Nonce::<Aes256Gcm>::try_from(&rest[..NONCE]).map_err(|_| "This file is damaged.".to_string())?;
-        self.files
-            .decrypt(&nonce, &rest[NONCE..])
-            .map_err(|_| "This file is damaged or was changed outside Voidcat.".to_string())
+        unseal(&self.files, &data).map_err(|_| "This file is damaged or was changed outside Voidcat.".to_string())
     }
+
+    /// Locks a record for Voidcat Cloud, in the same format as files.
+    pub fn seal_record(&self, plain: &[u8]) -> Result<Vec<u8>, String> {
+        seal(&self.records, plain)
+    }
+
+    pub fn open_record(&self, data: &[u8]) -> Result<Vec<u8>, String> {
+        unseal(&self.records, data)
+    }
+}
+
+fn seal(key: &Aes256Gcm, plain: &[u8]) -> Result<Vec<u8>, String> {
+    let nonce = Nonce::<Aes256Gcm>::generate();
+    let sealed = key.encrypt(&nonce, plain).map_err(|_| "Couldn't encrypt.".to_string())?;
+    let mut out = Vec::with_capacity(MAGIC.len() + NONCE + sealed.len());
+    out.extend_from_slice(MAGIC);
+    out.extend_from_slice(&nonce);
+    out.extend_from_slice(&sealed);
+    Ok(out)
+}
+
+fn unseal(key: &Aes256Gcm, data: &[u8]) -> Result<Vec<u8>, String> {
+    if !is_encrypted(data) || data.len() < MAGIC.len() + NONCE {
+        return Err("This item is damaged.".into());
+    }
+    let rest = &data[MAGIC.len()..];
+    let nonce = Nonce::<Aes256Gcm>::try_from(&rest[..NONCE]).map_err(|_| "This item is damaged.".to_string())?;
+    key.decrypt(&nonce, &rest[NONCE..]).map_err(|_| "This item is damaged or was locked with another key.".to_string())
 }
 
 /// Why the key couldn't be loaded.
@@ -171,6 +189,8 @@ pub fn is_encrypted_db(path: &Path) -> bool {
 mod tests {
     use super::*;
 
+    const SEALED_HELLO: &str = "564341540100ce21f680e3a7516ceccc87bf7f18cebcc539dd09036aaaa5eb7b9c3482bf8ec5b409548e140db2716e9992389a1a";
+
     #[test]
     fn files_round_trip_and_detect_changes() {
         let v = Vault::from_master(&[7; 32]);
@@ -214,6 +234,17 @@ mod tests {
         let v = Vault::from_master(&[7; 32]);
         assert_eq!(v.db_key, "11776c2d26779b5eb27bde41c7199f4b0559b1627484b492e82ababb918f4307");
         assert_eq!(v.recovery_code(), "A4DQ-OBYH-A4DQ-OBYH-A4DQ-OBYH-A4DQ-OBYH-A4DQ-OBYH-A4DQ-OBYH-A4DQ");
+    }
+
+    /// A record sealed here opens in the browser: `src/cloud/vault.test.ts` opens this same hex with master [7; 32].
+    #[test]
+    fn records_open_in_the_browser() {
+        let v = Vault::from_master(&[7; 32]);
+        let pinned = hex::decode(SEALED_HELLO).unwrap();
+        assert_eq!(v.open_record(&pinned).unwrap(), b"hello from the Mac");
+        assert!(v.decrypt(pinned).is_err(), "the files key doesn't open records");
+        let fresh = v.seal_record(b"hello from the Mac").unwrap();
+        assert_eq!(v.open_record(&fresh).unwrap(), b"hello from the Mac");
     }
 
     #[test]

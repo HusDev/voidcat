@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import { getDocumentProxy } from "unpdf";
 import { DocChat } from "../components/SideChat";
 import { LabelChips } from "../components/LabelChips";
+import { KeepInCloud } from "../components/CloudMark";
 import { FolderPicker } from "../components/FolderPicker";
 import { RenameInput } from "../components/RenameInput";
 import { ReviewPanel } from "../components/ReviewPanel";
@@ -411,6 +412,7 @@ export function Viewer() {
             <MessageSquareText aria-hidden className="size-4" /> Ask
           </button>
         </div>
+        <KeepInCloud id={doc.id} />
         <button
           type="button"
           onClick={async () => setMoving(moving ? null : await listFolders())}

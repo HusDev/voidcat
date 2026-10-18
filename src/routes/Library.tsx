@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Download, Eye, FileText, FolderInput, FolderSync, LoaderCircle, Pencil, Search, Sparkles, Trash2, Upload } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { CloudCardMark, CloudToggle } from "../components/CloudMark";
 import { FolderPicker } from "../components/FolderPicker";
 import { LabelChips } from "../components/LabelChips";
 import { RenameInput } from "../components/RenameInput";
@@ -375,6 +376,7 @@ export function Library() {
                           {done} of {done + left} approved
                         </span>
                       </div>
+                      <CloudCardMark id={d.id} />
                       <button
                         type="button"
                         onClick={() => openDocument(d.id)}
@@ -552,6 +554,7 @@ export function Library() {
                       <Private>{d.fileName}</Private> · {formatSize(d.sizeBytes)}
                       {d.pageCount ? ` · ${d.pageCount} ${d.pageCount === 1 ? "page" : "pages"}` : ""} · added {formatDay(d.addedAt)}
                     </span>
+                    <CloudCardMark id={d.id} />
 
                     {busy(step) && (
                       <span role="status" className="flex items-center gap-1.5 text-[13px] text-link">
@@ -618,6 +621,7 @@ export function Library() {
                         )}
                         {/* Less frequent actions: icons with a label on hover, all on one line. */}
                         <span className="ml-auto flex items-center gap-0.5">
+                          <CloudToggle id={d.id} />
                           <button
                             type="button"
                             onClick={() => setMoving(moving === d.id ? null : d.id)}

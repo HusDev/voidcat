@@ -57,6 +57,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 21. **Side chats:** "Ask about this document" in a document tab, "Ask about me" on Me.
 22. **Labels:** expired / ended from dates, duplicates by text similarity, unsigned only with a "sign here" request in a signable kind of document plus the vision model, incomplete from "page X of Y", not useful only when no facts were found.
 23. **Me redesign** (dark ID header, missing chips, section cards, timeline) and Contacts limited to people you can reach.
+24. **Voidcat Cloud, Mac side (18 Oct, branch `cloud/day-1`):** Settings → Voidcat Cloud connects the Mac (email link or Google, both through the browser and a localhost listener); every document goes up as a sealed record + its already-sealed file; per-document "In the cloud" switch (document tab, card, tree menu); marks on cards and tree rows; sidebar status above "Encrypted"; "New documents go to the cloud"; Disconnect; Delete the cloud copy; Join a cloud library made elsewhere (re-locks the Mac with that key, backup kept beside the library). The browser can't show synced documents yet (Day 2).
 
 ## Next, in order
 1. **GitLab hackathon work** (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):
@@ -82,6 +83,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - Explain in plain words; no jargon in the UI.
 
 ## Gotchas
+- Voidcat Cloud on the Mac: Firebase's sign-in pop-ups don't work inside the app's window, so sign-in happens in the browser and comes back to `http://localhost:<port>/signin|google/<nonce>` (`cloud_signin.rs`, 20 minutes). The email link only works on the Mac that asked for it, while Voidcat is open. CSP `connect-src` allows identitytoolkit, securetoken, firestore and firebasestorage. Rules are deployed with the Firebase Rules REST API (no firebase CLI): `firestore.rules` → release `cloud.firestore`, `storage.rules` → `firebase.storage/voidcat-cloud-files`. Bucket CORS allows GET from localhost:1430/1420 and tauri://localhost.
 - The library is encrypted: never read `files/` or `voidcat.db` directly; use `bytes_of` / `contents_of`, and for scripts against a copy use the ignored test `copy_check` (`VOIDCAT_COPY=<dir> cargo test copy_check -- --ignored`, throwaway key, prints counts only).
 - Dev builds are ad-hoc signed: after a Rust rebuild macOS asks again for the "library-key" Keychain item (Always Allow). Refusing shows a dialog and quits.
 - Timing tests take the fastest of three runs (`fastest` in `privacy.test.ts`); a single run failed at random when the machine was busy.

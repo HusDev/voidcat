@@ -2,6 +2,7 @@ import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { Archive, BellRing, Cloud, Check, Copy, EyeOff, KeyRound, LoaderCircle, Monitor, Moon, ScanFace, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCloud } from "../cloud/CloudGate";
+import { MacCloud } from "../components/MacCloud";
 import { exportEverything, hasLibrary, recoveryCode } from "../lib/library";
 import { MODEL_SIZE, setNameCheck, useNameCheck } from "../lib/nameCheck";
 import { type Theme, useTheme } from "../lib/theme";
@@ -269,6 +270,7 @@ export function Settings() {
       </section>
 
       <CloudAccount />
+      <MacCloud />
 
       <YourData />
 

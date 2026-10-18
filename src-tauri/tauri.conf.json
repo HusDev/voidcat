@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost https://openrouter.ai http://localhost:11434 http://127.0.0.1:11434 https://huggingface.co https://*.huggingface.co https://*.hf.co"
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost https://openrouter.ai http://localhost:11434 http://127.0.0.1:11434 https://huggingface.co https://*.huggingface.co https://*.hf.co https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com"
     }
   },
   "bundle": {

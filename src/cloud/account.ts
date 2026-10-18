@@ -16,7 +16,13 @@ export async function libraryState(uid: string): Promise<LibraryState> {
   const snap = await getDoc(doc(firebase().db, "users", uid));
   if (!snap.exists()) return { kind: "none" };
   const keys = await loadKeys(uid);
-  return keys ? { kind: "unlocked", keys } : { kind: "locked" };
+  if (!keys) return { kind: "locked" };
+  // A Mac may have taken the library over with its own key since: then this browser's key no longer opens it.
+  if (!(await opens(keys, snap.get("check") as Bytes | undefined))) {
+    await forgetKeys(uid);
+    return { kind: "locked" };
+  }
+  return { kind: "unlocked", keys };
 }
 
 /** Makes a new library: a fresh key, its sealed check in the cloud, the key kept in this browser. Returns the recovery key to show once. */
@@ -37,13 +43,18 @@ export async function unlockLibrary(uid: string, code: string): Promise<Keys> {
   const snap = await getDoc(doc(firebase().db, "users", uid));
   const check = snap.get("check") as Bytes | undefined;
   if (!check) throw new Error("There's no library on this account yet.");
-  try {
-    if ((await openText(keys.records, check.toUint8Array())) !== CHECK) throw new Error();
-  } catch {
-    throw new Error("That recovery key doesn't open this library. Check each group of four and try again.");
-  }
+  if (!(await opens(keys, check))) throw new Error("That recovery key doesn't open this library. Check each group of four and try again.");
   await saveKeys(uid, keys);
   return keys;
+}
+
+async function opens(keys: Keys, check: Bytes | undefined) {
+  if (!check) return false;
+  try {
+    return (await openText(keys.records, check.toUint8Array())) === CHECK;
+  } catch {
+    return false;
+  }
 }
 
 export const forgetThisBrowser = (uid: string) => forgetKeys(uid);
