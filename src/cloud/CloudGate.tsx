@@ -113,10 +113,7 @@ function OpenLibrary({ user, keys, children }: { user: User; keys: Keys; childre
     keys,
     library,
     signOut: () => signOutOfCloud(),
-    forget: async () => {
-      await forgetThisBrowser(user.uid);
-      await signOutOfCloud();
-    },
+    forget: () => forgetThisBrowser(user.uid),
   };
   return <CloudContext.Provider value={session}>{children}</CloudContext.Provider>;
 }

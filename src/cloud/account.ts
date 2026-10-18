@@ -1,4 +1,4 @@
-import { Bytes, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { Bytes, clearIndexedDbPersistence, doc, getDoc, serverTimestamp, setDoc, terminate } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { apiUrl } from "./config";
 import { firebase, signOutOfCloud } from "./firebase";
@@ -59,7 +59,18 @@ async function opens(keys: Keys, check: Bytes | undefined) {
   }
 }
 
-export const forgetThisBrowser = (uid: string) => forgetKeys(uid);
+/**
+ * Leaves nothing behind in this browser: the key, the sign-in, and the offline copy of the (locked) records. The page
+ * reloads, since the database connection can't be used after its copy is cleared.
+ */
+export async function forgetThisBrowser(uid: string) {
+  await forgetKeys(uid);
+  await signOutOfCloud().catch(() => {});
+  const { db } = firebase();
+  await terminate(db);
+  await clearIndexedDbPersistence(db).catch(() => {});
+  location.replace(location.pathname);
+}
 
 /**
  * Deletes the account: the API removes every sealed record, every file, the read count and the sign-in; then this
@@ -69,6 +80,5 @@ export async function deleteAccount(user: User) {
   const res = await fetch(`${apiUrl}/v1/account`, { method: "DELETE", headers: { Authorization: `Bearer ${await user.getIdToken(true)}` } });
   const body = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) throw new Error(body.error ?? `Couldn't delete the account (${res.status}).`);
-  await forgetKeys(user.uid);
-  await signOutOfCloud().catch(() => {});
+  await forgetThisBrowser(user.uid);
 }

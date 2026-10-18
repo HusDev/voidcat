@@ -22,6 +22,8 @@ create table if not exists cloud_account (
 );
 -- The account the uploads below belong to; kept after disconnecting, so another account starts over.
 create table if not exists cloud_last_uid (value text not null);
+-- The random number sealed in each browser edit already applied: a copied edit put back is ignored.
+create table if not exists cloud_edits_seen (nonce text primary key, at text not null default (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')));
 -- One row per document: whether it should be in the cloud, and what was last uploaded (hashes of the record's plain
 -- JSON and of the file). No foreign key, so a removed document's row stays until its cloud copy is deleted.
 create table if not exists cloud_sync (
@@ -457,7 +459,26 @@ impl Store {
     /// Applies one browser edit. Problems don't stop the sync: the edit is skipped and the browser's copy is
     /// replaced by the Mac's on the next upload.
     pub fn cloud_apply(&self, sealed: &[u8]) -> Result<Applied, String> {
-        let edit: Edit = match serde_json::from_slice(&self.vault.open_record(sealed)?) {
+        let value: serde_json::Value = match serde_json::from_slice(&self.vault.open_record(sealed)?) {
+            Ok(v) => v,
+            Err(e) => return Ok(Applied::Skipped { reason: format!("Unknown change: {e}") }),
+        };
+        // Each edit carries a random number; one already seen is a replay (someone with the sign-in, not the key,
+        // can copy a sealed edit, but can't make a new one).
+        let Some(nonce) = value.get("n").and_then(|n| n.as_str()).filter(|n| n.len() >= 16).map(str::to_string) else {
+            return Ok(Applied::Skipped { reason: "A change without its one-time number.".into() });
+        };
+        let fresh = self
+            .db
+            .lock()
+            .unwrap()
+            .execute("insert or ignore into cloud_edits_seen (nonce) values (?1)", [&nonce])
+            .map_err(|e| e.to_string())?
+            == 1;
+        if !fresh {
+            return Ok(Applied::Skipped { reason: "This change was applied already.".into() });
+        }
+        let edit: Edit = match serde_json::from_value(value) {
             Ok(e) => e,
             Err(e) => return Ok(Applied::Skipped { reason: format!("Unknown change: {e}") }),
         };
@@ -640,7 +661,12 @@ mod tests {
     #[test]
     fn applies_browser_edits_and_imports_browser_files() {
         let (_dir, store, id) = library(3);
-        let edit = |json: &str| store.cloud_apply(&store.vault.seal_record(json.as_bytes()).unwrap()).unwrap();
+        // Each edit gets its one-time number, as a browser adds it.
+        let edit = |json: &str| {
+            let mut v: serde_json::Value = serde_json::from_str(json).unwrap();
+            v["n"] = serde_json::Value::String(uuid::Uuid::new_v4().to_string());
+            store.cloud_apply(&store.vault.seal_record(v.to_string().as_bytes()).unwrap()).unwrap()
+        };
 
         assert_eq!(edit(&format!(r#"{{"op":"rename_document","id":"{id}","title":"Rental contract"}}"#)), Applied::Done);
         assert_eq!(edit(&format!(r#"{{"op":"file_document","id":"{id}","area":"Home","name":"Rental"}}"#)), Applied::Done);
@@ -689,6 +715,21 @@ mod tests {
 
         assert_eq!(edit(&format!(r#"{{"op":"remove_document","id":"{new_id}"}}"#)), Applied::Done);
         assert!(store.bytes_of(&new_id).is_err());
+    }
+
+    #[test]
+    fn a_copied_edit_is_applied_once() {
+        let (_dir, store, id) = library(3);
+        let sealed = store
+            .vault
+            .seal_record(format!(r#"{{"op":"rename_document","id":"{id}","title":"Rental contract","n":"0d1c2b3a-4f5e-6d7c-8b9a-000000000001"}}"#).as_bytes())
+            .unwrap();
+        assert_eq!(store.cloud_apply(&sealed).unwrap(), Applied::Done);
+        store.rename_document(&id, "Renamed on the Mac").unwrap();
+        assert!(matches!(store.cloud_apply(&sealed).unwrap(), Applied::Skipped { .. }), "the copy is ignored");
+        let unnumbered = store.vault.seal_record(format!(r#"{{"op":"remove_document","id":"{id}"}}"#).as_bytes()).unwrap();
+        assert!(matches!(store.cloud_apply(&unnumbered).unwrap(), Applied::Skipped { .. }));
+        assert!(store.bytes_of(&id).is_ok(), "nothing was removed");
     }
 
     #[test]
