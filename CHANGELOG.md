@@ -25,3 +25,11 @@ First version, built for the GitLab Transcend Hackathon.
 - Labels: expired, ended, duplicate, unsigned, incomplete and not useful, checked strictly, with duplicate copies grouped.
 - Look: a white line cat with gold eyes, black-and-white actions, light and dark themes.
 - Pipeline: verify, secure, govern (privacy guard), package and release stages.
+- Voidcat Cloud (optional, end-to-end encrypted): open your library in any browser. Everything is locked on your device before upload; Google Cloud (Firestore, Cloud Storage, in Belgium) only stores locked bytes. Sign in with an email link or Google; the recovery key opens the library. Live at https://voidcat-web-1094942921673.europe-west1.run.app (!6).
+- Mac sync: connect the Mac in Settings → Voidcat Cloud, choose per document whether it's in the cloud or only on the Mac, with marks on every file and a sync status in the sidebar (!6).
+- Browser library: folders, documents, search and fact review in the browser; drop in files; changes reach the Mac (!6).
+- Read now: a file added in the browser is read and masked in the browser (OCR included), and only masked text goes to Gemini in Belgium to file it; the Mac re-reads scans with Apple Vision (!7, !10).
+- Ask in the browser: Gemini answers from masked context, unmasked in the browser (!10).
+- Your data: Export everything and Delete my account in the browser, plain-words Privacy Policy and Terms, and the browser locks after 30 minutes away (!8).
+- Security: only verified emails reach cloud data, browser edits can't be replayed, `SECURITY.md` (!9).
+- Pipeline: a deploy stage ships the web app and API to Cloud Run on every merge to `main`, through Workload Identity Federation (no stored keys).
