@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Download, Eye, FileText, FolderInput, FolderSync, LoaderCircle, Pencil, Search, Sparkles, Trash2, Upload } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useCloudStatus } from "../cloud/mac";
 import { CloudCardMark, CloudToggle } from "../components/CloudMark";
 import { FolderPicker } from "../components/FolderPicker";
 import { LabelChips } from "../components/LabelChips";
@@ -64,6 +65,9 @@ function Snippet({ text }: { text: string }) {
 }
 
 export function Library() {
+  // Connected to Voidcat Cloud with new documents going up: the drop zone says so.
+  const cloud = useCloudStatus();
+  const cloudOn = !!cloud.account?.newDocuments;
   const [docs, setDocs] = useState<Document[]>([]);
   const [facts, setFacts] = useState<Fact[]>([]);
   const [pending, setPending] = useState<Fact[]>([]);
@@ -310,7 +314,10 @@ export function Library() {
             <Upload aria-hidden className="size-10 text-link" strokeWidth={1.6} />
             <div className="flex flex-col gap-0.5">
               <span className="font-semibold">{dragging ? "Let go to add" : "Drop any document here"}</span>
-              <span className="text-[13.5px] text-ink-2">PDF, photo, scan or email. It's read and filed on this Mac; nothing is uploaded.</span>
+              <span className="text-[13.5px] text-ink-2">
+                PDF, photo, scan or email. It's read and filed on this Mac;{" "}
+                {cloudOn ? "a locked copy goes to Voidcat Cloud." : "nothing is uploaded."}
+              </span>
             </div>
             <button
               type="button"
