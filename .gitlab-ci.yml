@@ -1,4 +1,4 @@
-# Voidcat's pipeline: verify → secure → govern → package → release.
+# Voidcat's pipeline: verify → secure → govern → package → deploy → release.
 # Runs on merge requests, on branches without an open merge request, and on version tags.
 
 workflow:
@@ -9,7 +9,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH
     - if: $CI_COMMIT_TAG
 
-stages: [verify, secure, govern, package, release]
+stages: [verify, secure, govern, package, deploy, release]
 
 include:
   - template: Jobs/SAST.gitlab-ci.yml
@@ -94,6 +94,69 @@ mcp-server:
   artifacts:
     paths: [out/]
     expire_in: 1 month
+
+# ——— deploy (main only): Voidcat Cloud's web app on Cloud Run ———
+# No keys are stored: GitLab's ID token is exchanged for a short-lived Google credential (Workload Identity
+# Federation, pool "gitlab", provider "gitlab-com"), which only main of this project can use, as the
+# gitlab-deploy service account.
+
+.gcp:
+  image: google/cloud-sdk:589.0.0-slim
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  id_tokens:
+    GCP_ID_TOKEN:
+      aud: https://iam.googleapis.com/projects/1094942921673/locations/global/workloadIdentityPools/gitlab/providers/gitlab-com
+  variables:
+    GCP_PROJECT: voidcat-cloud
+    GCP_REGION: europe-west1
+  before_script:
+    - echo "$GCP_ID_TOKEN" > .gitlab_id_token
+    - gcloud iam workload-identity-pools create-cred-config projects/1094942921673/locations/global/workloadIdentityPools/gitlab/providers/gitlab-com
+        --service-account=gitlab-deploy@voidcat-cloud.iam.gserviceaccount.com --credential-source-file=.gitlab_id_token --output-file=.gcp_credentials.json
+    - gcloud auth login --cred-file=.gcp_credentials.json --quiet
+    - gcloud config set project "$GCP_PROJECT"
+
+# The Firebase web settings (they name the project; not secret) come from Firebase itself, not from the repo.
+web-config:
+  extends: .gcp
+  stage: package
+  needs: []
+  script:
+    - >
+      curl -fsS -H "Authorization: Bearer $(gcloud auth print-access-token)"
+      "https://firebase.googleapis.com/v1beta1/projects/$GCP_PROJECT/webApps/1:1094942921673:web:97124aa25053ec04be8e18/config"
+      | python3 -c 'import json,sys; c=json.load(sys.stdin); print("\n".join(f"VITE_FIREBASE_{k}={c[v]}" for k,v in [("API_KEY","apiKey"),("AUTH_DOMAIN","authDomain"),("PROJECT_ID","projectId"),("APP_ID","appId")]))'
+      > web.env
+    # Files live in our own bucket in Belgium, not Firebase's default one.
+    - echo "VITE_FIREBASE_STORAGE_BUCKET=voidcat-cloud-files" >> web.env
+    - cut -d= -f1 web.env
+  artifacts:
+    reports:
+      dotenv: web.env
+
+web-build:
+  stage: package
+  needs: [web-config]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - bun install --frozen-lockfile
+    - bun run build
+    - sh deploy/web/stage.sh build/web
+  artifacts:
+    paths: [build/web/]
+    expire_in: 1 week
+
+deploy-web:
+  extends: .gcp
+  stage: deploy
+  needs: [web-build]
+  environment:
+    name: production
+    url: https://voidcat-web-1094942921673.europe-west1.run.app
+  script:
+    - gcloud run deploy voidcat-web --source build/web --region "$GCP_REGION" --allow-unauthenticated --port 8080 --cpu 1 --memory 256Mi --max-instances 3 --quiet
 
 # ——— release (version tags only) ———
 
