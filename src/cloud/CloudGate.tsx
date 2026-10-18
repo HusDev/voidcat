@@ -1,10 +1,11 @@
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { Check, Copy, KeyRound, LoaderCircle, LogIn, Mail } from "lucide-react";
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { Logo } from "../components/Logo";
 import { createLibrary, forgetThisBrowser, libraryState, unlockLibrary } from "./account";
 import { emailLinkReturn, finishEmailLink, firebase, sendEmailLink, signInWithGoogle, signOutOfCloud } from "./firebase";
 import type { Keys } from "./vault";
+import { legalPage } from "./Legal";
 import { openWebLibrary, type WebLibrary } from "./webLibrary";
 
 /** The signed-in, unlocked cloud library the app runs on in a browser. */
@@ -24,16 +25,55 @@ function Screen({ title, children }: { title: string; children: ReactNode }) {
         <Logo size={52} onPage />
         <h1 className="m-0 text-[28px] font-light">{title}</h1>
         {children}
+        <p className="m-0 mt-4 flex gap-4 text-[12px] text-ink-2">
+          <a href="#/privacy" className="underline">
+            Privacy Policy
+          </a>
+          <a href="#/terms" className="underline">
+            Terms
+          </a>
+        </p>
       </div>
     </main>
   );
+}
+
+/** No mouse, keyboard or touch for this long (while the tab is open) locks the library. */
+const IDLE_MS = 30 * 60_000;
+
+/**
+ * Locks after 30 minutes without use: the open library is closed, so nothing unlocked stays in memory, until
+ * "Open my library". A hidden tab counts as unused.
+ */
+function useIdleLock(open: boolean) {
+  const [state, setState] = useState({ on: false, at: 0 });
+  const last = useRef(Date.now());
+  useEffect(() => {
+    if (!open) return;
+    last.current = Date.now();
+    const seen = () => {
+      last.current = Date.now();
+    };
+    const events = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
+    for (const e of events) window.addEventListener(e, seen, { passive: true });
+    const check = setInterval(() => {
+      if (Date.now() - last.current > IDLE_MS) setState((s) => ({ ...s, on: true }));
+    }, 30_000);
+    return () => {
+      for (const e of events) window.removeEventListener(e, seen);
+      clearInterval(check);
+    };
+  }, [open]);
+  return { ...state, unlock: () => setState({ on: false, at: Date.now() }) };
 }
 
 /** Loads and unlocks the records, then shows the app on them. */
 function OpenLibrary({ user, keys, children }: { user: User; keys: Keys; children: ReactNode }) {
   const [library, setLibrary] = useState<WebLibrary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const locked = useIdleLock(!!library);
   useEffect(() => {
+    if (locked.on) return;
     let open: WebLibrary | null = null;
     let gone = false;
     openWebLibrary(user.uid, keys).then(
@@ -47,8 +87,21 @@ function OpenLibrary({ user, keys, children }: { user: User; keys: Keys; childre
     return () => {
       gone = true;
       open?.close();
+      setLibrary(null);
     };
-  }, [user.uid, keys]);
+  }, [user.uid, keys, locked.on, locked.at]);
+  if (locked.on)
+    return (
+      <Screen title="Locked">
+        <p className="m-0 text-[14.5px] text-ink-2">Voidcat locked your library after 30 minutes away. Nothing unlocked stays in this tab.</p>
+        <button type="button" onClick={locked.unlock} className={button}>
+          <KeyRound aria-hidden className="size-4" /> Open my library
+        </button>
+        <button type="button" onClick={() => signOutOfCloud()} className="text-[13px] text-ink-2 underline">
+          Sign out
+        </button>
+      </Screen>
+    );
   if (!library)
     return (
       <Screen title="Opening your library">
@@ -73,6 +126,17 @@ function OpenLibrary({ user, keys, children }: { user: User; keys: Keys; childre
  * this browser with the recovery key (what opens it). Only then does the app appear.
  */
 export function CloudGate({ children }: { children: ReactNode }) {
+  const [hash, setHash] = useState(location.hash);
+  useEffect(() => {
+    const on = () => setHash(location.hash);
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
+  const legal = legalPage(hash);
+  return legal ?? <Gate>{children}</Gate>;
+}
+
+function Gate({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [step, setStep] = useState<Step>({ kind: "loading" });
   const [busy, setBusy] = useState(false);

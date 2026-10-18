@@ -17,3 +17,6 @@ export const cloudConfigured = !!(config.apiKey && config.projectId && config.ap
 
 /** voidcat-api on Cloud Run ("Read now in the cloud"). */
 export const apiUrl = (import.meta.env.VITE_VOIDCAT_API as string | undefined) ?? "https://voidcat-api-1094942921673.europe-west1.run.app";
+
+/** Voidcat Cloud in a browser. */
+export const WEB = "https://voidcat-web-1094942921673.europe-west1.run.app";

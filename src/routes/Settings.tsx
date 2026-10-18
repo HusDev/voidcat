@@ -1,6 +1,7 @@
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { Archive, BellRing, Cloud, Check, Copy, EyeOff, KeyRound, LoaderCircle, Monitor, Moon, ScanFace, Sun } from "lucide-react";
+import { Archive, BellRing, Cloud, Check, Copy, EyeOff, KeyRound, LoaderCircle, Monitor, Moon, ScanFace, Sun, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { deleteAccount } from "../cloud/account";
 import { useCloud } from "../cloud/CloudGate";
 import { MacCloud } from "../components/MacCloud";
 import { exportEverything, onMac as hasLibrary, recoveryCode } from "../lib/library";
@@ -146,10 +147,44 @@ function YourData() {
   );
 }
 
-/** In the browser: the cloud account this library is opened with. */
+/** In the browser: the cloud account this library is opened with, your data, and leaving. */
 function CloudAccount() {
   const cloud = useCloud();
+  const [exporting, setExporting] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   if (!cloud) return null;
+
+  const exportAll = async () => {
+    setError(null);
+    setExporting("Unlocking your documents…");
+    try {
+      const { zip, count } = await cloud.library.exportZip((done, total) => setExporting(`Unlocking ${done} of ${total}…`));
+      const url = URL.createObjectURL(new Blob([zip.buffer as ArrayBuffer], { type: "application/zip" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Voidcat documents ${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setExporting(`Saved ${count} document${count === 1 ? "" : "s"}. The zip isn't encrypted: keep it somewhere safe.`);
+    } catch (e) {
+      setExporting(null);
+      setError(`Couldn't export: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
+  const remove = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteAccount(cloud.user);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setDeleting(false);
+    }
+  };
+
   return (
     <section aria-labelledby="cloud-account" className="flex flex-col gap-3">
       <h2 id="cloud-account" className="m-0 text-[15px] font-semibold">
@@ -168,6 +203,80 @@ function CloudAccount() {
           Forget this browser
         </button>
       </div>
+      <div className="flex flex-col gap-2 rounded-xl border border-line bg-card px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <Archive aria-hidden className="size-4.5 shrink-0 text-ink-2" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-[14px] font-semibold">Export everything</span>
+            <span className="text-[12.5px] text-ink-2">All your documents as one zip, sorted into their folders, unlocked in this browser.</span>
+          </span>
+          <button
+            type="button"
+            disabled={!!exporting && exporting.endsWith("…")}
+            onClick={exportAll}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-[13px] font-semibold hover:border-ink-2 disabled:opacity-40"
+          >
+            {exporting?.endsWith("…") && <LoaderCircle aria-hidden className="size-3.5 animate-spin" />}
+            Export…
+          </button>
+        </div>
+        {exporting && <p className="m-0 pl-7.5 text-[12.5px] text-ink-2">{exporting}</p>}
+      </div>
+      <div className="flex flex-col gap-2.5 rounded-xl border border-danger/40 bg-card px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <Trash2 aria-hidden className="size-4.5 shrink-0 text-danger" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-[14px] font-semibold">Delete my account</span>
+            <span className="text-[12.5px] text-ink-2">
+              Removes your cloud library, every file, and your sign-in, for good. Your Mac keeps its own library. Export first if you want a copy.
+            </span>
+          </span>
+          {confirm === null && (
+            <button type="button" onClick={() => setConfirm("")} className="shrink-0 rounded-lg border border-danger px-3 py-1.5 text-[13px] font-semibold text-danger">
+              Delete…
+            </button>
+          )}
+        </div>
+        {confirm !== null && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (confirm.trim().toUpperCase() === "DELETE") remove();
+            }}
+            className="flex flex-wrap items-center gap-2 pl-7.5"
+          >
+            <label htmlFor="delete-confirm" className="text-[12.5px]">
+              Type <b>DELETE</b> to confirm
+            </label>
+            <input
+              id="delete-confirm"
+              value={confirm}
+              onChange={(e) => setConfirm(e.currentTarget.value)}
+              autoComplete="off"
+              className="w-32 rounded-lg border border-line-strong bg-card px-2.5 py-1.5 text-[13px] outline-none focus:border-danger"
+            />
+            <button
+              type="submit"
+              disabled={deleting || confirm.trim().toUpperCase() !== "DELETE"}
+              className="flex items-center gap-1.5 rounded-lg bg-danger px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-40"
+            >
+              {deleting && <LoaderCircle aria-hidden className="size-3.5 animate-spin" />} Delete everything
+            </button>
+            <button type="button" onClick={() => setConfirm(null)} className="text-[13px] text-ink-2 underline">
+              Keep my account
+            </button>
+          </form>
+        )}
+      </div>
+      {error && <p className="m-0 text-[12.5px] text-danger">{error}</p>}
+      <p className="m-0 flex gap-4 text-[12.5px] text-ink-2">
+        <a href="#/privacy" className="underline">
+          Privacy Policy
+        </a>
+        <a href="#/terms" className="underline">
+          Terms
+        </a>
+      </p>
     </section>
   );
 }

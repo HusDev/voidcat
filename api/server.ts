@@ -11,12 +11,14 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { AREAS, CLOUD, SYSTEM } from "../src/lib/filing";
 import { type Filed, month, parseFiled, parseRequest } from "./read";
 
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT ?? "voidcat-cloud";
 const LOCATION = process.env.VERTEX_LOCATION ?? "europe-west1";
 const MODEL = process.env.MODEL ?? "gemini-2.5-flash";
+const BUCKET = process.env.FILES_BUCKET ?? "voidcat-cloud-files";
 const ORIGINS = (process.env.ALLOWED_ORIGINS ?? "https://voidcat-web-1094942921673.europe-west1.run.app,http://localhost:1430").split(",");
 export const READS_PER_MONTH = Number(process.env.READS_PER_MONTH ?? 300);
 
@@ -85,7 +87,7 @@ function cors(origin: string | null) {
   const allowed = origin && ORIGINS.includes(origin) ? origin : ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Max-Age": "3600",
     Vary: "Origin",
@@ -96,16 +98,27 @@ function cors(origin: string | null) {
 
 const json = (body: unknown, status: number, headers: Record<string, string>) => Response.json(body, { status, headers });
 
-/** The signed-in person, if the token is valid and they have a cloud library. */
-async function who(req: Request): Promise<string | null> {
+/** The signed-in person, if the token is valid (and, unless `anyone`, they have a cloud library). */
+async function who(req: Request, anyone = false): Promise<string | null> {
   const token = req.headers.get("Authorization")?.match(/^Bearer (.+)$/)?.[1];
   if (!token) return null;
   try {
-    const { uid } = await getAuth().verifyIdToken(token);
-    return (await db.collection("users").doc(uid).get()).exists ? uid : null;
+    const { uid } = await getAuth().verifyIdToken(token, true);
+    return anyone || (await db.collection("users").doc(uid).get()).exists ? uid : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Deletes everything Voidcat Cloud holds for one person: every sealed record and the library itself, their files,
+ * their read count, and their sign-in. What's on their devices stays.
+ */
+async function deleteAccount(uid: string) {
+  await db.recursiveDelete(db.collection("users").doc(uid));
+  await db.collection("usage").doc(uid).delete();
+  await getStorage().bucket(BUCKET).deleteFiles({ prefix: `users/${uid}/` });
+  await getAuth().deleteUser(uid);
 }
 
 export async function handle(req: Request): Promise<Response> {
@@ -133,6 +146,17 @@ export async function handle(req: Request): Promise<Response> {
       // Only the kind of failure is logged, never the text.
       console.error("read failed:", e instanceof Error ? e.name : "unknown");
       return json({ error: "The cloud couldn't read this document. Try again in a moment." }, 502, headers);
+    }
+  }
+  if (path === "/v1/account" && req.method === "DELETE") {
+    const uid = await who(req, true);
+    if (!uid) return json({ error: "Sign in to Voidcat Cloud first." }, 401, headers);
+    try {
+      await deleteAccount(uid);
+      return json({ deleted: true }, 200, headers);
+    } catch (e) {
+      console.error("delete failed:", e instanceof Error ? e.name : "unknown");
+      return json({ error: "Not everything could be deleted. Try again; what's already gone stays gone." }, 502, headers);
     }
   }
   return json({ error: "Not found." }, 404, headers);

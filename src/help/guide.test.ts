@@ -16,7 +16,7 @@ describe("Voidcat guide", () => {
   });
 
   it("names settings that exist", () => {
-    for (const name of ["Hide private details", "Catch names the rules miss", "Export everything", "Recovery key", "Open Voidcat when you log in", "Email me a sign-in link", "New documents go to the cloud", "Disconnect this Mac", "Delete the cloud copy"]) {
+    for (const name of ["Hide private details", "Catch names the rules miss", "Export everything", "Recovery key", "Open Voidcat when you log in", "Email me a sign-in link", "New documents go to the cloud", "Disconnect this Mac", "Delete the cloud copy", "Delete my account"]) {
       expect(guide).toContain(name);
       expect(settings, name).toContain(name);
     }
