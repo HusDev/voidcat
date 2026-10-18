@@ -4,6 +4,8 @@ Each version's section becomes its GitLab release notes.
 
 ## Unreleased
 
+- Masking: a fact whose label has accents ("Válida hasta") or no date word is still masked as a date when its value is one, so the AI gets "about 4 months from now" and can answer how long is left.
+
 ## 0.1.0
 
 First version, built for the GitLab Transcend Hackathon.
