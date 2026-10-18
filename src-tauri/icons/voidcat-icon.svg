@@ -5,8 +5,8 @@
   </defs>
   <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#g)"/>
   <rect x="100.5" y="100.5" width="823" height="823" rx="185" fill="none" stroke="#ffffff" stroke-opacity="0.08"/>
-  <g transform="translate(302 290) scale(2.1)" filter="url(#glow)">
-    <path d="M58 214 C18 190 4 150 10 102 L12 10 L66 58 Q100 50 134 58 L188 10 L190 102 C196 150 182 190 142 214" fill="none" stroke="#E9E7F2" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M50 124 L80 136 M150 124 L120 136" stroke="#F5B83D" stroke-width="10" stroke-linecap="round"/>
+  <g transform="translate(302 281)" filter="url(#glow)">
+    <path d="M15 447 V135 L93 15 L151 117 H267 L327 15 L405 135 V447 Z" fill="none" stroke="#E9E7F2" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M106 236 L174 266 M314 236 L246 266" stroke="#F5B83D" stroke-width="28" stroke-linecap="round"/>
   </g>
 </svg>

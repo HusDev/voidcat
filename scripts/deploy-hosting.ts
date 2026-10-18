@@ -21,7 +21,8 @@ const HOSTS = ["https://firebasehosting.googleapis.com/", "https://upload-fireba
 
 type Header = { source: string; headers: { key: string; value: string }[] };
 type Rewrite = { source: string; run: { serviceId: string; region: string } };
-type Entry = { target: string; public: string; ignore?: string[]; cleanUrls?: boolean; headers?: Header[]; rewrites?: Rewrite[] };
+type Redirect = { source: string; destination: string; type: number };
+type Entry = { target: string; public: string; ignore?: string[]; cleanUrls?: boolean; headers?: Header[]; rewrites?: Rewrite[]; redirects?: Redirect[] };
 
 async function accessToken(): Promise<string> {
   const idToken = process.env.GCP_ID_TOKEN;
@@ -53,12 +54,13 @@ async function accessToken(): Promise<string> {
   return ((await sa.json()) as { accessToken: string }).accessToken;
 }
 
-/** Firebase's REST config: `glob` instead of `source`, headers as a map. */
+/** Firebase's REST config: `glob` instead of `source`, headers as a map, redirects as `location` + `statusCode`. */
 export function restConfig(entry: Entry) {
   return {
     cleanUrls: entry.cleanUrls ?? false,
     headers: (entry.headers ?? []).map((h) => ({ glob: h.source, headers: Object.fromEntries(h.headers.map((x) => [x.key, x.value])) })),
     rewrites: (entry.rewrites ?? []).map((r) => ({ glob: r.source, run: r.run })),
+    redirects: (entry.redirects ?? []).map((r) => ({ glob: r.source, location: r.destination, statusCode: r.type })),
   };
 }
 
