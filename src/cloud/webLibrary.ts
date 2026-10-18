@@ -231,7 +231,8 @@ export function openWebLibrary(uid: string, keys: Keys): Promise<WebLibrary> {
     list_folders: folders,
     list_facts: (a) => facts(String(a.status)),
     document_pages: (a): Page[] => need(records.get(String(a.id))).pages.map(([page, text]) => ({ page, text })),
-    document_bytes: (a) => bytes(String(a.id)),
+    // A fresh copy every time: pdf.js takes over (detaches) the buffer it's given, as it does with the Mac's.
+    document_bytes: async (a) => (await bytes(String(a.id))).slice(0),
     read_docx: (a) => need(records.get(String(a.id))).pages.map(([, text]) => text),
     read_sheets: (a) =>
       need(records.get(String(a.id))).pages.map(([page, text]) => {
