@@ -41,7 +41,19 @@ export type Edit =
   | { op: "file_document"; id: string; area: string; name: string }
   | { op: "rename_folder"; area: string; from: string; to: string }
   | { op: "remove_document"; id: string }
-  | { op: "import"; id: string; fileName: string };
+  | { op: "import"; id: string; fileName: string }
+  /** Read in the cloud ("Read now"): the Mac keeps this reading instead of reading the file again. */
+  | {
+      op: "reading";
+      id: string;
+      method: NonNullable<Document["textMethod"]>;
+      pages: string[];
+      title: string;
+      docType: string;
+      area: string;
+      folder: string;
+      facts: { id?: string; label: string; value: string; page: number | null }[];
+    };
 
 export const folderId = (area: string, name: string) => `${area.toLowerCase()}/${name.toLowerCase()}`;
 const same = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "accent" }) === 0;
@@ -253,6 +265,35 @@ export function openWebLibrary(uid: string, keys: Keys): Promise<WebLibrary> {
       );
       if (folders().some((x) => x.id !== f.id && same(x.area, f.area) && same(x.name, String(a.name)))) throw new Error("A folder with that name already exists.");
       return edit({ op: "rename_folder", area: f.area, from: f.name, to: String(a.name).trim() });
+    },
+    save_cloud_reading: async (a) => {
+      const r = need(records.get(String(a.id)));
+      const e = a as unknown as Extract<Edit, { op: "reading" }>;
+      // Firestore takes up to 1 MiB a record: keep the page text well under that.
+      let room = 800_000;
+      const pages: [number, string][] = [];
+      for (const [i, text] of e.pages.entries()) {
+        if (text.length > room) break;
+        room -= text.length;
+        pages.push([i + 1, text]);
+      }
+      // The Mac keeps these ids, so approving a fact here works before and after it syncs.
+      const facts = e.facts.map((f) => ({ id: crypto.randomUUID(), label: f.label, value: f.value, page: f.page, status: "pending" as const }));
+      const updated: DocRecord = {
+        ...r,
+        title: e.title,
+        docType: e.docType,
+        area: e.area,
+        status: "filed",
+        textMethod: e.method,
+        pageCount: e.pages.length,
+        folder: [e.area, e.folder],
+        filing: "auto",
+        facts,
+        pages,
+        pagesCut: pages.length < e.pages.length,
+      };
+      await save({ op: "reading", id: r.id, method: e.method, pages: pages.map(([, t]) => t), title: e.title, docType: e.docType, area: e.area, folder: e.folder, facts: facts.map(({ id, label, value, page }) => ({ id, label, value, page })) }, [updated]);
     },
     remove_document: async (a) => {
       const id = String(a.id);

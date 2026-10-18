@@ -426,6 +426,17 @@ enum Edit {
     RemoveDocument { id: String },
     /// A file added in the browser: the Mac fetches it, keeps it and reads it.
     Import { id: String, file_name: String },
+    /// Read in the cloud ("Read now" in a browser): kept as the document's reading and filing.
+    Reading {
+        id: String,
+        method: String,
+        pages: Vec<String>,
+        title: String,
+        doc_type: String,
+        area: String,
+        folder: String,
+        facts: Vec<crate::store::NewFact>,
+    },
 }
 
 #[derive(Serialize, Debug, PartialEq)]
@@ -470,6 +481,11 @@ impl Store {
             }
             Edit::RemoveDocument { id } if self.has_document(&id) => done(self.remove(&id)),
             Edit::Import { id, file_name } if !self.has_document(&id) => Ok(Applied::Import { id, file_name }),
+            Edit::Reading { id, method, pages, title, doc_type, area, folder, facts } if self.has_document(&id) => done((|| {
+                self.save_reading(&id, pages, &method)?;
+                self.save_filing(&id, &title, &area, &doc_type, facts, None)?;
+                self.file_document(&id, &area, &folder).map(|_| ())
+            })()),
             _ => done(Ok(())),
         }
     }
@@ -647,6 +663,24 @@ mod tests {
         assert_eq!(store.bytes_of(&new_id).unwrap(), b"invented note from a browser");
         assert!(store.cloud_import(&uuid::Uuid::new_v4().to_string(), "copy.txt", &sealed).unwrap().is_none(), "same content: a duplicate");
         assert!(store.cloud_import(&uuid::Uuid::new_v4().to_string(), "x.txt", b"plain").is_err(), "must arrive locked");
+
+        let fact_id = uuid::Uuid::new_v4().to_string();
+        let read = format!(
+            r#"{{"op":"reading","id":"{new_id}","method":"text","pages":["invented note from a browser"],"title":"Note","docType":"note","area":"Other","folder":"Notes","facts":[{{"id":"{fact_id}","label":"Subject","value":"invented note","page":1}}]}}"#
+        );
+        assert_eq!(edit(&read), Applied::Done);
+        let (status, folder, fact): (String, String, String) = store
+            .db
+            .lock()
+            .unwrap()
+            .query_row(
+                "select d.status, f.name, (select id from facts where document_id = d.id) from documents d join folders f on f.id = d.folder_id where d.id = ?1",
+                [&new_id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!((status.as_str(), folder.as_str(), fact), ("filed", "Notes", fact_id), "the browser's reading and fact ids are kept");
+        assert_eq!(store.search("invented", false).unwrap().len(), 1);
 
         store.cloud_connect("uid-1", None).unwrap();
         let plan = store.cloud_plan().unwrap();

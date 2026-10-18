@@ -108,6 +108,7 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - **New documents go to the cloud** (Settings → Voidcat Cloud) decides what happens to documents you add later.
 - **Disconnect this Mac** stops syncing and keeps the cloud copy for your browsers. **Delete the cloud copy** removes every locked copy from the cloud.
 - In a browser, sign in at Voidcat Cloud and type your recovery key once. You see your Library, folders and documents, can open them, approve or correct facts, rename and move documents, and drop in new files. New files are locked in the browser first; your Mac fetches them, reads them and files them the next time Voidcat runs there. Changes you make in the browser reach your Mac the same way.
+- A file added in a browser waits for your Mac, or click **Read now** on its card to read it in the cloud. The text is read in your browser (scans and photos too), names, addresses and numbers are hidden there first, and only that masked text goes to Gemini in Belgium to file it. The first time, the browser downloads the privacy model once (about 917 MB). Afterwards the card shows exactly what was sent. You have 300 cloud reads a month; Word files and spreadsheets are read on your Mac.
 - If your account already has a cloud library started somewhere else, Voidcat asks for that library's recovery key to join it. Your Mac then uses that key, and its old recovery key stops working.
 
 ## Settings

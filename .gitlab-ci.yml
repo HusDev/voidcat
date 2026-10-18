@@ -158,6 +158,17 @@ deploy-web:
   script:
     - gcloud run deploy voidcat-web --source build/web --region "$GCP_REGION" --allow-unauthenticated --port 8080 --cpu 1 --memory 256Mi --max-instances 3 --quiet
 
+# voidcat-api ("Read now in the cloud"): the API's code and the shared filing instructions, run as voidcat-api@.
+deploy-api:
+  extends: .gcp
+  stage: deploy
+  needs: [verify]
+  script:
+    - sh deploy/api/stage.sh build/api
+    - gcloud run deploy voidcat-api --source build/api --region "$GCP_REGION" --service-account voidcat-api@voidcat-cloud.iam.gserviceaccount.com
+        --allow-unauthenticated --port 8080 --cpu 1 --memory 512Mi --max-instances 3 --concurrency 20 --timeout 120
+        --set-env-vars VERTEX_LOCATION=europe-west1,MODEL=gemini-2.5-flash,READS_PER_MONTH=300 --quiet
+
 # ——— release (version tags only) ———
 
 publish-packages:

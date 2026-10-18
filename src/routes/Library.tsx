@@ -6,6 +6,7 @@ import { useCloud } from "../cloud/CloudGate";
 import { Link, useSearchParams } from "react-router";
 import { useCloudStatus } from "../cloud/mac";
 import { CloudCardMark, CloudToggle } from "../components/CloudMark";
+import { ReadNow } from "../components/ReadNow";
 import { FolderPicker } from "../components/FolderPicker";
 import { LabelChips } from "../components/LabelChips";
 import { RenameInput } from "../components/RenameInput";
@@ -617,6 +618,7 @@ export function Library() {
                       {d.pageCount ? ` · ${d.pageCount} ${d.pageCount === 1 ? "page" : "pages"}` : ""} · added {formatDay(d.addedAt)}
                     </span>
                     <CloudCardMark id={d.id} />
+                    <ReadNow doc={d} />
 
                     {busy(step) && (
                       <span role="status" className="flex items-center gap-1.5 text-[13px] text-link">

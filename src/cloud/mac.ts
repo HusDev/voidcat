@@ -157,7 +157,11 @@ async function pullEdits(uid: string) {
     }
   }
   if (edits.size) announceChange();
-  if (added.length) process(added);
+  // Files a browser already read ("Read now") are kept as read there; the rest are read on this Mac.
+  if (added.length) {
+    const unread = new Set((await invoke<Document[]>("list_documents")).filter((d) => d.status === "new").map((d) => d.id));
+    process(added.filter((d) => unread.has(d.id)));
+  }
 }
 
 const hex = (b: Uint8Array) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
