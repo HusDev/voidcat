@@ -19,7 +19,6 @@ components:
       - "gitlab_blob_search"
       - "create_merge_request_note"
       - "create_merge_request_diff_note"
-    max_cycles: 50
     ui_log_events: ["on_agent_final_answer", "on_tool_execution_success", "on_tool_execution_failed"]
 prompts:
   - prompt_id: "voidcat_privacy_guard"
