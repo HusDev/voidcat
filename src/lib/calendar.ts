@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { call as invoke } from "./backend";
 import type { Document, Fact } from "./library";
 import { kindOfLabel, parseDate } from "./privacy";
 

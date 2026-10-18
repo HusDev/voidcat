@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { SideChat } from "../components/SideChat";
 import { dateKind } from "../lib/calendar";
-import { type Fact, LIBRARY_CHANGED, announceChange, hasLibrary, listFacts, openDocument } from "../lib/library";
+import { type Fact, LIBRARY_CHANGED, announceChange, hasLibrary, listFacts, onMac, openDocument } from "../lib/library";
 import {
   GROUPS,
   type Profile,
@@ -166,7 +166,7 @@ export function Me() {
           <button
             type="button"
             onClick={build}
-            disabled={building || !hasLibrary || facts.length === 0}
+            disabled={building || !onMac || facts.length === 0}
             className="inline-flex min-h-14 items-center gap-1.5 rounded-xl bg-accent px-4 text-[13.5px] font-semibold text-on-accent hover:bg-accent-strong disabled:opacity-40"
           >
             {building ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <RefreshCw aria-hidden className="size-4" />}

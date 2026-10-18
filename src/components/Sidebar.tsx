@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, Pencil, Eye, EyeOff, FileText, Folder as FolderIcon, FolderOpen, Inbox, Library, Lightbulb, Link2, LockKeyhole, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
+import { CalendarDays, Check, ChevronRight, Cloud, CloudCheck, Pencil, Eye, EyeOff, FileText, Folder as FolderIcon, FolderOpen, Inbox, Library, Lightbulb, Link2, LockKeyhole, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
 import { type DragEvent, type MouseEvent, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { AREAS } from "../lib/extract";
@@ -19,7 +19,9 @@ import {
   renameFolder,
 } from "../lib/library";
 import { Private, useVeil } from "../lib/veil";
+import { keepInCloud } from "../cloud/mac";
 import { Logo } from "./Logo";
+import { CloudRowMark, CloudStatusButton, useCloudMark } from "./CloudMark";
 import { RenameInput } from "./RenameInput";
 
 const link = ({ isActive }: { isActive: boolean }) =>
@@ -161,7 +163,7 @@ function Folders() {
                         await fileInFolder(id, f.area, f.name);
                         toggle(`folder:${f.id}`, true);
                       })}
-                      className={`flex items-center rounded-md pl-3 pr-2 text-[13.5px] ${
+                      className={`group flex items-center rounded-md pl-3 pr-2 text-[13.5px] ${
                         over === `folder:${f.id}` ? "bg-void/30 text-white ring-1 ring-void" : current === f.id ? "bg-rail-2 text-white" : "text-rail-text hover:text-white"
                       }`}
                     >
@@ -216,8 +218,11 @@ function Folders() {
                         <span className="min-w-0 flex-1 truncate">
                           <Private>{f.name}</Private>
                         </span>
-                        <span className="text-xs tabular-nums text-rail-faint">{f.documents}</span>
+                        <span className="text-xs tabular-nums text-rail-faint group-hover:hidden group-focus-within:hidden">{f.documents}</span>
                       </Link>
+                      )}
+                      {renaming !== `folder:${f.id}` && (
+                        <RenamePencil label={`Rename ${f.name}`} onClick={() => setRenaming(`folder:${f.id}`)} />
                       )}
                     </div>
                     {folderOpen &&
@@ -238,21 +243,24 @@ function Folders() {
                             />
                           </span>
                         ) : (
-                          <button
-                            key={d.id}
-                            type="button"
-                            draggable
-                            onDragStart={(e) => dragDocument(e, d.id)}
-                            onClick={() => openDocument(d.id)}
-                            onContextMenu={(e) => openMenu(e, `doc:${d.id}`)}
-                            title={`Open ${d.fileName}`}
-                            className="flex items-center gap-2 rounded-md py-1 pl-11 pr-2 text-left text-[12.5px] text-rail-mute hover:bg-rail-2 hover:text-white"
-                          >
-                            <FileText aria-hidden className="size-3.5 shrink-0 opacity-70" />
-                            <span className="min-w-0 flex-1 truncate">
-                              <Private>{d.title}</Private>
-                            </span>
-                          </button>
+                          <div key={d.id} className="group flex items-center rounded-md pr-2 text-rail-mute hover:bg-rail-2 hover:text-white">
+                            <button
+                              type="button"
+                              draggable
+                              onDragStart={(e) => dragDocument(e, d.id)}
+                              onClick={() => openDocument(d.id)}
+                              onContextMenu={(e) => openMenu(e, `doc:${d.id}`)}
+                              title={`Open ${d.fileName}`}
+                              className="flex min-w-0 flex-1 items-center gap-2 py-1 pl-11 text-left text-[12.5px] text-inherit"
+                            >
+                              <FileText aria-hidden className="size-3.5 shrink-0 opacity-70" />
+                              <span className="min-w-0 flex-1 truncate">
+                                <Private>{d.title}</Private>
+                              </span>
+                              <CloudRowMark id={d.id} />
+                            </button>
+                            <RenamePencil label={`Rename ${d.title}`} onClick={() => setRenaming(`doc:${d.id}`)} />
+                          </div>
                         ),
                       )}
                     {folderOpen && !docs.length && <span className="py-1 pl-11 text-[12px] text-rail-faint">Empty</span>}
@@ -268,6 +276,44 @@ function Folders() {
 }
 
 const item = "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] text-rail-text hover:bg-rail-2 hover:text-white";
+
+/** The pencil on a tree row: shows on hover or keyboard focus, and turns the name into a field in place. */
+function RenamePencil({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title="Rename"
+      className="grid size-5 shrink-0 place-items-center rounded text-rail-faint opacity-0 hover:bg-white/10 hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+    >
+      <Pencil aria-hidden className="size-3" />
+    </button>
+  );
+}
+
+/** "Keep in the cloud" with a tick, once this Mac syncs; off keeps the document only on this Mac. */
+function KeepInCloudItem({ id, onDone }: { id: string; onDone: () => void }) {
+  const mark = useCloudMark(id);
+  if (!mark) return null;
+  const on = mark !== "local";
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={on}
+      onClick={() => {
+        onDone();
+        keepInCloud(id, !on);
+      }}
+      className={item}
+    >
+      {on ? <CloudCheck aria-hidden className="size-3.5" /> : <Cloud aria-hidden className="size-3.5" />}
+      <span className="flex-1">Keep in the cloud</span>
+      {on && <Check aria-hidden className="size-3.5" />}
+    </button>
+  );
+}
 
 /** What you can do to a folder or a document in the tree, opened with a right-click. */
 function TreeMenu({
@@ -306,6 +352,7 @@ function TreeMenu({
           <button type="button" role="menuitem" onClick={run(() => onRename(menu.key))} className={item}>
             <Pencil aria-hidden className="size-3.5" /> Rename
           </button>
+          <KeepInCloudItem id={doc.id} onDone={onClose} />
           <span className="mt-1 border-t border-white/10 px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-widest text-rail-faint">Move to</span>
           <div className="flex max-h-56 flex-col overflow-y-auto">
             {folders
@@ -401,6 +448,7 @@ export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: nu
         <Folders />
       </div>
 
+      <CloudStatusButton />
       <div className="flex items-center gap-1 border-t border-white/5 pt-2.5">
         <span title="Your documents and everything Voidcat learned from them are encrypted, with the key in this Mac's Keychain." className="flex min-w-0 flex-1 items-center gap-1.5 pl-2 text-[12px] text-rail-faint">
           <LockKeyhole aria-hidden className="size-3.5 shrink-0" />

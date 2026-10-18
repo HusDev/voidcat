@@ -2,6 +2,8 @@ mod apps;
 mod bundle;
 mod calendar;
 mod chats;
+mod cloud;
+mod cloud_signin;
 mod docx;
 mod labels;
 mod legacy;
@@ -446,6 +448,128 @@ fn remove_document(store: State<Store>, id: String) -> Result<(), String> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// Voidcat Cloud on the Mac (see `cloud.rs`): the interface signs in and uploads; these decide and seal what goes up.
+#[tauri::command]
+fn cloud_account(store: State<Store>) -> Result<Option<cloud::Account>, String> {
+    store.cloud_account()
+}
+
+#[tauri::command]
+fn cloud_connect(store: State<Store>, uid: String, email: Option<String>) -> Result<(), String> {
+    store.cloud_connect(&uid, email.as_deref())
+}
+
+#[tauri::command]
+fn cloud_disconnect(store: State<Store>) -> Result<(), String> {
+    store.cloud_disconnect()
+}
+
+#[tauri::command]
+fn cloud_forget_uploads(store: State<Store>) -> Result<(), String> {
+    store.cloud_forget_uploads()
+}
+
+#[tauri::command]
+fn cloud_set_new_documents(store: State<Store>, on: bool) -> Result<(), String> {
+    store.cloud_set_new_documents(on)
+}
+
+#[tauri::command]
+fn cloud_keep(store: State<Store>, id: String, keep: bool) -> Result<(), String> {
+    store.cloud_keep(&id, keep)
+}
+
+#[tauri::command]
+fn cloud_plan(store: State<Store>) -> Result<cloud::Plan, String> {
+    store.cloud_plan()
+}
+
+#[tauri::command]
+fn cloud_record(store: State<Store>, id: String) -> Result<tauri::ipc::Response, String> {
+    store.cloud_record(&id).map(tauri::ipc::Response::new)
+}
+
+#[tauri::command]
+fn cloud_file(store: State<Store>, id: String) -> Result<tauri::ipc::Response, String> {
+    store.cloud_file(&id).map(tauri::ipc::Response::new)
+}
+
+#[tauri::command]
+fn cloud_uploaded(store: State<Store>, id: String, record_hash: String, file_hash: String) -> Result<(), String> {
+    store.cloud_uploaded(&id, &record_hash, &file_hash)
+}
+
+#[tauri::command]
+fn cloud_removed(store: State<Store>, id: String) -> Result<(), String> {
+    store.cloud_removed(&id)
+}
+
+#[tauri::command]
+fn cloud_failed(store: State<Store>, id: String, error: String) -> Result<(), String> {
+    store.cloud_failed(&id, &error)
+}
+
+#[tauri::command]
+fn cloud_marks(store: State<Store>) -> Result<Vec<cloud::Mark>, String> {
+    store.cloud_marks()
+}
+
+#[tauri::command]
+fn cloud_check(store: State<Store>) -> Result<tauri::ipc::Response, String> {
+    store.cloud_check().map(tauri::ipc::Response::new)
+}
+
+#[tauri::command]
+fn cloud_opens(store: State<Store>, check: Vec<u8>) -> bool {
+    store.cloud_opens(&check)
+}
+
+/// Joins a cloud library made elsewhere: the recovery key must open it; the whole library is re-locked with that
+/// key (a copy kept beside it first), the Keychain gets the new key and the app restarts.
+#[tauri::command]
+fn cloud_join(app: tauri::AppHandle, store: State<Store>, code: String, check: Vec<u8>, uid: String, email: Option<String>) -> Result<(), String> {
+    let new = vault::Vault::from_recovery_code(&code)?;
+    if !cloud::opens(&new, &check) {
+        return Err("That recovery key doesn't open your cloud library. Check each group of four and try again.".into());
+    }
+    // Connected before re-locking, so the re-locked library starts syncing after the restart.
+    store.cloud_connect(&uid, email.as_deref())?;
+    if let Err(e) = store.rekey(&new, || new.save()) {
+        let _ = store.cloud_disconnect();
+        return Err(e);
+    }
+    app.restart();
+}
+
+/// One browser edit (sealed), applied on this Mac.
+#[tauri::command]
+fn cloud_apply(store: State<Store>, sealed: Vec<u8>) -> Result<cloud::Applied, String> {
+    store.cloud_apply(&sealed)
+}
+
+/// A file added in a browser, sent as raw bytes (still sealed) with its id and name in headers.
+#[tauri::command]
+fn cloud_import(store: State<Store>, request: tauri::ipc::Request<'_>) -> Result<Option<Document>, String> {
+    let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).map(str::to_string).ok_or(format!("Missing {name}."));
+    let id = header("x-voidcat-id")?;
+    let name = header("x-voidcat-name")?;
+    let name = String::from_utf8(hex::decode(name).map_err(|_| "Bad file name.")?).map_err(|_| "Bad file name.")?;
+    match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => store.cloud_import(&id, &name, bytes),
+        _ => Err("Send the file as raw bytes.".into()),
+    }
+}
+
+#[tauri::command]
+fn cloud_listen(app: tauri::AppHandle, config: cloud_signin::WebConfig) -> Result<cloud_signin::Listening, String> {
+    cloud_signin::listen(app, config)
+}
+
+#[tauri::command]
+fn cloud_stop_listening() {
+    cloud_signin::stop();
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
@@ -569,7 +693,27 @@ pub fn run() {
             get_profile,
             save_profile,
             profile_choices,
-            choose_profile_value
+            choose_profile_value,
+            cloud_account,
+            cloud_connect,
+            cloud_disconnect,
+            cloud_forget_uploads,
+            cloud_set_new_documents,
+            cloud_keep,
+            cloud_plan,
+            cloud_record,
+            cloud_file,
+            cloud_uploaded,
+            cloud_removed,
+            cloud_failed,
+            cloud_marks,
+            cloud_check,
+            cloud_opens,
+            cloud_join,
+            cloud_apply,
+            cloud_import,
+            cloud_listen,
+            cloud_stop_listening
         ])
         .build(tauri::generate_context!())
         .expect("error while building Voidcat")

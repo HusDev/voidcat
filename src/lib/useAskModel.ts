@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { savedModel } from "./cloud";
-import { getSecret, hasLibrary } from "./library";
+import { getSecret, onMac } from "./library";
 import { type AskModel, type LocalModel, listLocalModels, saveAskModel, savedAskModel } from "./models";
 
 /** The model that answers in Ask: the saved choice while it's available, else one on this Mac, else the cloud model. */
@@ -11,7 +11,7 @@ export function useAskModel() {
 
   useEffect(() => {
     // A refused Keychain prompt just means no cloud model for now.
-    if (hasLibrary)
+    if (onMac)
       getSecret("openrouter")
         .then((k) => setHasKey(!!k))
         .catch(() => setHasKey(false));

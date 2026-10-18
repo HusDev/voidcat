@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { call as invoke } from "./backend";
 import { z } from "zod";
 import { type Folder, documentPages } from "./library";
 

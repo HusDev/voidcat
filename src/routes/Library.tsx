@@ -1,8 +1,11 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Download, Eye, FileText, FolderInput, FolderSync, LoaderCircle, Search, Sparkles, Trash2, Upload } from "lucide-react";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Download, Eye, FileText, FolderInput, FolderSync, LoaderCircle, Pencil, Search, Sparkles, Trash2, Upload } from "lucide-react";
+import { type DragEvent, Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useCloud } from "../cloud/CloudGate";
 import { Link, useSearchParams } from "react-router";
+import { useCloudStatus } from "../cloud/mac";
+import { CloudCardMark, CloudToggle } from "../components/CloudMark";
 import { FolderPicker } from "../components/FolderPicker";
 import { LabelChips } from "../components/LabelChips";
 import { RenameInput } from "../components/RenameInput";
@@ -20,6 +23,7 @@ import {
   formatDay,
   formatSize,
   hasLibrary,
+  onMac,
   importFiles,
   listDocuments,
   fileInFolder,
@@ -28,6 +32,7 @@ import {
   openDocument,
   removeDocument,
   renameDocument,
+  renameFolder,
   searchLibrary,
 } from "../lib/library";
 import { refileDocument } from "../lib/extract";
@@ -62,6 +67,8 @@ function Snippet({ text }: { text: string }) {
 }
 
 export function Library() {
+  // Connected to Voidcat Cloud with new documents going up: the drop zone says so.
+  const cloudOn = !!useCloudStatus().account?.newDocuments;
   const [docs, setDocs] = useState<Document[]>([]);
   const [facts, setFacts] = useState<Fact[]>([]);
   const [pending, setPending] = useState<Fact[]>([]);
@@ -78,6 +85,7 @@ export function Library() {
   const [params] = useSearchParams();
   const folderId = params.get("folder");
   const folder = folders.find((f) => f.id === folderId);
+  const [renamingFolder, setRenamingFolder] = useState(false);
   const progress = useProgress();
   const labels = useLabels();
   const veil = useVeil();
@@ -108,7 +116,7 @@ export function Library() {
   useEffect(() => {
     refresh();
     window.addEventListener(LIBRARY_CHANGED, refresh);
-    if (!hasLibrary) return () => window.removeEventListener(LIBRARY_CHANGED, refresh);
+    if (!onMac) return () => window.removeEventListener(LIBRARY_CHANGED, refresh);
     // Tauri delivers dropped files with their paths, which the browser's own drop event can't.
     const off = getCurrentWebview().onDragDropEvent((e) => {
       // Files from Finder carry paths; a document dragged inside the app doesn't, and isn't an upload.
@@ -156,9 +164,44 @@ export function Library() {
   };
 
   const choose = async () => {
+    if (!onMac) return picker.current?.click();
     const picked = await open({ multiple: true, filters: [{ name: "Documents", extensions: fileTypes }] });
     if (picked) add(Array.isArray(picked) ? picked : [picked]);
   };
+
+  // In a browser: files are locked here and uploaded; the Mac reads and files them on its next sync.
+  const picker = useRef<HTMLInputElement>(null);
+  const cloud = useCloud();
+  const upload = async (files: File[]) => {
+    if (!cloud || !files.length) return;
+    setNotice(`Locking and uploading ${files.length} ${files.length === 1 ? "file" : "files"}…`);
+    const r = await cloud.library.upload(files);
+    setNotice(
+      [
+        r.added && `Added ${r.added} ${r.added === 1 ? "document" : "documents"}. Your Mac reads and files ${r.added === 1 ? "it" : "them"} when Voidcat is open there`,
+        r.duplicates.length && `${r.duplicates.length} already in your library`,
+        r.failed.length && `${r.failed.length} couldn't be added (${r.failed.map(([n, why]) => `${n}: ${why}`).join(", ")})`,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    );
+  };
+  const browserDrop = onMac
+    ? {}
+    : {
+        onDragOver: (e: DragEvent) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          setDragging(true);
+        },
+        onDragLeave: () => setDragging(false),
+        onDrop: (e: DragEvent) => {
+          if (!e.dataTransfer.files.length) return;
+          e.preventDefault();
+          setDragging(false);
+          upload([...e.dataTransfer.files]);
+        },
+      };
 
   const factsOf = (id: string) => facts.filter((f) => f.documentId === id);
   /** A future expiry date from the document's approved facts (a passport's "valid until"). */
@@ -198,7 +241,37 @@ export function Library() {
               <Link to="/" className="text-ink-2 no-underline hover:text-ink">
                 Library
               </Link>{" "}
-              <span className="text-ink-2">›</span> {folder.area} › <Private>{folder.name}</Private>
+              <span className="text-ink-2">›</span> {folder.area} ›{" "}
+              {renamingFolder ? (
+                <span className="inline-flex w-72 align-middle">
+                  <RenameInput
+                    id={`rename-folder-view-${folder.id}`}
+                    value={folder.name}
+                    label="Folder name"
+                    className="h-10 font-display text-[26px] font-light text-ink"
+                    onSave={async (name) => {
+                      await renameFolder(folder.id, name);
+                      announceChange();
+                    }}
+                    onDone={() => setRenamingFolder(false)}
+                  />
+                </span>
+              ) : (
+                <>
+                  <span onDoubleClick={() => setRenamingFolder(true)}>
+                    <Private>{folder.name}</Private>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRenamingFolder(true)}
+                    aria-label={`Rename ${folder.name}`}
+                    title="Rename"
+                    className="ml-1.5 inline-grid size-8 place-items-center rounded-lg align-middle text-ink-2 hover:bg-card hover:text-ink"
+                  >
+                    <Pencil aria-hidden className="size-4" />
+                  </button>
+                </>
+              )}
             </>
           ) : (
             "Library"
@@ -271,13 +344,22 @@ export function Library() {
       ) : (
         <>
           <section
+            {...browserDrop}
             aria-label="Drop files"
             className={`flex items-center gap-4.5 rounded-xl border-2 border-dashed px-6 py-5 transition-colors ${dragging ? "border-accent bg-accent-soft" : "border-accent/40 bg-accent-soft/40"}`}
           >
             <Upload aria-hidden className="size-10 text-link" strokeWidth={1.6} />
             <div className="flex flex-col gap-0.5">
               <span className="font-semibold">{dragging ? "Let go to add" : "Drop any document here"}</span>
-              <span className="text-[13.5px] text-ink-2">PDF, photo, scan or email. It's read and filed on this Mac; nothing is uploaded.</span>
+              <span className="text-[13.5px] text-ink-2">
+                {onMac ? (
+                  <>
+                    PDF, photo, scan or email. It's read and filed on this Mac; {cloudOn ? "a locked copy goes to Voidcat Cloud." : "nothing is uploaded."}
+                  </>
+                ) : (
+                  "PDF, photo, scan or email. It's locked in this browser before upload; your Mac reads and files it."
+                )}
+              </span>
             </div>
             <button
               type="button"
@@ -289,6 +371,19 @@ export function Library() {
             </button>
           </section>
 
+          {!onMac && (
+            <input
+              ref={picker}
+              type="file"
+              multiple
+              hidden
+              accept={fileTypes.map((t) => `.${t}`).join(",")}
+              onChange={(e) => {
+                upload([...(e.currentTarget.files ?? [])]);
+                e.currentTarget.value = "";
+              }}
+            />
+          )}
           {!hasLibrary && <p className="m-0 text-sm text-private-ink">This is the browser preview. Open the desktop app to add documents.</p>}
           {notice && (
             <p role="status" className="m-0 text-sm text-ink-2">
@@ -343,6 +438,7 @@ export function Library() {
                           {done} of {done + left} approved
                         </span>
                       </div>
+                      <CloudCardMark id={d.id} />
                       <button
                         type="button"
                         onClick={() => openDocument(d.id)}
@@ -459,7 +555,7 @@ export function Library() {
                     draggable
                     onDragStart={(e) => dragDocument(e, d.id)}
                     title="Drag onto a folder in the sidebar to move it"
-                    className="flex flex-col gap-2.5 rounded-xl border border-line bg-card p-4"
+                    className="group flex flex-col gap-2.5 rounded-xl border border-line bg-card p-4"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="min-w-0 truncate text-xs font-semibold text-ink-2">
@@ -480,8 +576,19 @@ export function Library() {
                         onDone={() => setRenaming(null)}
                       />
                     ) : (
-                      <span className="text-[15px] font-semibold leading-snug" onDoubleClick={() => setRenaming(d.id)} title="Double-click to rename">
-                        <Private>{d.title}</Private>
+                      <span className="flex items-start gap-1.5">
+                        <span className="min-w-0 flex-1 text-[15px] font-semibold leading-snug" onDoubleClick={() => setRenaming(d.id)}>
+                          <Private>{d.title}</Private>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setRenaming(d.id)}
+                          aria-label={`Rename ${d.title}`}
+                          title="Rename"
+                          className="grid size-6 shrink-0 place-items-center rounded-md text-ink-2 opacity-0 hover:bg-ground hover:text-ink focus-visible:opacity-100 group-hover:opacity-100"
+                        >
+                          <Pencil aria-hidden className="size-3.5" />
+                        </button>
                       </span>
                     )}
 
@@ -509,6 +616,7 @@ export function Library() {
                       <Private>{d.fileName}</Private> · {formatSize(d.sizeBytes)}
                       {d.pageCount ? ` · ${d.pageCount} ${d.pageCount === 1 ? "page" : "pages"}` : ""} · added {formatDay(d.addedAt)}
                     </span>
+                    <CloudCardMark id={d.id} />
 
                     {busy(step) && (
                       <span role="status" className="flex items-center gap-1.5 text-[13px] text-link">
@@ -564,7 +672,7 @@ export function Library() {
                         >
                           <Eye aria-hidden className="size-4" /> Open
                         </button>
-                        {d.status !== "filed" && !busy(step) && (
+                        {d.status !== "filed" && !busy(step) && onMac && (
                           <button
                             type="button"
                             onClick={() => process([d])}
@@ -575,6 +683,7 @@ export function Library() {
                         )}
                         {/* Less frequent actions: icons with a label on hover, all on one line. */}
                         <span className="ml-auto flex items-center gap-0.5">
+                          <CloudToggle id={d.id} />
                           <button
                             type="button"
                             onClick={() => setMoving(moving === d.id ? null : d.id)}

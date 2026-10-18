@@ -12,8 +12,8 @@ use std::{
 
 pub struct Store {
     pub db: Mutex<Connection>,
-    files: PathBuf,
-    vault: crate::vault::Vault,
+    pub(crate) files: PathBuf,
+    pub(crate) vault: crate::vault::Vault,
 }
 
 #[derive(Serialize)]
@@ -198,12 +198,12 @@ fn migrate(db: &Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
-const COLUMNS: &str = "id, title, file_name, mime, size_bytes, area, doc_type, status, added_at, text_method, page_count, folder_id,
+pub(crate) const COLUMNS: &str = "id, title, file_name, mime, size_bytes, area, doc_type, status, added_at, text_method, page_count, folder_id,
   (select f.area || ' › ' || f.name from folders f where f.id = documents.folder_id), filing, suggested_area, suggested_folder,
   suggested_folder is not null and not exists (select 1 from folders f where f.area = documents.suggested_area collate nocase and f.name = documents.suggested_folder collate nocase),
   suggestion_reason";
 
-fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
+pub(crate) fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
     Ok(Document {
         id: r.get(0)?,
         title: r.get(1)?,
@@ -227,7 +227,7 @@ fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
 }
 
 /// A readable title from a file name: "rental_contract-signed.pdf" → "Rental contract signed".
-fn title_from(name: &str) -> String {
+pub(crate) fn title_from(name: &str) -> String {
     let stem = Path::new(name)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -244,7 +244,7 @@ fn title_from(name: &str) -> String {
     }
 }
 
-fn mime_of(name: &str) -> Option<String> {
+pub(crate) fn mime_of(name: &str) -> Option<String> {
     let ext = Path::new(name).extension()?.to_str()?.to_lowercase();
     let m = match ext.as_str() {
         "pdf" => "application/pdf",
@@ -263,6 +263,29 @@ fn mime_of(name: &str) -> Option<String> {
         _ => return None,
     };
     Some(m.to_string())
+}
+
+/// The type of a file whose name doesn't say (no or unknown extension), from its first bytes: PDF and photos.
+pub(crate) fn sniff(bytes: &[u8]) -> Option<String> {
+    let m = if bytes.starts_with(b"%PDF") {
+        "application/pdf"
+    } else if bytes.starts_with(b"\x89PNG") {
+        "image/png"
+    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "image/jpeg"
+    } else if bytes.len() > 12 && &bytes[..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        "image/webp"
+    } else if bytes.len() > 12 && &bytes[4..8] == b"ftyp" && [b"heic", b"heix", b"mif1"].iter().any(|b| &bytes[8..12] == *b) {
+        "image/heic"
+    } else {
+        return None;
+    };
+    Some(m.to_string())
+}
+
+/// A file's type: from its name, else from its contents.
+pub(crate) fn type_of(name: &str, bytes: &[u8]) -> Option<String> {
+    mime_of(name).or_else(|| sniff(bytes))
 }
 
 /// Puts a document in the suggested folder when it exists and the model is sure; otherwise it waits in "to file".
@@ -370,12 +393,14 @@ impl Store {
         db.execute_batch(crate::labels::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::apps::SCHEMA).map_err(|e| e.to_string())?;
         db.execute_batch(crate::people::SCHEMA).map_err(|e| e.to_string())?;
+        db.execute_batch(crate::cloud::SCHEMA).map_err(|e| e.to_string())?;
         let store = Store {
             db: Mutex::new(db),
             files,
             vault,
         };
         store.encrypt_files()?;
+        store.fill_types()?;
         // Copies decrypted for "Open in default app" last until the next start.
         let _ = fs::remove_dir_all(dir.join(OPENED));
         Ok(store)
@@ -403,6 +428,28 @@ impl Store {
             let tmp = format!("{path}.encrypting");
             fs::write(&tmp, &sealed).map_err(|e| e.to_string())?;
             fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+
+    /// Documents whose name didn't tell their type get it from their contents, and are read again.
+    fn fill_types(&self) -> Result<(), String> {
+        let unknown: Vec<(String, String)> = {
+            let db = self.db.lock().unwrap();
+            let mut stmt = db.prepare("select id, stored_path from documents where mime is null").map_err(|e| e.to_string())?;
+            let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(|e| e.to_string())?;
+            rows.collect::<Result<_, _>>().map_err(|e| e.to_string())?
+        };
+        for (id, path) in unknown {
+            let Ok(bytes) = fs::read(&path) else { continue };
+            let Ok(plain) = self.vault.decrypt(bytes) else { continue };
+            if let Some(mime) = sniff(&plain) {
+                self.db
+                    .lock()
+                    .unwrap()
+                    .execute("update documents set mime = ?2, status = 'new', text_method = null where id = ?1 and status != 'filed'", params![id, mime])
+                    .map_err(|e| e.to_string())?;
+            }
         }
         Ok(())
     }
@@ -501,7 +548,7 @@ impl Store {
             }
             let inserted = db.execute(
                 "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path) values (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-                params![id, title_from(&name), name, mime_of(&name), bytes.len() as i64, sha, stored.to_string_lossy()],
+                params![id, title_from(&name), name, type_of(&name, &bytes), bytes.len() as i64, sha, stored.to_string_lossy()],
             );
             match inserted {
                 Ok(_) => match db.query_row(
@@ -897,6 +944,14 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn knows_a_file_by_its_contents_when_the_name_doesnt_say() {
+        assert_eq!(type_of("scan", b"%PDF-1.7 ...").as_deref(), Some("application/pdf"));
+        assert_eq!(type_of("photo", &[0xFF, 0xD8, 0xFF, 0xE0]).as_deref(), Some("image/jpeg"));
+        assert_eq!(type_of("notes.txt", b"%PDF").as_deref(), Some("text/plain"), "the name wins when it says");
+        assert_eq!(type_of("blob", b"hello"), None);
+    }
 
     #[test]
     fn titles_read_like_names() {

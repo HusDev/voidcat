@@ -7,6 +7,7 @@ import { LIBRARY_CHANGED, libraryStats } from "./lib/library";
 import { useVeil } from "./lib/veil";
 import { fromIso } from "./lib/calendar";
 import { useReminders } from "./lib/reminders";
+import { useMacSync } from "./cloud/mac";
 import { useCalendar } from "./lib/useCalendar";
 import { Ask } from "./routes/Ask";
 import { Calendar } from "./routes/Calendar";
@@ -25,6 +26,7 @@ export default function App() {
   const veil = useVeil();
   const calendar = useCalendar();
   useReminders(calendar.events, calendar.done);
+  useMacSync();
   // Appointments, deadlines and expiries in the next 14 days.
   const soon = calendar.events.filter((e) => {
     const days = (fromIso(e.date).getTime() - new Date(new Date().toDateString()).getTime()) / 86_400_000;

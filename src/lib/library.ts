@@ -1,4 +1,5 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { call as invoke, onMac } from "./backend";
+import { cloudConfigured } from "../cloud/config";
 import type { DragEvent } from "react";
 
 /** The local library, kept by the Rust side in the app's data folder (`src-tauri/src/store.rs`). */
@@ -33,8 +34,12 @@ export type Folder = { id: string; area: string; name: string; documents: number
 export type Imported = { added: Document[]; duplicates: string[]; failed: [string, string][] };
 export type Stats = { documents: number; facts: number; pendingFacts: number; toFile: number };
 
-/** False when the interface runs in a plain browser (`bun run dev`), where there is no library. */
-export const hasLibrary = isTauri();
+/**
+ * There is a library to show: the Mac's, or in a browser the cloud library (the app only appears once it's open,
+ * see `CloudGate`). False only in a plain browser preview without the cloud.
+ */
+export const hasLibrary = onMac || cloudConfigured;
+export { onMac };
 
 export const listDocuments = () => (hasLibrary ? invoke<Document[]>("list_documents") : Promise.resolve([]));
 export const libraryStats = () => (hasLibrary ? invoke<Stats>("library_stats") : Promise.resolve({ documents: 0, facts: 0, pendingFacts: 0, toFile: 0 }));
@@ -66,7 +71,7 @@ export async function exportEverything() {
 }
 
 /** True when the library's key is missing from the Keychain and only the recovery key can open it. */
-export const libraryLocked = () => (hasLibrary ? invoke<boolean>("library_locked") : Promise.resolve(false));
+export const libraryLocked = () => (onMac ? invoke<boolean>("library_locked") : Promise.resolve(false));
 /** Opens a locked library with the recovery key; the app restarts when it works. */
 export const recoverLibrary = (code: string) => invoke<void>("recover_library", { code });
 export const recoveryCode = () => invoke<string>("recovery_code");

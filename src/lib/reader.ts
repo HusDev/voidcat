@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { call as invoke } from "./backend";
 import { extractText, getDocumentProxy } from "unpdf";
 import { type Document, isSpreadsheet, readSheets } from "./library";
 

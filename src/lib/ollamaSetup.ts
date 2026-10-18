@@ -1,8 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
+import { call as invoke } from "./backend";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
 import { OLLAMA, readingModel } from "./extract";
-import { hasLibrary } from "./library";
+import { onMac } from "./library";
 
 /**
  * Getting the local model without Terminal: Voidcat checks whether Ollama is installed and running and whether the
@@ -27,13 +27,13 @@ export async function ollamaStatus(): Promise<OllamaStatus> {
   } catch {
     /* not running */
   }
-  return { state: hasLibrary && (await invoke<boolean>("ollama_installed")) ? "installed" : "missing", installed: [] };
+  return { state: onMac && (await invoke<boolean>("ollama_installed")) ? "installed" : "missing", installed: [] };
 }
 
 export const ollamaState = async () => (await ollamaStatus()).state;
 
 /** This Mac's memory in GB, to say which models fit. */
-export const macMemory = () => (hasLibrary ? invoke<number>("mac_memory_gb") : Promise.resolve(16));
+export const macMemory = () => (onMac ? invoke<number>("mac_memory_gb") : Promise.resolve(16));
 
 export const downloadOllama = () => openUrl("https://ollama.com/download");
 export const openOllama = () => invoke<void>("open_ollama");

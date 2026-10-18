@@ -1,10 +1,10 @@
-import { invoke } from "@tauri-apps/api/core";
+import { call as invoke } from "./backend";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { dateKind } from "./calendar";
 import { OLLAMA, askLocal, pagesText, readingModel } from "./extract";
 import { pagePicture } from "./reader";
-import { type Fact, LIBRARY_CHANGED, announceChange, documentPages, hasLibrary, listDocuments, listFacts } from "./library";
+import { type Fact, LIBRARY_CHANGED, announceChange, documentPages, hasLibrary, listDocuments, listFacts, onMac } from "./library";
 import { parseDate } from "./privacy";
 
 /**
@@ -202,7 +202,7 @@ const VERSION_KEY = "voidcat.labelCheckVersion";
 
 /** Once per new check version: forget the old checks and their labels, then check everything again in the background. */
 export async function recheckIfOutdated() {
-  if (!hasLibrary) return;
+  if (!onMac) return;
   let seen = 0;
   try {
     seen = Number(localStorage.getItem(VERSION_KEY) ?? 0);

@@ -29,7 +29,7 @@ export function Recover() {
         }}
         className="flex w-full max-w-md flex-col items-center gap-4 text-center"
       >
-        <Logo size={52} />
+        <Logo size={52} onPage />
         <h1 className="m-0 text-[28px] font-light">Unlock your library</h1>
         <p className="m-0 text-[14.5px] text-ink-2">
           Your documents are here, but this Mac doesn't have their key. Type the recovery key you saved from Settings: 13 groups of four letters and numbers.

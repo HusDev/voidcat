@@ -30,6 +30,7 @@
     "@tauri-apps/plugin-notification": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "ai": "^7.0.137",
+    "firebase": "12.19.0",
     "lucide-react": "^1.55.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -53,6 +54,7 @@
   },
   "license": "MIT",
   "overrides": {
-    "qs": "^6.16.1"
+    "qs": "^6.16.1",
+    "@grpc/grpc-js": "^1.14.5"
   }
 }
