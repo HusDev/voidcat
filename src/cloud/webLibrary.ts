@@ -218,7 +218,8 @@ export function openWebLibrary(uid: string, keys: Keys): Promise<WebLibrary> {
     announce();
     const stamp = `${Date.now()}`.padStart(15, "0");
     await setDoc(doc(db, "users", uid, "records", `edit_${stamp}_${crypto.randomUUID().slice(0, 8)}`), {
-      data: Bytes.fromUint8Array(await sealText(keys.records, JSON.stringify(edit))),
+      // A random number sealed inside: the Mac applies each one once, so a copied edit can't be replayed.
+      data: Bytes.fromUint8Array(await sealText(keys.records, JSON.stringify({ ...edit, n: crypto.randomUUID() }))),
       v: 1,
       updatedAt: serverTimestamp(),
     });

@@ -103,7 +103,8 @@ async function who(req: Request, anyone = false): Promise<string | null> {
   const token = req.headers.get("Authorization")?.match(/^Bearer (.+)$/)?.[1];
   if (!token) return null;
   try {
-    const { uid } = await getAuth().verifyIdToken(token, true);
+    const { uid, email_verified } = await getAuth().verifyIdToken(token, true);
+    if (!email_verified && !anyone) return null;
     return anyone || (await db.collection("users").doc(uid).get()).exists ? uid : null;
   } catch {
     return null;

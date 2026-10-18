@@ -4,8 +4,9 @@ rules_version = '2';
 // "VCAT" format the Mac stores), so the bucket only ever holds locked bytes. Each person reaches only their own.
 service firebase.storage {
   match /b/{bucket}/o {
+    // Signed in as this person with a verified email (as in firestore.rules).
     function owner(uid) {
-      return request.auth != null && request.auth.uid == uid;
+      return request.auth != null && request.auth.uid == uid && request.auth.token.email_verified == true;
     }
 
     match /users/{uid}/files/{id} {

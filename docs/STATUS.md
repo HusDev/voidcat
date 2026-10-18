@@ -113,3 +113,26 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - `glib` 0.18.5 (Medium, RUSTSEC-2024-0429): Linux GTK dependency of Tauri/wry, only in the Linux CI build; the Mac app doesn't contain it, and Tauri 2 still pins gtk-rs 0.18. Not applicable; dismiss.
 - SAST: `detect-non-literal-regexp` in the browser search snippet (rewritten without a built regex) and `timing attack` on `hash === "#cloud"` in `MacCloud.tsx` (a URL anchor, not a secret; renamed). Both false positives, removed.
 - MR !7 (18 Oct): SAST `detect-non-literal-fs-filename` on `fs.readdirSync(dir)` in `vite.config.ts` (`vendorFiles`): dir is one of three fixed node_modules folders, build time only; marked nosemgrep like the other build-time reads. Dependency scanning: only the known Linux-only `glib` finding.
+
+## Security review of Voidcat Cloud (18 Oct 2026)
+Checked and fine:
+- Documents shown in the browser: Markdown without raw HTML (react-markdown, no rehype-raw), `javascript:` links stripped, remote images blocked by CSP; pdf.js (unpdf 1.8.1) has no `new Function` path and neither CSP allows `eval` (CVE-2024-4367 class).
+- Web headers: CSP (scripts from self + apis.google.com for the sign-in pop-up; connect only to Firebase, voidcat-api, jsDelivr, Hugging Face), HSTS, nosniff, no-referrer, frame-ancestors none.
+- voidcat-api: ID token verified with revocation check, library must exist, CORS to the web app, 60k-character and folder-list limits, 300 reads a month in a transaction, answers validated (`api/read.ts`), facts kept only if found on the page, no text logged, generic errors, max 3 instances.
+- Mac sign-in listener: 127.0.0.1 only, 128-bit nonce in every path, 20-minute window, one listener at a time, small bodies, config JSON escaped in the page.
+- Keys: browser keys are non-extractable CryptoKeys; the Mac's master key never leaves Rust.
+- Deleting: account deletion removes records, files (bucket soft delete off), read count and sign-in; "Forget this browser" and Delete also clear the browser's offline copy.
+- Firebase Auth: email enumeration protection on. Rules tested through the Rules API test endpoint (owner allowed; unverified, other users, signed out, usage counter and deleting the library doc refused).
+
+Fixed in this review:
+- Rules and API now require a verified email (email link and Google are; a password account made directly against Firebase gets nothing).
+- Browser edits carry a sealed one-time number; the Mac applies each once (`cloud_edits_seen`), so a copied edit can't be replayed.
+- Forget this browser / Delete my account clear the Firestore IndexedDB cache too.
+
+Accepted for now (with why):
+- Anyone with a verified email can sign up and store data, which costs money. Bounded by verified email, 200 MB per file, 300 Gemini reads a month, 3 API instances and the budget alert. Later: Firebase App Check and the 5 GB per-person limit enforced server-side, with billing.
+- Someone holding your sign-in session but not your key can delete or move your locked items or replace the check (locking browsers out until the recovery key is retyped against a new library); they can't read or forge anything, and the Mac keeps its full library.
+- Firebase's email/password provider stays on because email link needs it; unverified accounts get nothing.
+- The Firebase web API key has no referrer restriction (public by design, limited to Firebase APIs).
+- The Mac's Google sign-in page loads Firebase from gstatic.com without subresource integrity.
+- CSP allows inline styles (React style attributes).
