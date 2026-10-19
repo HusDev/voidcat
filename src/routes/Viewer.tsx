@@ -1,7 +1,8 @@
 import { call as invoke } from "../lib/backend";
-import { ExternalLink, FolderInput, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText } from "lucide-react";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { Check, ChevronDown, Download, ExternalLink, Trash2, FolderInput, History, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText, Sparkles } from "lucide-react";
 import { readDocument, saveReading } from "../lib/reader";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { useParams } from "react-router";
 import remarkGfm from "remark-gfm";
@@ -22,19 +23,32 @@ import {
   announceChange,
   documentPages,
   fileInFolder,
+  discardEmptyNote,
+  freshNotes,
+  hasPreviousVersion,
+  isEditable,
   isSpreadsheet,
   listFacts,
   listFolders,
   onMac,
   openInDefaultApp,
   readSheets,
+  removeDocument,
   renameDocument,
+  restorePreviousVersion,
   settleFact,
 } from "../lib/library";
+import { type SaveState, afterSaves } from "../lib/noteEditor";
+import { process, useProgress } from "../lib/pipeline";
 import { useLabels } from "../lib/labels";
 import { type Mark, type PageText, cellHas, findRuns, markClass, markText, pageText } from "../lib/marks";
 import { useTabs } from "../lib/tabs";
-import { Blurred, Private } from "../lib/veil";
+import { Blurred, Private, useVeil } from "../lib/veil";
+
+/** The document whose tab is on screen. */
+let onScreen: string | null = null;
+
+const NoteEditor = lazy(() => import("../components/NoteEditor"));
 
 const bytesOf = async (id: string) => new Uint8Array(await invoke<ArrayBuffer>("document_bytes", { id }));
 
@@ -150,16 +164,44 @@ function useMarked(marks: Mark[], selected: string | null, ready: unknown) {
   return ref;
 }
 
-function TextFile({ doc, marks, selected }: { doc: Document; marks: Mark[]; selected: string | null }) {
+/** A text or Markdown document, shown as a page, or written in when `editing` (a note). */
+function TextFile({
+  doc,
+  marks,
+  selected,
+  editing,
+  focus,
+  version,
+  onState,
+}: {
+  doc: Document;
+  marks: Mark[];
+  selected: string | null;
+  editing: boolean;
+  focus: boolean;
+  version: number;
+  onState: (state: SaveState, error: string | null) => void;
+}) {
   const [text, setText] = useState<string | null>(null);
-  const ref = useMarked(marks, selected, text);
+  const ref = useMarked(marks, selected, editing ? null : text);
   useEffect(() => {
+    setText(null);
     bytesOf(doc.id).then((b) => setText(new TextDecoder().decode(b)));
-  }, [doc.id]);
+  }, [doc.id, version]);
   if (text === null) return <Loading />;
+  if (editing)
+    return (
+      <div className="mx-auto w-full max-w-[820px] rounded-xl border border-line bg-card px-6 py-5 text-page-ink">
+        <Suspense fallback={<Loading />}>
+          <NoteEditor doc={doc} text={text} focus={focus} onState={onState} onText={setText} />
+        </Suspense>
+      </div>
+    );
   return (
     <div ref={ref} data-selectable className="mx-auto w-full max-w-[820px] rounded-xl border border-line bg-card px-8 py-8 text-page-ink">
-      {doc.mime === "text/markdown" ? (
+      {!text.trim() ? (
+        <p className="m-0 text-sm text-ink-2">This document is empty.</p>
+      ) : doc.mime === "text/markdown" ? (
         <div className="md-page text-[14px] leading-relaxed">
           <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
         </div>
@@ -298,7 +340,7 @@ function Loading() {
 /** A document opened in its tab, with the facts found in it beside it to check. */
 export function Viewer() {
   const { id = "" } = useParams();
-  const { documents } = useTabs();
+  const { documents, active, close } = useTabs();
   const doc = documents.get(id);
   const [facts, setFacts] = useState<Fact[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -307,6 +349,34 @@ export function Viewer() {
   const [moving, setMoving] = useState<Folder[] | null>(null);
   /** What sits beside the document: its facts to check, a chat about it, or nothing. */
   const [panel, setPanel] = useState<"facts" | "ask" | null>(null);
+  const veil = useVeil();
+  /** Writing in a note (Markdown or text); a note just made opens this way, with its name ready to type. */
+  const [editing, setEditing] = useState(false);
+  const [saveState, setSaveState] = useState<{ state: SaveState; error: string | null }>({ state: "saved", error: null });
+  /** Bumped when the file changes under the page (restoring the earlier version), so it loads again. */
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    const fresh = freshNotes.delete(id);
+    setEditing(fresh);
+    setRenaming(fresh);
+    setSaveState({ state: "saved", error: null });
+  }, [id]);
+  // A note closed while still empty and "Untitled" (made by mistake) is removed, once its last save is done.
+  useEffect(() => {
+    if (!onMac) return;
+    onScreen = id;
+    return () => {
+      if (onScreen === id) onScreen = null;
+      setTimeout(async () => {
+        await afterSaves();
+        // Back on screen already (React mounting the page twice in development, or reopened at once): keep it.
+        if (onScreen === id) return;
+        if (await discardEmptyNote(id).catch(() => false)) announceChange();
+      });
+    };
+  }, [id]);
+  // Hiding private details closes the editor (which saves first).
+  const writing = editing && !veil.on && onMac;
 
   useEffect(() => {
     const load = () => Promise.all([listFacts("pending"), listFacts("approved")]).then(([p, a]) => setFacts([...p, ...a].filter((f) => f.documentId === id)));
@@ -344,7 +414,7 @@ export function Viewer() {
     ) : mime.startsWith("image/") ? (
       <ImageFile doc={doc} />
     ) : mime.startsWith("text/") ? (
-      <TextFile doc={doc} marks={marks} selected={current} />
+      <TextFile doc={doc} marks={marks} selected={current} editing={writing} focus={!renaming} version={version} onState={(state, error) => setSaveState({ state, error })} />
     ) : (
       <ReadPages doc={doc} marks={marks} selected={current} />
     );
@@ -383,7 +453,13 @@ export function Viewer() {
           )}
           <span className="font-mono text-xs text-ink-2">
             {doc.folderName ? <Private>{doc.folderName}</Private> : "Not filed"}
-            {doc.pageCount ? ` · ${doc.pageCount} ${doc.pageCount === 1 ? "page" : "pages"}` : ""}
+            {doc.pageCount && !isEditable(doc) ? ` · ${doc.pageCount} ${doc.pageCount === 1 ? "page" : "pages"}` : ""}
+            {writing && (
+              <span role="status" className={saveState.state === "error" ? "text-danger" : ""} title={saveState.error ?? undefined}>
+                {" · "}
+                {saveState.state === "saving" ? "Saving…" : saveState.state === "unsaved" ? "Edited" : saveState.state === "error" ? `Couldn't save: ${saveState.error}` : "Saved"}
+              </span>
+            )}
           </span>
           <div className="mt-1.5">
             <LabelChips documentId={doc.id} labels={labels} canAdd />
@@ -414,7 +490,34 @@ export function Viewer() {
             <MessageSquareText aria-hidden className="size-4" /> Ask
           </button>
         </div>
+        {isEditable(doc) &&
+          (onMac ? (
+            <button
+              type="button"
+              aria-pressed={writing}
+              disabled={veil.on}
+              title={veil.on ? "Turn off Hide private details to edit" : writing ? "Stop editing (it's saved)" : "Write in this document"}
+              onClick={() => setEditing(!writing)}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] disabled:opacity-50 ${writing ? "bg-accent font-semibold text-on-accent hover:bg-accent-strong" : "border border-line-strong hover:border-ink-2"}`}
+            >
+              {writing ? <Check aria-hidden className="size-4" /> : <Pencil aria-hidden className="size-4" />} {writing ? "Done" : "Edit"}
+            </button>
+          ) : (
+            <span className="text-[12.5px] text-ink-2">Edit on your Mac</span>
+          ))}
+        {onMac && isEditable(doc) && <FindFacts doc={doc} saving={writing && saveState.state !== "saved"} />}
+        {isEditable(doc) && <ExportMenu doc={doc} />}
+        {onMac && isEditable(doc) && !writing && <RestorePrevious doc={doc} onRestored={() => setVersion((v) => v + 1)} />}
         <KeepInCloud id={doc.id} />
+        {onMac && doc.written && (
+          <DeleteNote
+            onDelete={async () => {
+              close(active);
+              await removeDocument(doc.id);
+              announceChange();
+            }}
+          />
+        )}
         <button
           type="button"
           onClick={async () => setMoving(moving ? null : await listFolders())}
@@ -491,5 +594,130 @@ function ReadAgain({ doc }: { doc: Document }) {
       {state === "reading" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <ScanText aria-hidden className="size-4" />}
       {state === "reading" ? "Reading…" : state === "done" ? "Read again ✓" : "Read again"}
     </button>
+  );
+}
+
+/**
+ * Runs the local model on a note when you ask (never on its own): filing suggestion, facts to check, contacts and
+ * labels. A dot shows the text changed since it last ran. A folder you chose stays.
+ */
+function FindFacts({ doc, saving }: { doc: Document; saving: boolean }) {
+  const step = useProgress().get(doc.id);
+  const busy = step?.stage === "queued" || step?.stage === "reading" || step?.stage === "filing";
+  const stale = doc.contentChanged || doc.status !== "filed";
+  return (
+    <button
+      type="button"
+      disabled={busy || saving}
+      title={step?.stage === "failed" ? step.message : saving ? "Wait for the note to save" : "Let the local model file this note and find facts in it"}
+      onClick={() => process([doc])}
+      className="relative inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2 disabled:opacity-50"
+    >
+      {busy ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <Sparkles aria-hidden className="size-4" />}
+      {busy ? "Finding facts…" : "Find facts & file"}
+      {stale && !busy && <span aria-label="(text changed)" className="absolute -right-1 -top-1 size-2.5 rounded-full bg-accent ring-2 ring-ground" />}
+    </button>
+  );
+}
+
+/** Saves a copy of a note elsewhere: as a Word document, or as it is. */
+function ExportMenu({ doc }: { doc: Document }) {
+  const [error, setError] = useState<string | null>(null);
+  const plain = doc.mime === "text/plain";
+  const ext = plain ? "txt" : "md";
+  const stem = doc.fileName.replace(/\.[^.]+$/, "") || "Untitled";
+  const exportAs = async (kind: "docx" | "same") => {
+    setError(null);
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const bytes = await bytesOf(doc.id);
+      const target = kind === "docx" ? "docx" : ext;
+      const path = await save({ defaultPath: `${stem}.${target}`, filters: [{ name: kind === "docx" ? "Word document" : plain ? "Text" : "Markdown", extensions: [target] }] });
+      if (!path) return;
+      const out = kind === "docx" ? await (await import("../lib/exportDocx")).docxBytes(new TextDecoder().decode(bytes), doc.title, plain) : bytes;
+      const hex = [...new TextEncoder().encode(path)].map((b) => b.toString(16).padStart(2, "0")).join("");
+      await invoke<void>("save_export_file", out, { headers: { "Content-Type": "application/octet-stream", "x-voidcat-path": hex } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+  if (!onMac) return null;
+  return (
+    <Menu>
+      <MenuButton
+        title={error ? `Couldn't export: ${error}` : "Save a copy"}
+        className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[13px] hover:border-ink-2 ${error ? "border-danger text-danger" : "border-line-strong"}`}
+      >
+        <Download aria-hidden className="size-4" /> Export <ChevronDown aria-hidden className="size-3.5" />
+      </MenuButton>
+      <MenuItems anchor="bottom end" className="z-50 mt-1 flex w-52 flex-col rounded-lg border border-line-strong bg-card p-1 text-[13px] shadow-xl focus:outline-none">
+        <MenuItem>
+          <button type="button" onClick={() => exportAs("docx")} className="rounded-md px-2.5 py-1.5 text-left data-focus:bg-accent-soft">
+            Word (.docx)
+          </button>
+        </MenuItem>
+        <MenuItem>
+          <button type="button" onClick={() => exportAs("same")} className="rounded-md px-2.5 py-1.5 text-left data-focus:bg-accent-soft">
+            {plain ? "Text (.txt)" : "Markdown (.md)"}
+          </button>
+        </MenuItem>
+      </MenuItems>
+    </Menu>
+  );
+}
+
+/** Puts back the version from before the last editing session; doing it again undoes that. */
+function RestorePrevious({ doc, onRestored }: { doc: Document; onRestored: () => void }) {
+  const [has, setHas] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    const check = () => hasPreviousVersion(doc.id).then(setHas, () => setHas(false));
+    check();
+    window.addEventListener(LIBRARY_CHANGED, check);
+    return () => window.removeEventListener(LIBRARY_CHANGED, check);
+  }, [doc.id]);
+  if (!has) return null;
+  return (
+    <button
+      type="button"
+      title={error ?? "Swap in the version from before your last edits (do it again to undo)"}
+      onClick={async () => {
+        try {
+          await restorePreviousVersion(doc.id);
+          onRestored();
+          announceChange();
+        } catch (e) {
+          setError(e instanceof Error ? e.message : String(e));
+        }
+      }}
+      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2"
+    >
+      <History aria-hidden className="size-4" /> Restore previous version
+    </button>
+  );
+}
+
+/** Removes a note for good, after asking once. */
+function DeleteNote({ onDelete }: { onDelete: () => Promise<void> }) {
+  const [asking, setAsking] = useState(false);
+  if (!asking)
+    return (
+      <button
+        type="button"
+        onClick={() => setAsking(true)}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-danger hover:text-danger"
+      >
+        <Trash2 aria-hidden className="size-4" /> Delete
+      </button>
+    );
+  return (
+    <span role="group" aria-label="Delete this note?" className="inline-flex items-center gap-1.5 text-[13px]">
+      <button type="button" autoFocus onClick={() => setAsking(false)} className="h-8 rounded-md border border-line-strong px-2.5 hover:border-ink-2">
+        Keep
+      </button>
+      <button type="button" onClick={onDelete} className="h-8 rounded-md bg-danger px-2.5 font-semibold text-white">
+        Remove for good
+      </button>
+    </span>
   );
 }

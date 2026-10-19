@@ -1,4 +1,4 @@
-import { CalendarDays, Check, ChevronRight, Cloud, CloudCheck, Pencil, Eye, EyeOff, FileText, Folder as FolderIcon, FolderOpen, Inbox, Library, Lightbulb, Link2, LockKeyhole, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
+import { CalendarDays, Check, ChevronRight, Cloud, CloudCheck, Pencil, Eye, EyeOff, FileText, FilePlus, Folder as FolderIcon, FolderOpen, Inbox, Library, Lightbulb, Link2, LockKeyhole, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
 import { type DragEvent, type MouseEvent, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { AREAS } from "../lib/extract";
@@ -14,6 +14,8 @@ import {
   listDocuments,
   listFolders,
   moveFolder,
+  newNote,
+  onMac,
   openDocument,
   renameDocument,
   renameFolder,
@@ -378,6 +380,11 @@ function TreeMenu({
         </>
       ) : (
         <>
+          {onMac && (
+            <button type="button" role="menuitem" onClick={run(() => newNote("md", id))} className={item}>
+              <FilePlus aria-hidden className="size-3.5" /> New document here
+            </button>
+          )}
           <button type="button" role="menuitem" onClick={run(() => onRename(menu.key))} className={item}>
             <Pencil aria-hidden className="size-3.5" /> Rename
           </button>

@@ -11,6 +11,7 @@ import { FolderPicker } from "../components/FolderPicker";
 import { LabelChips } from "../components/LabelChips";
 import { RenameInput } from "../components/RenameInput";
 import { ToFile } from "../components/ToFile";
+import { NewNoteButton } from "../components/NewNoteButton";
 import {
   type Document,
   type Fact,
@@ -282,6 +283,7 @@ export function Library() {
           {inView.length} {inView.length === 1 ? "document" : "documents"}
           {!folder && ` · ${facts.length} ${facts.length === 1 ? "fact" : "facts"}`}
         </span>
+        {onMac && <NewNoteButton folderId={folder?.id} onError={setNotice} />}
         {folder && inView.length > 0 && (
           <button
             type="button"

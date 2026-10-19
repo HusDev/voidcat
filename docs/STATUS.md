@@ -58,6 +58,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 22. **Labels:** expired / ended from dates, duplicates by text similarity, unsigned only with a "sign here" request in a signable kind of document plus the vision model, incomplete from "page X of Y", not useful only when no facts were found.
 23. **Me redesign** (dark ID header, missing chips, section cards, timeline) and Contacts limited to people you can reach.
 24. **Voidcat Cloud, Mac side (18 Oct, branch `cloud/day-1`):** Settings → Voidcat Cloud connects the Mac (email link or Google, both through the browser and a localhost listener); every document goes up as a sealed record + its already-sealed file; per-document "In the cloud" switch (document tab, card, tree menu); marks on cards and tree rows; sidebar status above "Encrypted"; "New documents go to the cloud"; Disconnect; Delete the cloud copy; Join a cloud library made elsewhere (re-locks the Mac with that key, backup kept beside the library). Day 2 (same branch): the browser opens the cloud library (Library, folders, document tabs, search, fact review, rename/move, remove, drop or choose files); browser changes and files reach the Mac through sealed `edit_` records on its next sync. Not in the browser yet: Ask, Calendar extras, Contacts, Me, labels (Day 6 for Ask). Day 3 (branch `cloud/day-3`): "Read now" in the browser (OCR and masking in the browser, voidcat-api + Gemini 2.5 Flash in Belgium, 300 reads a month), live at https://voidcat-api-1094942921673.europe-west1.run.app. Ask in the browser (branch `cloud/ask`): Gemini through `/v1/ask`, masked both ways, 1,000 a month; no zip or saved chats there yet. Trust basics (branch `cloud/trust`): Delete my account, browser export, Privacy Policy and Terms (placeholders to fill in), 30-minute idle lock.
+25. **Notes (19 Oct, branch `feat/notes`):** write .md/.txt in Voidcat (New document, New document here on a folder), Edit any text document with autosave and ⌘S, one previous version kept per editing session, Export as Word (.docx) or as is, Find facts & file only by hand; Mac only (browser read-only).
 
 ## Next, in order
 1. **GitLab hackathon work** (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):
@@ -97,6 +98,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - Model prompts: don't give concrete example names or addresses; the local model copies them ("Lease Provença 210" incident).
 - `keyring` must be v3 with `apple-native` (v4 has a different API).
 - The browser preview (`bun run dev`, http://localhost:1420) has no library (`hasLibrary` false); use it only for layout checks (puppeteer scripts in the Claude scratchpad).
+- Notes' `sha256` column is `<hex>:<id>` (so notes may share text); compare file contents with `store::content_sha`. Each edited note may have a sealed `<stored_path>.prev` next to it.
 - The library DB is real user data: never reset it. Migrations add columns in `store.rs` `migrate()`; new tables use `create table if not exists`.
 
 ## Security findings reviewed (13 Oct 2026, MR !1)

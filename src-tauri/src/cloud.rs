@@ -374,13 +374,20 @@ impl Store {
             for (path, sha) in &docs {
                 let Ok(bytes) = fs::read(path) else { continue };
                 let plain = self.vault.decrypt(bytes)?;
-                if hash(&plain) != *sha {
+                if hash(&plain) != crate::store::content_sha(sha) {
                     return Err(format!("Stopped: {path} didn't read back the same."));
                 }
                 let sealed = new.encrypt(&plain)?;
                 let tmp = format!("{path}.rekeyed");
                 fs::write(&tmp, &sealed).map_err(|e| e.to_string())?;
                 written.push((path.clone(), tmp));
+                // A note's kept earlier version moves to the new key too.
+                let prev = crate::store::previous(path);
+                if let Ok(bytes) = fs::read(&prev) {
+                    let tmp = format!("{prev}.rekeyed");
+                    fs::write(&tmp, new.encrypt(&self.vault.decrypt(bytes)?)?).map_err(|e| e.to_string())?;
+                    written.push((prev, tmp));
+                }
             }
             let target = db_tmp.to_string_lossy().replace('\'', "''");
             db.execute_batch(&format!("attach database '{target}' as rekeyed key \"x'{}'\"; select sqlcipher_export('rekeyed'); detach database rekeyed;", new.db_key))

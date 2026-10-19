@@ -56,6 +56,49 @@ fn rename_document(store: State<Store>, id: String, title: String) -> Result<(),
     store.rename_document(&id, &title)
 }
 
+/// A new, empty note (Markdown or plain text), filed in `folder_id` when given.
+#[tauri::command]
+fn create_note(store: State<Store>, title: String, kind: String, folder_id: Option<String>) -> Result<Document, String> {
+    store.create_note(&title, &kind, folder_id.as_deref())
+}
+
+/// Saves a text document's contents; `keep_previous` on an editing session's first save.
+#[tauri::command]
+fn save_note(store: State<Store>, id: String, text: String, keep_previous: bool) -> Result<(), String> {
+    store.save_note(&id, &text, keep_previous)
+}
+
+/// Removes a note closed while still empty and "Untitled"; true when it did.
+#[tauri::command]
+fn discard_empty_note(store: State<Store>, id: String) -> Result<bool, String> {
+    store.discard_empty_note(&id)
+}
+
+#[tauri::command]
+fn has_previous_version(store: State<Store>, id: String) -> Result<bool, String> {
+    store.has_previous(&id)
+}
+
+#[tauri::command]
+fn restore_previous_version(store: State<Store>, id: String) -> Result<(), String> {
+    store.restore_previous(&id)
+}
+
+/// Writes an exported copy of a note (Word, Markdown or text) where the save dialog said, sent as the request body.
+#[tauri::command]
+fn save_export_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
+    let path = request.headers().get("x-voidcat-path").and_then(|v| v.to_str().ok()).ok_or("Missing x-voidcat-path.")?;
+    let path = String::from_utf8(hex::decode(path).map_err(|_| "Bad path.")?).map_err(|_| "Bad path.")?;
+    let lower = path.to_lowercase();
+    if ![".docx", ".md", ".txt"].iter().any(|e| lower.ends_with(e)) {
+        return Err("Export as .docx, .md or .txt.".into());
+    }
+    match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => std::fs::write(path, bytes).map_err(|e| e.to_string()),
+        _ => Err("Send the file as raw bytes.".into()),
+    }
+}
+
 #[tauri::command]
 fn list_labels(store: State<Store>) -> Result<Vec<labels::Label>, String> {
     labels::list(&store.db.lock().unwrap())
@@ -642,6 +685,12 @@ pub fn run() {
             refile_document,
             move_folder,
             rename_document,
+            create_note,
+            save_note,
+            has_previous_version,
+            discard_empty_note,
+            restore_previous_version,
+            save_export_file,
             save_zip,
             list_labels,
             replace_auto_labels,
