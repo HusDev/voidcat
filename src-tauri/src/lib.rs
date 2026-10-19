@@ -68,6 +68,35 @@ fn save_note(store: State<Store>, id: String, text: String, keep_previous: bool)
     store.save_note(&id, &text, keep_previous)
 }
 
+/// Keeps a signed PDF (the request body) made from the document in `x-voidcat-id` as a new document beside it.
+#[tauri::command]
+fn save_signed(store: State<Store>, request: tauri::ipc::Request<'_>) -> Result<Document, String> {
+    let id = request.headers().get("x-voidcat-id").and_then(|v| v.to_str().ok()).ok_or("Missing x-voidcat-id.")?;
+    match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => store.save_signed(id, bytes),
+        _ => Err("Send the PDF as raw bytes.".into()),
+    }
+}
+
+/// Your saved signature (a PNG), or nothing.
+#[tauri::command]
+fn get_signature(store: State<Store>) -> Result<tauri::ipc::Response, String> {
+    Ok(tauri::ipc::Response::new(store.signature()?.unwrap_or_default()))
+}
+
+#[tauri::command]
+fn save_signature(store: State<Store>, request: tauri::ipc::Request<'_>) -> Result<(), String> {
+    match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => store.save_signature(bytes),
+        _ => Err("Send the signature as raw bytes.".into()),
+    }
+}
+
+#[tauri::command]
+fn forget_signature(store: State<Store>) -> Result<(), String> {
+    store.forget_signature()
+}
+
 /// Removes a note closed while still empty and "Untitled"; true when it did.
 #[tauri::command]
 fn discard_empty_note(store: State<Store>, id: String) -> Result<bool, String> {
@@ -689,6 +718,10 @@ pub fn run() {
             save_note,
             has_previous_version,
             discard_empty_note,
+            save_signed,
+            get_signature,
+            save_signature,
+            forget_signature,
             restore_previous_version,
             save_export_file,
             save_zip,

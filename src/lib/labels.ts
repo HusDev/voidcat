@@ -91,7 +91,8 @@ export async function refreshLabels() {
   const [approved, pending, docs] = await Promise.all([listFacts("approved"), listFacts("pending"), listDocuments()]);
   await replaceAuto(["expired", "ended"], dateLabels([...approved, ...pending], new Date(new Date().toDateString())));
   const texts = new Map<string, string>();
-  for (const d of docs) texts.set(d.id, (await documentPages(d.id)).map((p) => p.text).join("\n"));
+  // A signed copy has its original's text on purpose; it isn't a stray copy.
+  for (const d of docs) if (!d.signedFrom) texts.set(d.id, (await documentPages(d.id)).map((p) => p.text).join("\n"));
   const title = new Map(docs.map((d) => [d.id, d.title]));
   const dupes = duplicateGroups(texts).flatMap((g) =>
     g.map((id): NewLabel => {

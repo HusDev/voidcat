@@ -1,13 +1,13 @@
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { Archive, BellRing, Cloud, Check, Copy, EyeOff, KeyRound, LoaderCircle, Monitor, Moon, ScanFace, Sun, Trash2 } from "lucide-react";
+import { Archive, BellRing, Cloud, Check, Copy, EyeOff, KeyRound, LoaderCircle, Monitor, Moon, PenLine, ScanFace, Sun, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { deleteAccount } from "../cloud/account";
 import { useCloud } from "../cloud/CloudGate";
 import { MacCloud } from "../components/MacCloud";
-import { exportEverything, onMac as hasLibrary, recoveryCode } from "../lib/library";
+import { exportEverything, forgetSignature, getSignature, onMac as hasLibrary, recoveryCode } from "../lib/library";
 import { MODEL_SIZE, setNameCheck, useNameCheck } from "../lib/nameCheck";
 import { type Theme, useTheme } from "../lib/theme";
-import { useVeil } from "../lib/veil";
+import { Blurred, useVeil } from "../lib/veil";
 
 const THEMES: { id: Theme; name: string; note: string; Icon: typeof Sun }[] = [
   { id: "system", name: "Auto", note: "Follows your Mac", Icon: Monitor },
@@ -57,6 +57,63 @@ function useOpenAtLogin() {
 }
 
 /** Your data: one zip of every document, and the recovery key that opens the library without the Keychain. */
+/** The signature you sign documents with: kept on this Mac, locked; you can forget it. */
+function YourSignature() {
+  const [url, setUrl] = useState<string | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let made: string | null = null;
+    getSignature()
+      .then((png) => {
+        made = png ? URL.createObjectURL(new Blob([new Uint8Array(png)], { type: "image/png" })) : null;
+        setUrl(made);
+      })
+      .catch(() => setUrl(null));
+    return () => {
+      if (made) URL.revokeObjectURL(made);
+    };
+  }, []);
+  return (
+    <section aria-labelledby="your-signature" className="flex flex-col gap-3">
+      <h2 id="your-signature" className="m-0 text-[15px] font-semibold">
+        Your signature
+      </h2>
+      <div className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3.5">
+        <PenLine aria-hidden className="size-4.5 shrink-0 text-ink-2" />
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+          {url ? (
+            <Blurred className="grid h-14 w-56 max-w-full place-items-center rounded-md border border-line bg-white">
+              <img src={url} alt="Your saved signature" className="max-h-12 max-w-full" />
+            </Blurred>
+          ) : (
+            <span className="text-[14px] font-semibold">No signature kept</span>
+          )}
+          <span className="text-[12.5px] text-ink-2">
+            {url ? "Kept on this Mac, locked like your documents. It never goes to an AI or to the cloud on its own." : "You make one the first time you sign a document."}
+          </span>
+          {error && <span className="text-[12.5px] text-danger">{error}</span>}
+        </span>
+        {url && (
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await forgetSignature();
+                setUrl(null);
+              } catch (e) {
+                setError(`Couldn't forget it: ${String(e)}`);
+              }
+            }}
+            className="shrink-0 rounded-lg border border-line-strong px-3 py-1.5 text-[13px] font-semibold hover:border-danger hover:text-danger"
+          >
+            Forget my signature
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function YourData() {
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState<string | null>(null);
@@ -381,6 +438,7 @@ export function Settings() {
       <CloudAccount />
       <MacCloud />
 
+      {hasLibrary && <YourSignature />}
       {hasLibrary && <YourData />}
 
       {hasLibrary && (

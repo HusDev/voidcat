@@ -21,6 +21,15 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - While **Hide private details** is on, notes are blurred and can't be edited.
 - In a browser, notes can be read but are edited on your Mac.
 
+## Signing
+- Open a PDF, a photo or scan, or a note and click **Sign**. Photos and notes are made into a PDF first.
+- The first time, make your signature: **Draw** it with the trackpad or mouse, **Type** your name in a handwriting style, or **Upload** a photo of it on white paper (the paper is made see-through). It's kept on this Mac, locked, and never goes to an AI or to the cloud on its own.
+- Voidcat puts your signature where the document asks for it ("Firma", "Signature"), with today's date under it. Drag it to move it, drag its corner to resize it. **Signature**, **Date** and **Text** add more: click the button, then the page. Text boxes offer values from your approved facts, like your name.
+- **Save signed copy** makes a new PDF called "… (signed)" next to the original, in the same folder. The original stays as it is, and each links to the other.
+- This is a visible signature, like signing on paper. A digital signature with your FNMT certificate or DNIe comes later.
+- **Forget my signature** in [Settings](#/settings) removes the kept signature. Hide private details blurs it, and signing waits until it's off.
+- In a browser, signing happens on your Mac.
+
 ## Folders
 - Documents are filed as **Area › Folder**, for example Home › Lease or Identity › Passport.
 - If Voidcat isn't sure where a document goes, it waits in the **to file** strip at the top of the [Library](#/) with a suggestion: File here, Create and file, or pick another folder. Click its name to open it, or the trash icon to remove it without filing.
