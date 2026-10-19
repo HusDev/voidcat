@@ -26,6 +26,7 @@ import {
   fileInFolder,
   discardEmptyNote,
   freshNotes,
+  signNext,
   hasPreviousVersion,
   isEditable,
   isSpreadsheet,
@@ -364,7 +365,7 @@ export function Viewer() {
     const fresh = freshNotes.delete(id);
     setEditing(fresh);
     setRenaming(fresh);
-    setSigning(false);
+    setSigning(signNext.delete(id));
     setSaveState({ state: "saved", error: null });
   }, [id]);
   // A note closed while still empty and "Untitled" (made by mistake) is removed, once its last save is done.

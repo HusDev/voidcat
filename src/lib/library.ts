@@ -79,6 +79,8 @@ export const getSignature = async () => {
 export const saveSignature = (png: Uint8Array) => invoke<void>("save_signature", png, { headers: { "Content-Type": "application/octet-stream" } });
 export const forgetSignature = () => invoke<void>("forget_signature");
 
+/** Documents chosen in Tools → Sign, which their tab opens ready to sign (once). */
+export const signNext = new Set<string>();
 /** Notes just made, which their tab opens in edit mode (once). */
 export const freshNotes = new Set<string>();
 /** Makes a note and opens it in its tab, ready to type in. */

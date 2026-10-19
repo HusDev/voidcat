@@ -12,6 +12,7 @@ import {
   MessageSquareText,
   Settings,
   UserRound,
+  Wrench,
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router";
@@ -20,6 +21,7 @@ import { Private } from "../lib/veil";
 
 const SCREENS: Record<string, [string, LucideIcon]> = {
   "/": ["Library", Library],
+  "/tools": ["Tools", Wrench],
   "/me": ["Me", UserRound],
   "/contacts": ["Contacts", Contact],
   "/calendar": ["Calendar", CalendarDays],

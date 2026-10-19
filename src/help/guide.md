@@ -10,6 +10,10 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - The same file twice is added once.
 - Reading and filing happen on your Mac with the local model. Nothing is uploaded to do this.
 
+## Tools and + New
+- [Tools](#/tools) in the sidebar lists everything you can do with documents. Ready now: **New document** and **Sign** (pick a document and it opens ready to sign). The others are marked **Coming**: New sheet, Fill a form, Combine PDFs, Split or reorder, Scan to PDF, Convert and Redact.
+- **+ New** at the top of the sidebar makes a document from any screen: **Document** (Markdown) or **Plain text**.
+
 ## Writing your own documents
 - Click **New document** on the [Library](#/) to write a note right in Voidcat. The arrow next to it makes **Plain text** instead of **Markdown** (headings, lists, bold, tables). Inside a folder's view, or with right-click on a folder in the sidebar → **New document here**, the note goes straight into that folder.
 - Type its name first, then write. It saves by itself a moment after you stop typing; ⌘S saves at once. "Saved" shows under the name.

@@ -18,6 +18,7 @@ import { Library } from "./routes/Library";
 import { Me } from "./routes/Me";
 import { Opportunities } from "./routes/Opportunities";
 import { Settings } from "./routes/Settings";
+import { Tools } from "./routes/Tools";
 import { Viewer } from "./routes/Viewer";
 
 export default function App() {
@@ -64,6 +65,7 @@ export default function App() {
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8 pt-6">
           <Routes>
             <Route index element={<Library />} />
+            <Route path="tools" element={<Tools />} />
             <Route path="me" element={<Me />} />
             <Route path="contacts" element={<Contacts />} />
             <Route path="ask" element={<Ask />} />

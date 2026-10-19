@@ -4,6 +4,7 @@ Each version's section becomes its GitLab release notes.
 
 ## Unreleased
 
+- Tools screen in the sidebar (New document, Sign, and the tools coming next) and **+ New** at the top of the sidebar.
 - Signing: sign PDFs, photos and notes with a drawn, typed or uploaded signature (kept on this Mac, locked), placed where the document asks for it, with the date and text boxes; Save signed copy makes "… (signed)" next to the original. Settings → Your signature → Forget my signature.
 - Notes: write Markdown or plain-text documents in Voidcat (New document in the Library, New document here on a folder), edit any .md/.txt with Edit, autosave, Restore previous version, export as Word (.docx); Find facts & file runs the local model only when asked; Delete in a note's tab, and an empty Untitled note is removed when closed.
 - Ask: a local model that says it made a zip without calling the tool is asked once more, and the answer never claims a zip that wasn't made.

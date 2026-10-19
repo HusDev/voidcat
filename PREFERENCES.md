@@ -160,3 +160,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 19 Oct 2026 — The "to file" cards get a trash icon (remove for good, asks once) and their name opens the document (his report: a note waiting there could only be filed, "nothing is there" to delete it).
 - 19 Oct 2026 — Document tools direction (his: "look the end goal is to have doc, sheets … convert … sign docs"; after three design options he liked A + C and "i like the tools tab can you keep it"): tool row on the document, + New menu, and a Tools screen, all three.
 - 19 Oct 2026 — Signing decided in a grill-me session (visible signature first, kept locked, auto-placed, new signed copy, PDFs/photos/notes, date + text boxes, Mac only); the tools order confirmed ("looks good").
+- 19 Oct 2026 — Tools screen and + New built (his report: "where is the tools tab i can't see it"; only signing had been built). Tools not built yet show as "Coming".
