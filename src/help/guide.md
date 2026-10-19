@@ -20,7 +20,7 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - **+ New** at the top of the sidebar makes a document from any screen: **Document** (Markdown) or **Plain text**.
 
 ## Writing your own documents
-- Click **New document** on the [Library](#/) to write a note right in Voidcat. The arrow next to it makes **Plain text** instead of **Markdown** (headings, lists, bold, tables). Inside a folder's view, or with right-click on a folder in the sidebar → **New document here**, the note goes straight into that folder.
+- Click **+ New** at the top of the sidebar to write a note right in Voidcat: **Document** (Markdown: headings, lists, bold, tables) or **Plain text**. Right-click a folder in the sidebar → **New document here** to put the note straight into that folder.
 - Type its name first, then write. It saves by itself a moment after you stop typing; ⌘S saves at once. "Saved" shows under the name.
 - Any Markdown or text document can be changed: open it and click **Edit**, then **Done**. Photos, PDFs and Word files can't be edited.
 - What you write is searchable at once. To file it and find facts in it, click **Find facts & file** (a dot on it means the text changed since it last ran). The local model never reads your notes on its own.

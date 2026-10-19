@@ -11,7 +11,6 @@ import { FolderPicker } from "../components/FolderPicker";
 import { LabelChips } from "../components/LabelChips";
 import { RenameInput } from "../components/RenameInput";
 import { TaskSection, ToFile, smallButton, taskRow } from "../components/ToFile";
-import { NewNoteButton } from "../components/NewNoteButton";
 import {
   type Document,
   type Fact,
@@ -755,7 +754,6 @@ export function Library() {
             className="min-w-0 flex-1 bg-transparent text-ink outline-none"
           />
         </label>
-        {onMac && <NewNoteButton folderId={folder?.id} onError={setNotice} />}
         <button
           type="button"
           onClick={choose}
