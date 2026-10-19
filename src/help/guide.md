@@ -4,8 +4,13 @@ Voidcat keeps your important papers (passports, residence cards, leases, payslip
 
 Your **library** means all your documents in Voidcat and everything Voidcat learned from them. Links like [Library](#/) open that screen in Voidcat.
 
+## The Library
+- Tabs across the top show one view at a time: **Needs you** (what's waiting: documents to file, facts to check, possible copies), **Recently added** (the last 30 days), **Expiring soon** (IDs and permits expiring in the next three months, or already expired), **Unsigned**, **Notes I wrote** and **Everything**. The Library opens on Needs you when something waits, otherwise on Recently added.
+- Documents show as a compact list grouped by when they were added, each with its folder and one key fact (an expiry, an amount or a date). Filter by **Area**, **Type**, **Year** or **Label**, sort by date, name or folder, and switch between **List** and **Cards**. More load as you scroll.
+- Hover a row for its actions: keep in the cloud, rename, move, re-file, remove. Click a name to open it.
+
 ## Adding documents
-- Drag files onto the [Library](#/), or click **Choose files**.
+- Drop files anywhere on the [Library](#/), or click **Add files**.
 - Voidcat reads PDFs, photos and scans (it reads the text in pictures on your Mac), Word (.docx), Excel and other spreadsheets (.xlsx, .xls, .ods, .csv), text and Markdown.
 - The same file twice is added once.
 - Reading and filing happen on your Mac with the local model. Nothing is uploaded to do this.
@@ -36,10 +41,10 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 
 ## Folders
 - Documents are filed as **Area › Folder**, for example Home › Lease or Identity › Passport.
-- If Voidcat isn't sure where a document goes, it waits in the **to file** strip at the top of the [Library](#/) with a suggestion: File here, Create and file, or pick another folder. Click its name to open it, or the trash icon to remove it without filing.
+- If Voidcat isn't sure where a document goes, it waits under **To file** in the Library's **Needs you** view with a suggestion: File here (or Create and file), the pencil to rename the new folder, or **Other…** to pick another. Click its name to open it, or the trash icon to remove it without filing.
 - The sidebar shows your folders like Finder. Drag a document onto a folder to move it. Drag a folder onto an area to move the whole folder.
-- **Rename**: hover a folder or document (in the sidebar or on its card) and click the **pencil**; the name becomes a field right there. Enter saves, Esc cancels. An open folder has a pencil next to its title. Double-click or right-click → Rename work too.
-- **Re-file** on a document card asks the local model again where it belongs.
+- **Rename**: hover a folder or document (in the sidebar or in the Library's list) and click the **pencil**; the name becomes a field right there. Enter saves, Esc cancels. An open folder has a pencil next to its title. Double-click or right-click → Rename work too.
+- **Re-file** (in a document's row actions) asks the local model again where it belongs.
 - A folder's view has **Download zip** to save all its documents at once.
 
 ## Facts to approve
