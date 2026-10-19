@@ -7,6 +7,14 @@ export type SaveState = "saved" | "unsaved" | "saving" | "error";
 
 export const AUTOSAVE_MS = 1500;
 
+/** Saves still running after their editor closed, so a closed note is checked only once they finish. */
+const inFlight = new Set<Promise<void>>();
+export function track(save: Promise<void>) {
+  inFlight.add(save);
+  void save.finally(() => inFlight.delete(save));
+}
+export const afterSaves = () => Promise.allSettled(inFlight);
+
 export class Autosave {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private pending: string | null = null;

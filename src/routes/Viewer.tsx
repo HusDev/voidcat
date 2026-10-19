@@ -1,6 +1,6 @@
 import { call as invoke } from "../lib/backend";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { Check, ChevronDown, Download, ExternalLink, FolderInput, History, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Download, ExternalLink, Trash2, FolderInput, History, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText, Sparkles } from "lucide-react";
 import { readDocument, saveReading } from "../lib/reader";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -23,6 +23,7 @@ import {
   announceChange,
   documentPages,
   fileInFolder,
+  discardEmptyNote,
   freshNotes,
   hasPreviousVersion,
   isEditable,
@@ -32,16 +33,20 @@ import {
   onMac,
   openInDefaultApp,
   readSheets,
+  removeDocument,
   renameDocument,
   restorePreviousVersion,
   settleFact,
 } from "../lib/library";
-import type { SaveState } from "../lib/noteEditor";
+import { type SaveState, afterSaves } from "../lib/noteEditor";
 import { process, useProgress } from "../lib/pipeline";
 import { useLabels } from "../lib/labels";
 import { type Mark, type PageText, cellHas, findRuns, markClass, markText, pageText } from "../lib/marks";
 import { useTabs } from "../lib/tabs";
 import { Blurred, Private, useVeil } from "../lib/veil";
+
+/** The document whose tab is on screen. */
+let onScreen: string | null = null;
 
 const NoteEditor = lazy(() => import("../components/NoteEditor"));
 
@@ -335,7 +340,7 @@ function Loading() {
 /** A document opened in its tab, with the facts found in it beside it to check. */
 export function Viewer() {
   const { id = "" } = useParams();
-  const { documents } = useTabs();
+  const { documents, active, close } = useTabs();
   const doc = documents.get(id);
   const [facts, setFacts] = useState<Fact[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -355,6 +360,20 @@ export function Viewer() {
     setEditing(fresh);
     setRenaming(fresh);
     setSaveState({ state: "saved", error: null });
+  }, [id]);
+  // A note closed while still empty and "Untitled" (made by mistake) is removed, once its last save is done.
+  useEffect(() => {
+    if (!onMac) return;
+    onScreen = id;
+    return () => {
+      if (onScreen === id) onScreen = null;
+      setTimeout(async () => {
+        await afterSaves();
+        // Back on screen already (React mounting the page twice in development, or reopened at once): keep it.
+        if (onScreen === id) return;
+        if (await discardEmptyNote(id).catch(() => false)) announceChange();
+      });
+    };
   }, [id]);
   // Hiding private details closes the editor (which saves first).
   const writing = editing && !veil.on && onMac;
@@ -490,6 +509,15 @@ export function Viewer() {
         {isEditable(doc) && <ExportMenu doc={doc} />}
         {onMac && isEditable(doc) && !writing && <RestorePrevious doc={doc} onRestored={() => setVersion((v) => v + 1)} />}
         <KeepInCloud id={doc.id} />
+        {onMac && doc.written && (
+          <DeleteNote
+            onDelete={async () => {
+              close(active);
+              await removeDocument(doc.id);
+              announceChange();
+            }}
+          />
+        )}
         <button
           type="button"
           onClick={async () => setMoving(moving ? null : await listFolders())}
@@ -666,5 +694,30 @@ function RestorePrevious({ doc, onRestored }: { doc: Document; onRestored: () =>
     >
       <History aria-hidden className="size-4" /> Restore previous version
     </button>
+  );
+}
+
+/** Removes a note for good, after asking once. */
+function DeleteNote({ onDelete }: { onDelete: () => Promise<void> }) {
+  const [asking, setAsking] = useState(false);
+  if (!asking)
+    return (
+      <button
+        type="button"
+        onClick={() => setAsking(true)}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-danger hover:text-danger"
+      >
+        <Trash2 aria-hidden className="size-4" /> Delete
+      </button>
+    );
+  return (
+    <span role="group" aria-label="Delete this note?" className="inline-flex items-center gap-1.5 text-[13px]">
+      <button type="button" autoFocus onClick={() => setAsking(false)} className="h-8 rounded-md border border-line-strong px-2.5 hover:border-ink-2">
+        Keep
+      </button>
+      <button type="button" onClick={onDelete} className="h-8 rounded-md bg-danger px-2.5 font-semibold text-white">
+        Remove for good
+      </button>
+    </span>
   );
 }

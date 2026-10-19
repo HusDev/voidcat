@@ -15,6 +15,7 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - Type its name first, then write. It saves by itself a moment after you stop typing; ⌘S saves at once. "Saved" shows under the name.
 - Any Markdown or text document can be changed: open it and click **Edit**, then **Done**. Photos, PDFs and Word files can't be edited.
 - What you write is searchable at once. To file it and find facts in it, click **Find facts & file** (a dot on it means the text changed since it last ran). The local model never reads your notes on its own.
+- **Delete** in a note's tab removes it for good (it asks once). A note you close while it's still empty and called "Untitled" is removed by itself.
 - **Restore previous version** puts back the text from before your last edits; click it again to undo that.
 - **Export** saves a copy as a Word document (.docx) or as the Markdown or text file itself.
 - While **Hide private details** is on, notes are blurred and can't be edited.

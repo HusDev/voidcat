@@ -68,6 +68,12 @@ fn save_note(store: State<Store>, id: String, text: String, keep_previous: bool)
     store.save_note(&id, &text, keep_previous)
 }
 
+/// Removes a note closed while still empty and "Untitled"; true when it did.
+#[tauri::command]
+fn discard_empty_note(store: State<Store>, id: String) -> Result<bool, String> {
+    store.discard_empty_note(&id)
+}
+
 #[tauri::command]
 fn has_previous_version(store: State<Store>, id: String) -> Result<bool, String> {
     store.has_previous(&id)
@@ -682,6 +688,7 @@ pub fn run() {
             create_note,
             save_note,
             has_previous_version,
+            discard_empty_note,
             restore_previous_version,
             save_export_file,
             save_zip,

@@ -22,7 +22,7 @@ import {
 } from "@mdxeditor/editor";
 import { useEffect, useRef } from "react";
 import { type Document, announceChange, saveNote } from "../lib/library";
-import { Autosave, type SaveState } from "../lib/noteEditor";
+import { Autosave, type SaveState, track } from "../lib/noteEditor";
 
 /**
  * A note being written: Markdown with the formatting shown as you type (MDXEditor), or plain text in a text area.
@@ -72,7 +72,7 @@ export default function NoteEditor({
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("pagehide", onHide);
       // Leaving the editor saves what is left; the save finishes on its own.
-      void a.flush();
+      track(a.flush());
       if (latest.current !== null) keep.current(latest.current);
       autosave.current = null;
     };

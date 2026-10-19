@@ -4,7 +4,7 @@ Each version's section becomes its GitLab release notes.
 
 ## Unreleased
 
-- Notes: write Markdown or plain-text documents in Voidcat (New document in the Library, New document here on a folder), edit any .md/.txt with Edit, autosave, Restore previous version, export as Word (.docx); Find facts & file runs the local model only when asked.
+- Notes: write Markdown or plain-text documents in Voidcat (New document in the Library, New document here on a folder), edit any .md/.txt with Edit, autosave, Restore previous version, export as Word (.docx); Find facts & file runs the local model only when asked; Delete in a note's tab, and an empty Untitled note is removed when closed.
 - Ask: a local model that says it made a zip without calling the tool is asked once more, and the answer never claims a zip that wasn't made.
 - Privacy: labels like "NIE de la arrendataria" are read as IDs again (the "end" inside "arrendataria" made them dates).
 - Calendar: a date with a time in the same value ("12 November 2026 at 10:30") now shows up.

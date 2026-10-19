@@ -1053,6 +1053,26 @@ impl Store {
         self.save_reading(id, vec![text], "text")
     }
 
+    /// Removes a note left as it was made: still "Untitled", nothing written in it and no facts. Returns whether it did.
+    pub fn discard_empty_note(&self, id: &str) -> Result<bool, String> {
+        let untouched: bool = {
+            let db = self.db.lock().unwrap();
+            db.query_row(
+                "select written = 1 and title = 'Untitled' and not exists (select 1 from facts where document_id = ?1) from documents where id = ?1",
+                [id],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(|e| e.to_string())?
+            .unwrap_or(false)
+        };
+        if !untouched || !String::from_utf8_lossy(&self.bytes_of(id)?).trim().is_empty() {
+            return Ok(false);
+        }
+        self.remove(id)?;
+        Ok(true)
+    }
+
     /// Whether a document has an earlier version kept by `save_note`.
     pub fn has_previous(&self, id: &str) -> Result<bool, String> {
         Ok(Path::new(&previous(&self.path_of(id)?)).exists())
@@ -1209,6 +1229,26 @@ mod tests {
         let path = store.path_of(&a.id).unwrap();
         store.remove(&a.id).unwrap();
         assert!(!Path::new(&previous(&path)).exists());
+    }
+
+    #[test]
+    fn discards_only_untouched_notes() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
+        let empty = store.create_note("Untitled", "md", None).unwrap();
+        let blank = store.create_note("Untitled", "md", None).unwrap();
+        store.save_note(&blank.id, "  \n", true).unwrap();
+        let written = store.create_note("Untitled", "md", None).unwrap();
+        store.save_note(&written.id, "Bring the spare key.", true).unwrap();
+        let named = store.create_note("Untitled", "txt", None).unwrap();
+        store.rename_document(&named.id, "Ideas").unwrap();
+
+        assert!(store.discard_empty_note(&empty.id).unwrap());
+        assert!(store.discard_empty_note(&blank.id).unwrap(), "only spaces counts as empty");
+        assert!(!store.discard_empty_note(&written.id).unwrap());
+        assert!(!store.discard_empty_note(&named.id).unwrap());
+        assert!(!store.discard_empty_note(&empty.id).unwrap(), "already gone");
+        assert_eq!(store.list().unwrap().len(), 2);
     }
 
     #[test]

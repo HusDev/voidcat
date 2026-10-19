@@ -59,6 +59,8 @@ export const isEditable = (doc: Pick<Document, "mime">) => doc.mime === "text/ma
 export const createNote = (kind: "md" | "txt", folderId?: string) => invoke<Document>("create_note", { title: "Untitled", kind, folderId: folderId ?? null });
 /** Saves a note's text; `keepPrevious` on the first save of an editing session keeps the version before it. */
 export const saveNote = (id: string, text: string, keepPrevious: boolean) => invoke<void>("save_note", { id, text, keepPrevious });
+/** Removes a note closed while still empty and "Untitled"; true when it did. */
+export const discardEmptyNote = (id: string) => invoke<boolean>("discard_empty_note", { id });
 export const hasPreviousVersion = (id: string) => invoke<boolean>("has_previous_version", { id });
 /** Swaps in the kept earlier version (doing it again undoes it). */
 export const restorePreviousVersion = (id: string) => invoke<void>("restore_previous_version", { id });
