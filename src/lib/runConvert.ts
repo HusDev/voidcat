@@ -22,7 +22,7 @@ const plainText = (markdown: string) =>
  * Converts a document and keeps each result as a new document next to it (its folder and type; none of its facts).
  * Returns what was made, first one first.
  */
-export async function convertDocument(doc: Document, t: Target): Promise<Document[]> {
+export async function convertDocument(doc: Document, t: Target, progress: (said: string) => void = () => {}): Promise<Document[]> {
   const mime = doc.mime ?? "";
   const named = (suffix = shortLabel(t)) => `${doc.title} (${suffix})`;
   /** One result whose text is the original's. */
@@ -68,7 +68,9 @@ export async function convertDocument(doc: Document, t: Target): Promise<Documen
     if (t.ext === "png") {
       const pdf = await getDocumentProxy(await bytesOf(doc.id));
       const made: Document[] = [];
-      for (let n = 1; n <= Math.min(pdf.numPages, MAX_PICTURES); n++) {
+      const pages = Math.min(pdf.numPages, MAX_PICTURES);
+      for (let n = 1; n <= pages; n++) {
+        progress(`Page ${n} of ${pages}…`);
         const page = await pdf.getPage(n);
         const viewport = page.getViewport({ scale: 2 });
         const canvas = document.createElement("canvas");

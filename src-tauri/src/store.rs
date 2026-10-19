@@ -1480,6 +1480,10 @@ mod tests {
         assert!(store.save_made("x", "exe", b"MZ", Some(&word.id), None, true).is_err());
         assert!(store.save_made("x", "rtf", b"{\\rtf1 hi}", Some(&word.id), None, true).is_ok());
         assert_eq!(mime_of("page.html").as_deref(), Some("text/html"));
+        let picture = store.save_made("Contract, page 1", "png", b"\x89PNG\r\n\x1a\npixels", Some(&word.id), None, false).unwrap();
+        assert_eq!(picture.mime.as_deref(), Some("image/png"));
+        assert_eq!(picture.file_name, "Contract, page 1.png");
+        assert!(store.save_made("x", "png", b"GIF89a", Some(&word.id), None, false).is_err());
     }
 
     #[test]
