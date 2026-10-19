@@ -1,4 +1,4 @@
-import { FolderInput, Pencil, Trash2 } from "lucide-react";
+import { Folder as FolderIcon, FolderInput, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { AREAS } from "../lib/extract";
 import { type Document, type Folder, announceChange, fileInFolder, openDocument, removeDocument } from "../lib/library";
@@ -64,33 +64,41 @@ export function ToFile({ docs, unsorted, folders }: { docs: Document[]; unsorted
             <button type="button" onClick={() => openDocument(d.id)} title={d.suggestionReason ?? undefined} className="min-w-0 flex-[1_1_200px] truncate text-left font-semibold hover:underline">
               <Private>{d.title}</Private>
             </button>
-            <span className={`font-mono text-[12px] ${d.suggestedNew ? "text-private-ink" : "text-ok"}`} title={d.suggestionReason ?? undefined}>
-              → {d.suggestedArea} › <Private>{d.suggestedFolder ?? ""}</Private>
-              {d.suggestedNew ? " (new)" : ""}
-            </span>
-            <button type="button" onClick={() => d.suggestedArea && d.suggestedFolder && file(d, d.suggestedArea, d.suggestedFolder)} className={smallButton}>
+            {/* The suggested folder as a chip; a new one can be renamed by clicking it. */}
+            <button
+              type="button"
+              disabled={!d.suggestedNew}
+              onClick={() => setRenaming({ id: d.id, area: d.suggestedArea ?? "Other", name: d.suggestedFolder ?? "" })}
+              title={d.suggestedNew ? `A new folder. Click to rename it. ${d.suggestionReason ?? ""}` : (d.suggestionReason ?? undefined)}
+              className={`group/chip inline-flex h-7 max-w-64 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] ${d.suggestedNew ? "bg-private-soft text-private-ink hover:ring-1 hover:ring-private-line" : "bg-ok-soft text-ok"}`}
+            >
+              {d.suggestedNew ? <FolderPlus aria-hidden className="size-3.5 shrink-0" /> : <FolderIcon aria-hidden className="size-3.5 shrink-0" />}
+              <span className="truncate">
+                {d.suggestedArea} › <Private>{d.suggestedFolder ?? ""}</Private>
+              </span>
+              {d.suggestedNew && (
+                <>
+                  <span className="rounded-full bg-card/70 px-1.5 text-[10.5px] font-semibold uppercase tracking-wide">new</span>
+                  <Pencil aria-hidden className="size-3 shrink-0 opacity-60 group-hover/chip:opacity-100" />
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => d.suggestedArea && d.suggestedFolder && file(d, d.suggestedArea, d.suggestedFolder)}
+              className="h-7 shrink-0 rounded-md bg-accent px-2.5 text-[12.5px] font-semibold text-on-accent hover:bg-accent-strong"
+            >
               {d.suggestedNew ? "Create and file" : "File here"}
             </button>
-            {d.suggestedNew && (
-              <button
-                type="button"
-                onClick={() => setRenaming({ id: d.id, area: d.suggestedArea ?? "Other", name: d.suggestedFolder ?? "" })}
-                aria-label="Rename the new folder"
-                title="Rename the new folder"
-                className={`${smallButton} grid w-7 place-items-center px-0`}
-              >
-                <Pencil aria-hidden className="size-3.5" />
-              </button>
-            )}
-            <button type="button" onClick={() => setPicking(picking === d.id ? null : d.id)} className={smallButton}>
-              Other…
+            <button type="button" onClick={() => setPicking(picking === d.id ? null : d.id)} className="h-7 shrink-0 rounded-md px-2 text-[12.5px] text-ink-2 hover:bg-ground hover:text-ink">
+              Other folder…
             </button>
             <button
               type="button"
               onClick={() => setRemoving(d.id)}
               aria-label={`Remove ${d.title}`}
               title="Remove this document"
-              className={`${smallButton} grid w-7 place-items-center px-0 text-ink-2 hover:border-danger hover:text-danger`}
+              className="grid size-7 shrink-0 place-items-center rounded-md text-ink-2 hover:bg-danger-soft hover:text-danger"
             >
               <Trash2 aria-hidden className="size-3.5" />
             </button>
