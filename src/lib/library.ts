@@ -27,6 +27,10 @@ export type Document = {
   /** The suggested folder doesn't exist yet. */
   suggestedNew: boolean;
   suggestionReason: string | null;
+  /** Written or edited in Voidcat (a note). Absent in a browser's cloud copy. */
+  written?: boolean;
+  /** The text changed since facts and filing were last found. */
+  contentChanged?: boolean;
 };
 
 export type Folder = { id: string; area: string; name: string; documents: number };
@@ -49,6 +53,26 @@ export const fileInFolder = (id: string, area: string, name: string) => invoke<s
 export const renameFolder = (id: string, name: string) => invoke<void>("rename_folder", { id, name });
 /** The name a document shows in Voidcat; the stored file keeps its own name. */
 export const renameDocument = (id: string, title: string) => invoke<void>("rename_document", { id, title });
+/** Markdown and plain text can be written and edited in Voidcat (on the Mac). */
+export const isEditable = (doc: Pick<Document, "mime">) => doc.mime === "text/markdown" || doc.mime === "text/plain";
+/** A new, empty note, filed in `folderId` when given. */
+export const createNote = (kind: "md" | "txt", folderId?: string) => invoke<Document>("create_note", { title: "Untitled", kind, folderId: folderId ?? null });
+/** Saves a note's text; `keepPrevious` on the first save of an editing session keeps the version before it. */
+export const saveNote = (id: string, text: string, keepPrevious: boolean) => invoke<void>("save_note", { id, text, keepPrevious });
+export const hasPreviousVersion = (id: string) => invoke<boolean>("has_previous_version", { id });
+/** Swaps in the kept earlier version (doing it again undoes it). */
+export const restorePreviousVersion = (id: string) => invoke<void>("restore_previous_version", { id });
+/** Notes just made, which their tab opens in edit mode (once). */
+export const freshNotes = new Set<string>();
+/** Makes a note and opens it in its tab, ready to type in. */
+export async function newNote(kind: "md" | "txt", folderId?: string) {
+  const doc = await createNote(kind, folderId);
+  freshNotes.add(doc.id);
+  announceChange();
+  openDocument(doc.id);
+  return doc;
+}
+
 /**
  * Saves documents as one .zip, each under its original file name, where you choose in the save dialog.
  * Returns false when you cancel.

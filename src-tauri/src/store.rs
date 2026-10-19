@@ -43,6 +43,10 @@ pub struct Document {
     /// True when the suggested folder doesn't exist yet.
     suggested_new: bool,
     suggestion_reason: Option<String>,
+    /// Written or edited in Voidcat (a note), so its file is no longer the one that was dropped in.
+    written: bool,
+    /// The text changed since facts and filing were last found.
+    content_changed: bool,
 }
 
 #[derive(Serialize)]
@@ -182,6 +186,8 @@ fn migrate(db: &Connection) -> rusqlite::Result<()> {
         "suggested_area text",
         "suggested_folder text",
         "suggestion_reason text",
+        "written integer not null default 0",
+        "content_changed integer not null default 0",
     ] {
         let name = col.split(' ').next().unwrap();
         if !has(name)? {
@@ -204,7 +210,7 @@ fn migrate(db: &Connection) -> rusqlite::Result<()> {
 pub(crate) const COLUMNS: &str = "id, title, file_name, mime, size_bytes, area, doc_type, status, added_at, text_method, page_count, folder_id,
   (select f.area || ' › ' || f.name from folders f where f.id = documents.folder_id), filing, suggested_area, suggested_folder,
   suggested_folder is not null and not exists (select 1 from folders f where f.area = documents.suggested_area collate nocase and f.name = documents.suggested_folder collate nocase),
-  suggestion_reason";
+  suggestion_reason, written, content_changed";
 
 pub(crate) fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
     Ok(Document {
@@ -226,6 +232,8 @@ pub(crate) fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
         suggested_folder: r.get(15)?,
         suggested_new: r.get(16)?,
         suggestion_reason: r.get(17)?,
+        written: r.get(18)?,
+        content_changed: r.get(19)?,
     })
 }
 
@@ -289,6 +297,28 @@ pub(crate) fn sniff(bytes: &[u8]) -> Option<String> {
 /// A file's type: from its name, else from its contents.
 pub(crate) fn type_of(name: &str, bytes: &[u8]) -> Option<String> {
     mime_of(name).or_else(|| sniff(bytes))
+}
+
+/// Text types a note can be written in.
+const NOTE_TYPES: [&str; 2] = ["text/markdown", "text/plain"];
+
+/// The sha256 column of a note: its content hash with its id after it, so two notes may hold the same text while a
+/// dropped-in file is still known by its content alone.
+fn note_sha(bytes: &[u8], id: &str) -> String {
+    format!("{}:{id}", hex::encode(Sha256::digest(bytes)))
+}
+
+/// The content hash in a sha256 column (a note's id cut off).
+pub(crate) fn content_sha(column: &str) -> &str {
+    column.split(':').next().unwrap_or(column)
+}
+
+/// A file name from a note's title: no slashes or other characters Finder or zips trip on.
+fn note_file_name(title: &str, ext: &str) -> String {
+    let clean: String = title.chars().map(|c| if matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') || c.is_control() { ' ' } else { c }).collect();
+    let clean = clean.split_whitespace().collect::<Vec<_>>().join(" ");
+    let stem = if clean.is_empty() { "Untitled".to_string() } else { clean.chars().take(120).collect() };
+    format!("{stem}.{ext}")
 }
 
 /// Puts a document in the suggested folder when it exists and the model is sure; otherwise it waits in "to file".
@@ -425,7 +455,7 @@ impl Store {
             }
             let sealed = self.vault.encrypt(&bytes)?;
             let back = self.vault.decrypt(sealed.clone())?;
-            if hex::encode(Sha256::digest(&back)) != sha {
+            if hex::encode(Sha256::digest(&back)) != content_sha(&sha) {
                 return Err(format!("Stopped encrypting: {path} didn't read back the same."));
             }
             let tmp = format!("{path}.encrypting");
@@ -721,7 +751,11 @@ impl Store {
     ) -> Result<(), String> {
         let mut db = self.db.lock().unwrap();
         let tx = db.transaction().map_err(|e| e.to_string())?;
-        tx.execute("update documents set title = ?2, area = ?3, doc_type = ?4, status = 'filed' where id = ?1", params![id, title, area, doc_type])
+        // A note keeps the title you gave it.
+        tx.execute(
+            "update documents set title = case when written = 1 then title else ?2 end, area = ?3, doc_type = ?4, status = 'filed', content_changed = 0 where id = ?1",
+            params![id, title, area, doc_type],
+        )
             .map_err(|e| e.to_string())?;
         tx.execute(
             "delete from facts where document_id = ?1 and status = 'pending'",
@@ -860,6 +894,16 @@ impl Store {
         let db = self.db.lock().unwrap();
         db.execute("update documents set title = ?2 where id = ?1", params![id, title])
             .map_err(|e| e.to_string())?;
+        // A note's file name follows its title, so exports and zips carry it.
+        let note: Option<String> = db
+            .query_row("select file_name from documents where id = ?1 and written = 1", [id], |r| r.get(0))
+            .optional()
+            .map_err(|e| e.to_string())?;
+        if let Some(name) = note {
+            let ext = Path::new(&name).extension().and_then(|e| e.to_str()).unwrap_or("md").to_string();
+            db.execute("update documents set file_name = ?2 where id = ?1", params![id, note_file_name(title, &ext)])
+                .map_err(|e| e.to_string())?;
+        }
         Ok(())
     }
 
@@ -939,9 +983,95 @@ impl Store {
             .map_err(|e| e.to_string())?;
         db.execute("delete from documents where id = ?1", [id])
             .map_err(|e| e.to_string())?;
+        let _ = fs::remove_file(previous(&path));
         let _ = fs::remove_file(path);
         Ok(())
     }
+
+    /// A new, empty note ("md" or "txt"), in `folder_id` when given (as if you filed it there). It counts as read, so
+    /// the local model only looks at it when you ask.
+    pub fn create_note(&self, title: &str, kind: &str, folder_id: Option<&str>) -> Result<Document, String> {
+        let ext = match kind {
+            "md" => "md",
+            "txt" => "txt",
+            _ => return Err("A note is Markdown or plain text.".into()),
+        };
+        let title = if title.trim().is_empty() { "Untitled" } else { title.trim() };
+        let name = note_file_name(title, ext);
+        let id = uuid::Uuid::new_v4().to_string();
+        let stored = self.files.join(format!("{id}.{ext}"));
+        fs::write(&stored, self.vault.encrypt(b"")?).map_err(|e| e.to_string())?;
+        let db = self.db.lock().unwrap();
+        let area: Option<String> = match folder_id {
+            Some(f) => Some(db.query_row("select area from folders where id = ?1", [f], |r| r.get(0)).map_err(|_| "That folder no longer exists.".to_string())?),
+            None => None,
+        };
+        let inserted = db.execute(
+            "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path, status, text_method, page_count, written, folder_id, area, filing)
+             values (?1, ?2, ?3, ?4, 0, ?5, ?6, 'read', 'text', 0, 1, ?7, ?8, case when ?7 is null then null else 'confirmed' end)",
+            params![id, title, name, mime_of(&name), note_sha(b"", &id), stored.to_string_lossy(), folder_id, area],
+        );
+        if let Err(e) = inserted {
+            let _ = fs::remove_file(&stored);
+            return Err(e.to_string());
+        }
+        db.query_row(&format!("select {COLUMNS} from documents where id = ?1"), [&id], row_to_document)
+            .map_err(|e| e.to_string())
+    }
+
+    /// Saves a text document's new contents and makes them searchable at once. With `keep_previous` (the first save
+    /// of an editing session) the file as it was is kept beside it first, for "Restore previous version".
+    pub fn save_note(&self, id: &str, text: &str, keep_previous: bool) -> Result<(), String> {
+        let (path, mime): (String, Option<String>) = {
+            let db = self.db.lock().unwrap();
+            db.query_row("select stored_path, mime from documents where id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?)))
+                .map_err(|_| "Document not found.".to_string())?
+        };
+        if !mime.as_deref().is_some_and(|m| NOTE_TYPES.contains(&m)) {
+            return Err("Only Markdown and text documents can be edited.".into());
+        }
+        if keep_previous {
+            fs::copy(&path, previous(&path)).map_err(|e| format!("Couldn't keep the previous version: {e}"))?;
+        }
+        self.write_note(id, &path, text.as_bytes())
+    }
+
+    /// Writes a note's file (sealed, through a temporary file) and its row and search page.
+    fn write_note(&self, id: &str, path: &str, bytes: &[u8]) -> Result<(), String> {
+        let tmp = format!("{path}.saving");
+        fs::write(&tmp, self.vault.encrypt(bytes)?).map_err(|e| e.to_string())?;
+        fs::rename(&tmp, path).map_err(|e| e.to_string())?;
+        let text = String::from_utf8_lossy(bytes).to_string();
+        {
+            let db = self.db.lock().unwrap();
+            db.execute(
+                "update documents set sha256 = ?2, size_bytes = ?3, written = 1, content_changed = 1 where id = ?1",
+                params![id, note_sha(bytes, id), bytes.len() as i64],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        self.save_reading(id, vec![text], "text")
+    }
+
+    /// Whether a document has an earlier version kept by `save_note`.
+    pub fn has_previous(&self, id: &str) -> Result<bool, String> {
+        Ok(Path::new(&previous(&self.path_of(id)?)).exists())
+    }
+
+    /// Swaps a document's file with the kept earlier version, so restoring twice undoes the restore.
+    pub fn restore_previous(&self, id: &str) -> Result<(), String> {
+        let path = self.path_of(id)?;
+        let prev = previous(&path);
+        let older = self.vault.decrypt(fs::read(&prev).map_err(|_| "There is no earlier version.".to_string())?)?;
+        fs::copy(&path, format!("{prev}.swap")).map_err(|e| e.to_string())?;
+        self.write_note(id, &path, &older)?;
+        fs::rename(format!("{prev}.swap"), &prev).map_err(|e| e.to_string())
+    }
+}
+
+/// Where a document's earlier version is kept (sealed like the file itself).
+pub(crate) fn previous(path: &str) -> String {
+    format!("{path}.prev")
 }
 
 #[cfg(test)]
@@ -1030,6 +1160,67 @@ mod tests {
         assert!(store.rename_folder(&folder, "ids").is_err(), "names are unique in an area");
         store.rename_folder(&folder, "Old passports").unwrap();
         assert!(store.folders().unwrap().iter().any(|f| f.name == "Old passports"));
+    }
+
+    #[test]
+    fn writes_notes_and_keeps_the_previous_version() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
+        let a = store.create_note("Untitled", "md", None).unwrap();
+        let b = store.create_note("Untitled", "md", None).unwrap();
+        assert_ne!(a.id, b.id, "two empty notes don't clash");
+        assert_eq!(a.mime.as_deref(), Some("text/markdown"));
+        assert!(a.written && !a.content_changed);
+        assert!(store.create_note("x", "docx", None).is_err());
+
+        store.save_note(&a.id, "# Packing list\n\nSunscreen and the blue umbrella.", true).unwrap();
+        store.save_note(&b.id, "# Packing list\n\nSunscreen and the blue umbrella.", true).unwrap();
+        assert_eq!(store.search("umbrella", false).unwrap().len(), 2, "searchable at once, same text allowed");
+        let saved = store.list().unwrap().into_iter().find(|d| d.id == a.id).unwrap();
+        assert!(saved.content_changed);
+        assert_eq!(saved.status, "read");
+
+        // A second editing session keeps the first one's text.
+        store.save_note(&a.id, "Only the hat", true).unwrap();
+        store.save_note(&a.id, "Only the hat now.", false).unwrap();
+        assert_eq!(store.bytes_of(&a.id).unwrap(), b"Only the hat now.");
+        assert!(store.has_previous(&a.id).unwrap());
+        store.restore_previous(&a.id).unwrap();
+        assert_eq!(store.bytes_of(&a.id).unwrap(), b"# Packing list\n\nSunscreen and the blue umbrella.");
+        store.restore_previous(&a.id).unwrap();
+        assert_eq!(store.bytes_of(&a.id).unwrap(), b"Only the hat now.", "restoring twice undoes it");
+
+        store.rename_document(&a.id, "Trip: beach / June").unwrap();
+        let named = store.list().unwrap().into_iter().find(|d| d.id == a.id).unwrap();
+        assert_eq!(named.file_name, "Trip beach June.md");
+
+        let folder = store.file_document(&b.id, "Home", "Lists").unwrap();
+        let inside = store.create_note("Groceries", "txt", Some(&folder)).unwrap();
+        assert_eq!(inside.filing.as_deref(), Some("confirmed"));
+        assert_eq!(inside.file_name, "Groceries.txt");
+
+        let src = dir.join("scan.pdf");
+        fs::write(&src, b"%PDF-1.4 scan").unwrap();
+        store.import(vec![src.to_string_lossy().to_string()]);
+        let pdf = store.list().unwrap().into_iter().find(|d| d.file_name == "scan.pdf").unwrap();
+        assert!(store.save_note(&pdf.id, "text", true).is_err(), "only text documents can be edited");
+        assert_eq!(store.import(vec![src.to_string_lossy().to_string()]).duplicates.len(), 1, "imports still dedupe");
+
+        let path = store.path_of(&a.id).unwrap();
+        store.remove(&a.id).unwrap();
+        assert!(!Path::new(&previous(&path)).exists());
+    }
+
+    #[test]
+    fn filing_a_note_keeps_its_title() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
+        let n = store.create_note("My plan", "md", None).unwrap();
+        store.save_note(&n.id, "Call the gym on Monday.", true).unwrap();
+        store.save_filing(&n.id, "Gym reminder", "Health", "note", vec![], None).unwrap();
+        let d = store.list().unwrap().remove(0);
+        assert_eq!(d.title, "My plan");
+        assert!(!d.content_changed);
     }
 
     #[test]

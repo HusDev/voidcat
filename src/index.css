@@ -148,6 +148,39 @@ textarea,
 .md-page ul, .md-page ol { margin: 0 0 10px; padding-left: 18px; }
 .md-page li { margin: 2px 0; }
 .md-page a { color: var(--color-link); }
+/* The note editor (MDXEditor) in the app's colours, light and dark; the text is laid out like .md-page. */
+.mdxeditor.note-editor {
+  --basePageBg: var(--color-card);
+  --baseBase: var(--color-card);
+  --baseBgSubtle: var(--color-ground);
+  --baseBg: var(--color-ground);
+  --baseBgHover: var(--color-accent-soft);
+  --baseBgActive: var(--color-accent-soft);
+  --baseLine: var(--color-line);
+  --baseBorder: var(--color-line-strong);
+  --baseBorderHover: var(--color-ink-2);
+  --baseSolid: var(--color-ink-2);
+  --baseSolidHover: var(--color-ink);
+  --baseText: var(--color-ink-2);
+  --baseTextContrast: var(--color-ink);
+  --accentBase: var(--color-card);
+  --accentBgSubtle: var(--color-accent-soft);
+  --accentBg: var(--color-accent-soft);
+  --accentBgHover: var(--color-accent-soft);
+  --accentBgActive: var(--color-accent-soft);
+  --accentLine: var(--color-line-strong);
+  --accentBorder: var(--color-line-strong);
+  --accentBorderHover: var(--color-ink-2);
+  --accentSolid: var(--color-accent);
+  --accentSolidHover: var(--color-accent-strong);
+  --accentText: var(--color-ink);
+  --accentTextContrast: var(--color-ink);
+  --font-body: var(--font-sans);
+  color: var(--color-page-ink);
+}
+.mdxeditor.note-editor [role="toolbar"] { position: sticky; top: 0; z-index: 2; border-radius: 8px; background: var(--color-ground); }
+.mdxeditor.note-editor .md-page { padding: 16px 0 0; min-height: 50vh; outline: none; }
+.mdxeditor-popup-container.note-editor { color: var(--color-ink); }
 /* Links are black or white like the text, so they carry a quiet underline. */
 .text-link { text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 3px; }
 .md-page code { font-family: var(--font-mono); font-size: 12px; background: var(--color-ground); padding: 1px 4px; border-radius: 4px; }
