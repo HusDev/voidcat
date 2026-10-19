@@ -61,6 +61,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 25. **Notes (19 Oct, branch `feat/notes`):** write .md/.txt in Voidcat (New document, New document here on a folder), Edit any text document with autosave and ⌘S, one previous version kept per editing session, Export as Word (.docx) or as is, Find facts & file only by hand; Mac only (browser read-only).
 26. **Signing (19 Oct, branch `feat/signing`):** visible signature (draw, type, upload), kept sealed on the Mac; auto-placed where the document asks; date and text boxes; "… (signed)" PDF next to the original; PDFs, photos and notes; Settings → Your signature.
 27. **Library at scale (19 Oct, branch `feat/library-views`):** view tabs (Needs you, Recently added, Expiring soon, Unsigned, Notes I wrote, Everything), compact list by time with key facts, filters, sort, List/Cards, drop anywhere; plus the Tools screen and + New.
+28. **PDF tools (19 Oct, branch `feat/pdf-tools`):** Combine PDFs, Split or reorder (keep/move/turn, one PDF or one per page, **Pages** in a document's tab), Scan to PDF (photos → PDF, then read and filed); new documents carry the text over and none of the facts.
 
 ## Next, in order
 1. **GitLab hackathon work** (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):

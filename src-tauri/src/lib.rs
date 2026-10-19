@@ -78,6 +78,19 @@ fn save_signed(store: State<Store>, request: tauri::ipc::Request<'_>) -> Result<
     }
 }
 
+/// Keeps a PDF made by a tool (the request body): `x-voidcat-name` (hex UTF-8) is its title; `x-voidcat-like` is a
+/// document it rearranges (its folder and type are taken, its text saved after); `x-voidcat-folder` places a scan.
+#[tauri::command]
+fn save_made_pdf(store: State<Store>, request: tauri::ipc::Request<'_>) -> Result<Document, String> {
+    let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).filter(|v| !v.is_empty()).map(str::to_string);
+    let title = header("x-voidcat-name").ok_or("Missing x-voidcat-name.")?;
+    let title = String::from_utf8(hex::decode(title).map_err(|_| "Bad name.")?).map_err(|_| "Bad name.")?;
+    match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => store.save_made_pdf(&title, bytes, header("x-voidcat-like").as_deref(), header("x-voidcat-folder").as_deref()),
+        _ => Err("Send the PDF as raw bytes.".into()),
+    }
+}
+
 /// Your saved signature (a PNG), or nothing.
 #[tauri::command]
 fn get_signature(store: State<Store>) -> Result<tauri::ipc::Response, String> {
@@ -719,6 +732,7 @@ pub fn run() {
             has_previous_version,
             discard_empty_note,
             save_signed,
+            save_made_pdf,
             get_signature,
             save_signature,
             forget_signature,

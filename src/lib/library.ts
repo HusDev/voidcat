@@ -66,11 +66,23 @@ export const discardEmptyNote = (id: string) => invoke<boolean>("discard_empty_n
 export const hasPreviousVersion = (id: string) => invoke<boolean>("has_previous_version", { id });
 /** Swaps in the kept earlier version (doing it again undoes it). */
 export const restorePreviousVersion = (id: string) => invoke<void>("restore_previous_version", { id });
-/** PDFs, photos and scans, and notes can be signed (the last two become a PDF first). */
-export const canSign = (doc: Pick<Document, "mime">) => doc.mime === "application/pdf" || !!doc.mime?.startsWith("image/") || isEditable(doc);
+/** Documents a PDF tool can take: PDFs, photos and scans, and notes (made into a PDF first). */
+export const canBePdf = (doc: Pick<Document, "mime">) => doc.mime === "application/pdf" || !!doc.mime?.startsWith("image/") || isEditable(doc);
+/** The same documents can be signed. */
+export const canSign = canBePdf;
 /** Keeps a signed PDF made from `originalId` as a new document beside it. */
 export const saveSigned = (originalId: string, pdf: Uint8Array) =>
   invoke<Document>("save_signed", pdf, { headers: { "Content-Type": "application/octet-stream", "x-voidcat-id": originalId } });
+/**
+ * Keeps a PDF made by a tool as a new document. `like`: the document it rearranges (folder and type taken from it,
+ * text saved after with `saveReading`). `folder`: where a scan goes (it is then read and filed like any import).
+ */
+export const saveMadePdf = (title: string, pdf: Uint8Array, to: { like?: string; folder?: string }) => {
+  const hex = [...new TextEncoder().encode(title)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return invoke<Document>("save_made_pdf", pdf, {
+    headers: { "Content-Type": "application/octet-stream", "x-voidcat-name": hex, "x-voidcat-like": to.like ?? "", "x-voidcat-folder": to.folder ?? "" },
+  });
+};
 /** Your saved signature (a PNG, sealed on this Mac), or null. */
 export const getSignature = async () => {
   const bytes = new Uint8Array(await invoke<ArrayBuffer>("get_signature"));

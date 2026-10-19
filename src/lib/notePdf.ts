@@ -150,13 +150,19 @@ export async function notePdf(text: string, plain: boolean) {
   return doc.save();
 }
 
-/** A photo as a one-page PDF, the page as wide as A4 and as tall as the picture needs. */
-export async function photoPdf(image: Uint8Array, kind: "png" | "jpg", pixels: { width: number; height: number }) {
+export type Photo = { bytes: Uint8Array; kind: "png" | "jpg"; width: number; height: number };
+
+/** Photos as a PDF, one page each, each page as wide as A4 (long side for landscape) and as tall as its picture needs. */
+export async function photosPdf(photos: Photo[]) {
   const doc = await PDFDocument.create();
-  const picture = kind === "png" ? await doc.embedPng(image) : await doc.embedJpg(image);
-  const landscape = pixels.width > pixels.height;
-  const width = landscape ? A4.height : A4.width;
-  const height = (width * pixels.height) / pixels.width;
-  doc.addPage([width, height]).drawImage(picture, { x: 0, y: 0, width, height });
+  for (const p of photos) {
+    const picture = p.kind === "png" ? await doc.embedPng(p.bytes) : await doc.embedJpg(p.bytes);
+    const width = p.width > p.height ? A4.height : A4.width;
+    const height = (width * p.height) / p.width;
+    doc.addPage([width, height]).drawImage(picture, { x: 0, y: 0, width, height });
+  }
   return doc.save();
 }
+
+/** A photo as a one-page PDF. */
+export const photoPdf = (image: Uint8Array, kind: "png" | "jpg", pixels: { width: number; height: number }) => photosPdf([{ bytes: image, kind, ...pixels }]);

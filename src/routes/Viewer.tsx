@@ -1,10 +1,10 @@
 import { call as invoke } from "../lib/backend";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { Check, ChevronDown, Download, ExternalLink, PenLine, Trash2, FolderInput, History, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Download, ExternalLink, Files, PenLine, Trash2, FolderInput, History, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText, Sparkles } from "lucide-react";
 import { readDocument, saveReading } from "../lib/reader";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import remarkGfm from "remark-gfm";
 import { getDocumentProxy } from "unpdf";
 import { DocChat } from "../components/SideChat";
@@ -21,6 +21,7 @@ import {
   type Sheet,
   LIBRARY_CHANGED,
   announceChange,
+  canBePdf,
   canSign,
   documentPages,
   fileInFolder,
@@ -345,6 +346,7 @@ function Loading() {
 export function Viewer() {
   const { id = "" } = useParams();
   const { documents, active, close } = useTabs();
+  const navigate = useNavigate();
   const doc = documents.get(id);
   const [facts, setFacts] = useState<Fact[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -534,6 +536,16 @@ export function Viewer() {
           ) : (
             <span className="text-[12.5px] text-ink-2">Sign on your Mac</span>
           ))}
+        {onMac && canBePdf(doc) && (
+          <button
+            type="button"
+            onClick={() => navigate(`/tools?tool=pages&doc=${encodeURIComponent(doc.id)}`)}
+            title="Split, reorder or turn its pages; saved as a new PDF"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] hover:border-ink-2"
+          >
+            <Files aria-hidden className="size-4" /> Pages
+          </button>
+        )}
         {isEditable(doc) &&
           (onMac ? (
             <button

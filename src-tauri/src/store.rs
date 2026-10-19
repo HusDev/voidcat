@@ -1118,6 +1118,63 @@ impl Store {
             .map_err(|e| e.to_string())
     }
 
+    /// Keeps a PDF made by a tool (combined, split, reordered, scanned) as a new document named `title`.
+    /// With `like`, it is a rearrangement of documents already read: it takes that document's folder, area and type,
+    /// counts as read (or filed) and as checked for labels, and its text is saved by the caller; its facts stay on the
+    /// originals. Without `like` (a scan) it is new, in `folder` when given, and the pipeline reads and files it.
+    pub fn save_made_pdf(&self, title: &str, pdf: &[u8], like: Option<&str>, folder: Option<&str>) -> Result<Document, String> {
+        if !pdf.starts_with(b"%PDF") {
+            return Err("That isn't a PDF.".into());
+        }
+        let title = if title.trim().is_empty() { "Untitled" } else { title.trim() };
+        let id = uuid::Uuid::new_v4().to_string();
+        let name = note_file_name(title, "pdf");
+        let stored = self.files.join(format!("{id}.pdf"));
+        fs::write(&stored, self.vault.encrypt(pdf)?).map_err(|e| e.to_string())?;
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction().map_err(|e| e.to_string())?;
+        let done = (|| -> rusqlite::Result<()> {
+            let sha = note_sha(pdf, &id);
+            let path = stored.to_string_lossy().to_string();
+            match like {
+                Some(source) => {
+                    let changed = tx.execute(
+                        "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path, area, doc_type, status, text_method, folder_id, filing)
+                         select ?1, ?2, ?3, 'application/pdf', ?4, ?5, ?6, area, doc_type, case when status = 'filed' then 'filed' else 'read' end, 'pdf-text', folder_id,
+                                case when folder_id is null then null else 'confirmed' end
+                         from documents where id = ?7",
+                        params![id, title, name, pdf.len() as i64, sha, path, source],
+                    )?;
+                    if changed == 0 {
+                        return Err(rusqlite::Error::QueryReturnedNoRows);
+                    }
+                    tx.execute("insert or ignore into label_checks (document_id) values (?1)", [&id])?;
+                }
+                None => {
+                    let area: Option<String> = match folder {
+                        Some(f) => Some(tx.query_row("select area from folders where id = ?1", [f], |r| r.get(0))?),
+                        None => None,
+                    };
+                    tx.execute(
+                        "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path, folder_id, area, filing)
+                         values (?1, ?2, ?3, 'application/pdf', ?4, ?5, ?6, ?7, ?8, case when ?7 is null then null else 'confirmed' end)",
+                        params![id, title, name, pdf.len() as i64, sha, path, folder, area],
+                    )?;
+                }
+            }
+            Ok(())
+        })();
+        if let Err(e) = done.and_then(|_| tx.commit()) {
+            let _ = fs::remove_file(&stored);
+            return Err(match e {
+                rusqlite::Error::QueryReturnedNoRows => "The document it was made from no longer exists.".into(),
+                e => e.to_string(),
+            });
+        }
+        db.query_row(&format!("select {COLUMNS} from documents where id = ?1"), [&id], row_to_document)
+            .map_err(|e| e.to_string())
+    }
+
     /// Where your saved signature is kept (a picture, sealed like the documents).
     pub(crate) fn signature_path(&self) -> PathBuf {
         self.files.parent().unwrap_or(&self.files).join(SIGNATURE)
@@ -1345,6 +1402,35 @@ mod tests {
         assert_eq!(checked, 1);
         // The same signed bytes again are still a new copy, not refused as a duplicate.
         assert!(store.save_signed(&original.id, b"%PDF-1.4 lease, signed").is_ok());
+    }
+
+    #[test]
+    fn keeps_pdfs_made_by_tools() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
+        let src = dir.join("lease.pdf");
+        fs::write(&src, b"%PDF-1.4 lease").unwrap();
+        store.import(vec![src.to_string_lossy().to_string()]);
+        let lease = store.list().unwrap().remove(0);
+        let folder = store.file_document(&lease.id, "Home", "Lease").unwrap();
+        store.save_filing(&lease.id, "Lease", "Home", "lease", vec![], None).unwrap();
+
+        assert!(store.save_made_pdf("x", b"nope", None, None).is_err());
+        let part = store.save_made_pdf("Lease: pages 1-2", b"%PDF-1.4 part", Some(&lease.id), None).unwrap();
+        assert_eq!(part.file_name, "Lease pages 1-2.pdf");
+        assert_eq!(part.folder_id.as_deref(), Some(folder.as_str()));
+        assert_eq!(part.status, "filed");
+        assert_eq!(part.filing.as_deref(), Some("confirmed"));
+        assert!(store.save_made_pdf("Again", b"%PDF-1.4 part", Some(&lease.id), None).is_ok(), "same bytes twice is fine");
+        assert!(store.save_made_pdf("Gone", b"%PDF-1.4 x", Some("missing"), None).is_err());
+
+        let scan = store.save_made_pdf("Scan 19 Oct", b"%PDF-1.4 scan", None, Some(&folder)).unwrap();
+        assert_eq!(scan.status, "new");
+        assert_eq!(scan.area.as_deref(), Some("Home"));
+        let loose = store.save_made_pdf("", b"%PDF-1.4 scan", None, None).unwrap();
+        assert_eq!(loose.title, "Untitled");
+        assert_eq!(loose.folder_id, None);
+        assert_eq!(store.bytes_of(&scan.id).unwrap(), b"%PDF-1.4 scan");
     }
 
     #[test]

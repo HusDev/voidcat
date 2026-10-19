@@ -1,43 +1,14 @@
 import { CalendarDays, GripVertical, LoaderCircle, PenLine, TextCursorInput, X } from "lucide-react";
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { getDocumentProxy } from "unpdf";
-import { call as invoke } from "../lib/backend";
 import { type Document, announceChange, getSignature, listFacts, openDocument, saveSignature, saveSigned } from "../lib/library";
 import { useLabels } from "../lib/labels";
-import { notePdf, photoPdf } from "../lib/notePdf";
+import { asPdf } from "../lib/asPdf";
 import { type Placed, type Run, SIGNATURE_H, SIGNATURE_W, findSpot, stampPdf, todayText, unsignedHint } from "../lib/signing";
 import { Blurred, Private } from "../lib/veil";
 import { SignatureMaker } from "./SignatureMaker";
 
 type PDFDocumentProxy = Awaited<ReturnType<typeof getDocumentProxy>>;
-
-const bytesOf = async (id: string) => new Uint8Array(await invoke<ArrayBuffer>("document_bytes", { id }));
-
-/** The document as a PDF to sign: PDFs as they are, photos and notes made into one first. */
-async function asPdf(doc: Document) {
-  const bytes = await bytesOf(doc.id);
-  const mime = doc.mime ?? "";
-  if (mime === "application/pdf") return bytes;
-  if (mime === "text/markdown" || mime === "text/plain") return notePdf(new TextDecoder().decode(bytes), mime === "text/plain");
-  const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
-  try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    const size = { width: img.naturalWidth, height: img.naturalHeight };
-    if (mime === "image/jpeg") return photoPdf(bytes, "jpg", size);
-    if (mime === "image/png") return photoPdf(bytes, "png", size);
-    // HEIC, WebP…: drawn once to become a PNG the PDF can hold.
-    const canvas = document.createElement("canvas");
-    [canvas.width, canvas.height] = [size.width, size.height];
-    canvas.getContext("2d")!.drawImage(img, 0, 0);
-    const png = await new Promise<Blob | null>((done) => canvas.toBlob(done, "image/png"));
-    if (!png) throw new Error("This picture could not be read.");
-    return photoPdf(new Uint8Array(await png.arrayBuffer()), "png", size);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
 
 /** A page as shown: its size in points (after its own rotation) and its words with their boxes. */
 type Shown = { width: number; height: number; runs: Run[] };

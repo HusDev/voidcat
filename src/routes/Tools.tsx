@@ -1,7 +1,15 @@
-import { Combine, EyeOff, FilePen, FilePlus, FileScan, FileText, FileInput, type LucideIcon, PenLine, Repeat, Search, Sheet, Split } from "lucide-react";
-import { useEffect, useState } from "react";
-import { type Document, LIBRARY_CHANGED, canSign, listDocuments, newNote, onMac, openDocument, signNext } from "../lib/library";
-import { Private } from "../lib/veil";
+import { ArrowLeft, Combine, EyeOff, FilePen, FilePlus, FileScan, FileInput, type LucideIcon, PenLine, Repeat, Sheet, Split } from "lucide-react";
+import { Suspense, lazy, useState } from "react";
+import { useSearchParams } from "react-router";
+import { canSign, newNote, onMac, openDocument, signNext } from "../lib/library";
+
+// The PDF tools carry pdf-lib and pdf.js: loaded when one is opened.
+const tools = () => import("../components/PdfTools");
+const CombineTool = lazy(() => tools().then((m) => ({ default: m.CombineTool })));
+const PagesTool = lazy(() => tools().then((m) => ({ default: m.PagesTool })));
+const ScanTool = lazy(() => tools().then((m) => ({ default: m.ScanTool })));
+const DocumentPicker = lazy(() => tools().then((m) => ({ default: m.DocumentPicker })));
+const Waiting = () => <p className="m-0 text-[13px] text-ink-2">Opening…</p>;
 
 type Tool = { id: string; name: string; note: string; Icon: LucideIcon; ready: boolean };
 
@@ -12,9 +20,9 @@ const WRITE: Tool[] = [
 ];
 const PDF: Tool[] = [
   { id: "sign", name: "Sign", note: "Draw, type or upload your signature", Icon: PenLine, ready: true },
-  { id: "combine", name: "Combine PDFs", note: "Several documents into one", Icon: Combine, ready: false },
-  { id: "split", name: "Split or reorder", note: "Pick, move, rotate, remove pages", Icon: Split, ready: false },
-  { id: "scan", name: "Scan to PDF", note: "Photos of a paper into one PDF", Icon: FileScan, ready: false },
+  { id: "combine", name: "Combine PDFs", note: "Several documents into one", Icon: Combine, ready: true },
+  { id: "pages", name: "Split or reorder", note: "Pick, move, turn, remove pages", Icon: Split, ready: true },
+  { id: "scan", name: "Scan to PDF", note: "Photos of a paper into one PDF", Icon: FileScan, ready: true },
   { id: "convert", name: "Convert", note: "Word, PDF, Markdown, images, sheets", Icon: Repeat, ready: false },
   { id: "redact", name: "Redact", note: "Black out IDs and addresses for a copy", Icon: EyeOff, ready: false },
 ];
@@ -40,59 +48,44 @@ function Card({ tool, chosen, onPick }: { tool: Tool; chosen: boolean; onPick: (
 
 /** Picks the document to sign, then opens it ready to sign. */
 function PickToSign() {
-  const [docs, setDocs] = useState<Document[]>([]);
-  const [query, setQuery] = useState("");
-  useEffect(() => {
-    const load = () => listDocuments().then((all) => setDocs(all.filter(canSign)));
-    load();
-    window.addEventListener(LIBRARY_CHANGED, load);
-    return () => window.removeEventListener(LIBRARY_CHANGED, load);
-  }, []);
-  const q = query.trim().toLowerCase();
-  const shown = docs.filter((d) => !q || d.title.toLowerCase().includes(q) || (d.folderName ?? "").toLowerCase().includes(q)).slice(0, 40);
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-0.5">
         <h2 className="m-0 text-[15px] font-bold">Sign a document</h2>
         <span className="text-[12.5px] text-ink-2">PDFs, photos and notes. The signed copy goes next to the original.</span>
       </div>
-      <label className="flex h-9 items-center gap-2 rounded-lg border border-line-strong bg-card px-2.5 focus-within:border-ink-2">
-        <Search aria-hidden className="size-4 text-ink-2" />
-        <span className="sr-only">Find a document</span>
-        <input autoFocus value={query} onChange={(e) => setQuery(e.currentTarget.value)} placeholder="Find a document" className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none" />
-      </label>
-      <ul className="m-0 flex max-h-[52vh] list-none flex-col gap-1 overflow-y-auto p-0">
-        {shown.map((d) => (
-          <li key={d.id}>
-            <button
-              type="button"
-              onClick={() => {
-                signNext.add(d.id);
-                openDocument(d.id);
-              }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-ground"
-            >
-              <FileText aria-hidden className="size-4 shrink-0 text-ink-2" />
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-[13.5px] font-medium">
-                  <Private>{d.title}</Private>
-                </span>
-                <span className="truncate font-mono text-[11.5px] text-ink-2">{d.folderName ? <Private>{d.folderName}</Private> : "Not filed"}</span>
-              </span>
-            </button>
-          </li>
-        ))}
-        {!shown.length && <li className="px-2.5 py-2 text-[13px] text-ink-2">{docs.length ? "Nothing matches." : "No PDFs, photos or notes yet."}</li>}
-      </ul>
+      <DocumentPicker
+        filter={canSign}
+        onPick={(d) => {
+          signNext.add(d.id);
+          openDocument(d.id);
+        }}
+      />
     </div>
   );
 }
 
 /** Every tool in one place: writing, and working with PDFs. Results are new documents; originals stay. */
 export function Tools() {
-  const [chosen, setChosen] = useState<string | null>(null);
+  // The chosen tool is in the address (?tool=…), so a document's tab can open one (?tool=pages&doc=…).
+  const [params, setParams] = useSearchParams();
+  const chosen = params.get("tool");
+  const setChosen = (tool: string | null) => setParams(tool ? { tool } : {}, { replace: true });
   const [error, setError] = useState<string | null>(null);
   const pick = (t: Tool) => setChosen(chosen === t.id ? null : t.id);
+
+  // Pages need the whole width.
+  if (chosen === "pages" && onMac)
+    return (
+      <div className="flex flex-col gap-4">
+        <button type="button" onClick={() => setChosen(null)} className="inline-flex items-center gap-1.5 self-start text-[13px] text-ink-2 hover:text-ink">
+          <ArrowLeft aria-hidden className="size-4" /> All tools
+        </button>
+        <Suspense fallback={<Waiting />}>
+          <PagesTool start={params.get("doc")} />
+        </Suspense>
+      </div>
+    );
 
   return (
     <div className="flex flex-wrap items-start gap-6">
@@ -116,9 +109,13 @@ export function Tools() {
         </div>
       </section>
 
-      {chosen && (
+      {chosen && onMac && (
         <aside aria-label="Tool" className="flex w-[340px] max-w-full flex-[1_1_300px] flex-col gap-3 rounded-xl border border-line bg-card p-4">
-          {chosen === "sign" && <PickToSign />}
+          <Suspense fallback={<Waiting />}>
+            {chosen === "sign" && <PickToSign />}
+            {chosen === "combine" && <CombineTool />}
+            {chosen === "scan" && <ScanTool />}
+          </Suspense>
           {chosen === "note" && (
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-0.5">
