@@ -48,7 +48,7 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
       {docs.map((d) => {
         const isNew = d.suggestedNew;
         return (
-          <article key={d.id} className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-4 gap-y-3 rounded-xl border border-line bg-card p-4 lg:grid-cols-[40px_minmax(0,1fr)_340px]">
+          <article key={d.id} className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-4 gap-y-3 rounded-xl border border-line bg-card p-4 lg:grid-cols-[40px_minmax(0,1fr)_380px]">
             <span className="grid h-12 w-10 place-items-center rounded-md bg-accent-soft text-[10.5px] font-bold text-link">{ext(d.fileName)}</span>
             <div className="flex min-w-0 flex-col gap-1">
               <button type="button" onClick={() => openDocument(d.id)} className="self-start text-left text-[15px] font-semibold hover:underline">
@@ -114,11 +114,11 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
               ) : picking === d.id ? (
                 <FolderPicker folders={folders} area={d.suggestedArea ?? d.area ?? "Other"} onPick={(area, name) => file(d, area, name)} onCancel={() => setPicking(null)} />
               ) : (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 whitespace-nowrap">
                   <button
                     type="button"
                     onClick={() => d.suggestedArea && d.suggestedFolder && file(d, d.suggestedArea, d.suggestedFolder)}
-                    className="h-8 rounded-md bg-accent px-3 text-[13px] font-semibold text-on-accent hover:bg-accent-strong"
+                    className="h-8 shrink-0 rounded-md bg-accent px-3 text-[13px] font-semibold text-on-accent hover:bg-accent-strong"
                   >
                     {isNew ? "Create and file" : "File here"}
                   </button>
@@ -126,12 +126,12 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
                     <button
                       type="button"
                       onClick={() => setRenaming({ id: d.id, area: d.suggestedArea ?? "Other", name: d.suggestedFolder ?? "" })}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-card px-3 text-[13px] hover:border-ink-2"
+                      className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-line-strong bg-card px-3 text-[13px] hover:border-ink-2"
                     >
                       <Pencil aria-hidden className="size-3.5" /> Rename
                     </button>
                   )}
-                  <button type="button" onClick={() => setPicking(d.id)} className="h-8 rounded-md border border-line-strong bg-card px-3 text-[13px] hover:border-ink-2">
+                  <button type="button" onClick={() => setPicking(d.id)} className="h-8 shrink-0 rounded-md border border-line-strong bg-card px-3 text-[13px] hover:border-ink-2">
                     Other folder…
                   </button>
                   <button
@@ -139,7 +139,7 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
                     onClick={() => setRemoving(d.id)}
                     aria-label={`Remove ${d.title}`}
                     title="Remove this document"
-                    className="grid size-8 place-items-center rounded-md border border-line-strong bg-card text-ink-2 hover:border-danger hover:text-danger"
+                    className="ml-auto grid size-8 shrink-0 place-items-center rounded-md border border-line-strong bg-card text-ink-2 hover:border-danger hover:text-danger"
                   >
                     <Trash2 aria-hidden className="size-4" />
                   </button>
