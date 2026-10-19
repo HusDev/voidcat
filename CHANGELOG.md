@@ -4,6 +4,7 @@ Each version's section becomes its GitLab release notes.
 
 ## Unreleased
 
+- Convert, with what macOS already has: Word, OpenDocument, rich text and web pages into each other, to PDF and text; Markdown to PDF, Word, text; spreadsheets to CSV and CSV to Excel; pictures to PDF/JPEG/PNG; PDF to text or pictures. Copies go next to the original.
 - PDF tools in Tools: Combine PDFs (photos and notes too), Split or reorder (keep, move, turn pages; one PDF or one per page; **Pages** in a document's tab), Scan to PDF (photos into one PDF, read and filed on the Mac). Results are new documents; originals stay.
 - Library for big collections: view tabs (Needs you, Recently added, Expiring soon, Unsigned, Notes I wrote, Everything), one compact list grouped by when files were added with a key fact per row, filters, sorting, List or Cards; files drop anywhere on the page.
 - Tools screen in the sidebar (New document, Sign, and the tools coming next) and **+ New** at the top of the sidebar.

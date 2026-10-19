@@ -4,6 +4,7 @@ mod calendar;
 mod chats;
 mod cloud;
 mod cloud_signin;
+mod convert;
 mod docx;
 mod labels;
 mod legacy;
@@ -78,17 +79,26 @@ fn save_signed(store: State<Store>, request: tauri::ipc::Request<'_>) -> Result<
     }
 }
 
-/// Keeps a PDF made by a tool (the request body): `x-voidcat-name` (hex UTF-8) is its title; `x-voidcat-like` is a
-/// document it rearranges (its folder and type are taken, its text saved after); `x-voidcat-folder` places a scan.
+/// Keeps a file made by a tool (the request body) as a new document. `x-voidcat-name` (hex UTF-8) is its title,
+/// `x-voidcat-ext` its type (pdf when absent); `x-voidcat-like` is the document it was made from (folder and type taken
+/// from it; `x-voidcat-copy-text: 1` copies its read pages too); `x-voidcat-folder` places a scan.
 #[tauri::command]
-fn save_made_pdf(store: State<Store>, request: tauri::ipc::Request<'_>) -> Result<Document, String> {
+fn save_made(store: State<Store>, request: tauri::ipc::Request<'_>) -> Result<Document, String> {
     let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).filter(|v| !v.is_empty()).map(str::to_string);
     let title = header("x-voidcat-name").ok_or("Missing x-voidcat-name.")?;
     let title = String::from_utf8(hex::decode(title).map_err(|_| "Bad name.")?).map_err(|_| "Bad name.")?;
+    let ext = header("x-voidcat-ext").unwrap_or_else(|| "pdf".into());
+    let copy = header("x-voidcat-copy-text").as_deref() == Some("1");
     match request.body() {
-        tauri::ipc::InvokeBody::Raw(bytes) => store.save_made_pdf(&title, bytes, header("x-voidcat-like").as_deref(), header("x-voidcat-folder").as_deref()),
-        _ => Err("Send the PDF as raw bytes.".into()),
+        tauri::ipc::InvokeBody::Raw(bytes) => store.save_made(&title, &ext, bytes, header("x-voidcat-like").as_deref(), header("x-voidcat-folder").as_deref(), copy),
+        _ => Err("Send the file as raw bytes.".into()),
     }
+}
+
+/// A Word, OpenDocument, rich-text, web-page or text document converted with the Mac's own tools.
+#[tauri::command]
+async fn convert_office(store: State<'_, Store>, id: String, to: String) -> Result<tauri::ipc::Response, String> {
+    convert::office(&store, &id, &to).map(tauri::ipc::Response::new)
 }
 
 /// Your saved signature (a PNG), or nothing.
@@ -732,7 +742,8 @@ pub fn run() {
             has_previous_version,
             discard_empty_note,
             save_signed,
-            save_made_pdf,
+            save_made,
+            convert_office,
             get_signature,
             save_signature,
             forget_signature,

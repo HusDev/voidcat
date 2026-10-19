@@ -19,7 +19,7 @@ pub struct Store {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Document {
-    id: String,
+    pub(crate) id: String,
     title: String,
     file_name: String,
     mime: Option<String>,
@@ -275,6 +275,9 @@ pub(crate) fn mime_of(name: &str) -> Option<String> {
         "xls" => "application/vnd.ms-excel",
         "ods" => "application/vnd.oasis.opendocument.spreadsheet",
         "csv" => "text/csv",
+        "odt" => "application/vnd.oasis.opendocument.text",
+        "rtf" => "application/rtf",
+        "html" | "htm" => "text/html",
         _ => return None,
     };
     Some(m.to_string())
@@ -523,6 +526,11 @@ impl Store {
                 Ok((name.replace(['\\', ':'], " "), self.vault.decrypt(bytes)?))
             })
             .collect()
+    }
+
+    /// The library's "opened" folder: plain copies for other apps and tools, emptied on every start.
+    pub(crate) fn opened_dir(&self) -> PathBuf {
+        self.files.parent().unwrap_or(&self.files).join(OPENED)
     }
 
     /// A document's file decrypted into the library's "opened" folder, for opening in another app.
@@ -1119,34 +1127,54 @@ impl Store {
     }
 
     /// Keeps a PDF made by a tool (combined, split, reordered, scanned) as a new document named `title`.
-    /// With `like`, it is a rearrangement of documents already read: it takes that document's folder, area and type,
-    /// counts as read (or filed) and as checked for labels, and its text is saved by the caller; its facts stay on the
-    /// originals. Without `like` (a scan) it is new, in `folder` when given, and the pipeline reads and files it.
     pub fn save_made_pdf(&self, title: &str, pdf: &[u8], like: Option<&str>, folder: Option<&str>) -> Result<Document, String> {
-        if !pdf.starts_with(b"%PDF") {
-            return Err("That isn't a PDF.".into());
+        self.save_made(title, "pdf", pdf, like, folder, false)
+    }
+
+    /// Keeps a file made by a tool (a PDF from the PDF tools, a converted copy) as a new document named `title`, of
+    /// type `ext`. With `like`, it is made from a document already read: it takes that document's folder, area and
+    /// type, counts as read (or filed) and as checked for labels, and its facts stay on the original; `copy_text` also
+    /// copies that document's read pages (a converted copy says the same), otherwise the caller saves its text.
+    /// Without `like` (a scan) it is new, in `folder` when given, and the pipeline reads and files it.
+    pub fn save_made(&self, title: &str, ext: &str, bytes: &[u8], like: Option<&str>, folder: Option<&str>, copy_text: bool) -> Result<Document, String> {
+        let looks_right = match ext {
+            "pdf" => bytes.starts_with(b"%PDF"),
+            "png" => bytes.starts_with(b"\x89PNG"),
+            "jpg" => bytes.starts_with(&[0xFF, 0xD8, 0xFF]),
+            "docx" | "odt" | "xlsx" => bytes.starts_with(b"PK"),
+            "rtf" => bytes.starts_with(b"{\\rtf"),
+            "html" | "txt" | "csv" | "md" => std::str::from_utf8(bytes).is_ok(),
+            _ => return Err(format!("Voidcat doesn't make .{ext} files.")),
+        };
+        if !looks_right {
+            return Err(format!("That isn't a .{ext} file."));
         }
         let title = if title.trim().is_empty() { "Untitled" } else { title.trim() };
         let id = uuid::Uuid::new_v4().to_string();
-        let name = note_file_name(title, "pdf");
-        let stored = self.files.join(format!("{id}.pdf"));
-        fs::write(&stored, self.vault.encrypt(pdf)?).map_err(|e| e.to_string())?;
+        let name = note_file_name(title, ext);
+        let stored = self.files.join(format!("{id}.{ext}"));
+        fs::write(&stored, self.vault.encrypt(bytes)?).map_err(|e| e.to_string())?;
         let mut db = self.db.lock().unwrap();
         let tx = db.transaction().map_err(|e| e.to_string())?;
         let done = (|| -> rusqlite::Result<()> {
-            let sha = note_sha(pdf, &id);
+            let sha = note_sha(bytes, &id);
             let path = stored.to_string_lossy().to_string();
+            let mime = mime_of(&name);
             match like {
                 Some(source) => {
                     let changed = tx.execute(
-                        "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path, area, doc_type, status, text_method, folder_id, filing)
-                         select ?1, ?2, ?3, 'application/pdf', ?4, ?5, ?6, area, doc_type, case when status = 'filed' then 'filed' else 'read' end, 'pdf-text', folder_id,
+                        "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path, area, doc_type, status, text_method, page_count, folder_id, filing)
+                         select ?1, ?2, ?3, ?4, ?5, ?6, ?7, area, doc_type, case when status = 'filed' then 'filed' else 'read' end,
+                                case when ?9 then text_method else 'pdf-text' end, case when ?9 then page_count else null end, folder_id,
                                 case when folder_id is null then null else 'confirmed' end
-                         from documents where id = ?7",
-                        params![id, title, name, pdf.len() as i64, sha, path, source],
+                         from documents where id = ?8",
+                        params![id, title, name, mime, bytes.len() as i64, sha, path, source, copy_text],
                     )?;
                     if changed == 0 {
                         return Err(rusqlite::Error::QueryReturnedNoRows);
+                    }
+                    if copy_text {
+                        tx.execute("insert into pages (document_id, page, text) select ?1, page, text from pages where document_id = ?2", params![id, source])?;
                     }
                     tx.execute("insert or ignore into label_checks (document_id) values (?1)", [&id])?;
                 }
@@ -1157,8 +1185,8 @@ impl Store {
                     };
                     tx.execute(
                         "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path, folder_id, area, filing)
-                         values (?1, ?2, ?3, 'application/pdf', ?4, ?5, ?6, ?7, ?8, case when ?7 is null then null else 'confirmed' end)",
-                        params![id, title, name, pdf.len() as i64, sha, path, folder, area],
+                         values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, case when ?8 is null then null else 'confirmed' end)",
+                        params![id, title, name, mime, bytes.len() as i64, sha, path, folder, area],
                     )?;
                 }
             }
@@ -1431,6 +1459,27 @@ mod tests {
         assert_eq!(loose.title, "Untitled");
         assert_eq!(loose.folder_id, None);
         assert_eq!(store.bytes_of(&scan.id).unwrap(), b"%PDF-1.4 scan");
+    }
+
+    #[test]
+    fn keeps_converted_copies_with_the_same_text() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
+        let src = dir.join("contract.docx");
+        fs::write(&src, b"PK word").unwrap();
+        store.import(vec![src.to_string_lossy().to_string()]);
+        let word = store.list().unwrap().remove(0);
+        store.save_reading(&word.id, vec!["Trial period six months".into()], "text").unwrap();
+
+        let copy = store.save_made("Contract (OpenDocument)", "odt", b"PK odt", Some(&word.id), None, true).unwrap();
+        assert_eq!(copy.mime.as_deref(), Some("application/vnd.oasis.opendocument.text"));
+        assert_eq!(copy.file_name, "Contract (OpenDocument).odt");
+        assert_eq!(copy.text_method.as_deref(), Some("text"));
+        assert_eq!(store.search("trial", false).unwrap().len(), 2);
+        assert!(store.save_made("x", "rtf", b"not rtf", Some(&word.id), None, true).is_err());
+        assert!(store.save_made("x", "exe", b"MZ", Some(&word.id), None, true).is_err());
+        assert!(store.save_made("x", "rtf", b"{\\rtf1 hi}", Some(&word.id), None, true).is_ok());
+        assert_eq!(mime_of("page.html").as_deref(), Some("text/html"));
     }
 
     #[test]

@@ -8,6 +8,7 @@ import { useNavigate, useParams } from "react-router";
 import remarkGfm from "remark-gfm";
 import { getDocumentProxy } from "unpdf";
 import { DocChat } from "../components/SideChat";
+import { ConvertMenu } from "../components/Convert";
 import { LabelChips } from "../components/LabelChips";
 import { KeepInCloud } from "../components/CloudMark";
 import { FolderPicker } from "../components/FolderPicker";
@@ -206,6 +207,9 @@ function TextFile({
     <div ref={ref} data-selectable className="mx-auto w-full max-w-[820px] rounded-xl border border-line bg-card px-8 py-8 text-page-ink">
       {!text.trim() ? (
         <p className="m-0 text-sm text-ink-2">This document is empty.</p>
+      ) : doc.mime === "text/html" ? (
+        // A web page shown as a page, in a frame with no scripts, no forms and no access to the app.
+        <iframe title={doc.title} sandbox="" srcDoc={text} className="h-[70vh] w-full rounded-md border-0 bg-white" />
       ) : doc.mime === "text/markdown" ? (
         <div className="md-page text-[14px] leading-relaxed">
           <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
@@ -546,6 +550,7 @@ export function Viewer() {
             <Files aria-hidden className="size-4" /> Pages
           </button>
         )}
+        {onMac && <ConvertMenu doc={doc} />}
         {isEditable(doc) &&
           (onMac ? (
             <button

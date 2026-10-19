@@ -62,6 +62,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 26. **Signing (19 Oct, branch `feat/signing`):** visible signature (draw, type, upload), kept sealed on the Mac; auto-placed where the document asks; date and text boxes; "… (signed)" PDF next to the original; PDFs, photos and notes; Settings → Your signature.
 27. **Library at scale (19 Oct, branch `feat/library-views`):** view tabs (Needs you, Recently added, Expiring soon, Unsigned, Notes I wrote, Everything), compact list by time with key facts, filters, sort, List/Cards, drop anywhere; plus the Tools screen and + New.
 28. **PDF tools (19 Oct, branch `feat/pdf-tools`):** Combine PDFs, Split or reorder (keep/move/turn, one PDF or one per page, **Pages** in a document's tab), Scan to PDF (photos → PDF, then read and filed); new documents carry the text over and none of the facts.
+29. **Convert (20 Oct, branch `feat/convert`):** built-in only (textutil, AppKit printing for PDF, the app's own docx/xlsx/PDF writers, canvas for pictures); copies next to the original; Convert menu in a document's tab and in Tools.
 
 ## Next, in order
 1. **GitLab hackathon work** (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):
@@ -101,6 +102,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - Model prompts: don't give concrete example names or addresses; the local model copies them ("Lease Provença 210" incident).
 - `keyring` must be v3 with `apple-native` (v4 has a different API).
 - The browser preview (`bun run dev`, http://localhost:1420) has no library (`hasLibrary` false); use it only for layout checks (puppeteer scripts in the Claude scratchpad).
+- Convert runs `/usr/bin/textutil` and `/usr/bin/osascript -l JavaScript` (AppKit printing) on a plain copy in `opened/convert-*`, deleted when done; the Rust test that runs them is skipped where textutil doesn't exist (Linux CI).
 - Notes' `sha256` column is `<hex>:<id>` (so notes may share text); compare file contents with `store::content_sha`. Each edited note may have a sealed `<stored_path>.prev` next to it.
 - The library DB is real user data: never reset it. Migrations add columns in `store.rs` `migrate()`; new tables use `create table if not exists`.
 

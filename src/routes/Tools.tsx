@@ -1,6 +1,7 @@
 import { ArrowLeft, Combine, EyeOff, FilePen, FilePlus, FileScan, FileInput, type LucideIcon, PenLine, Repeat, Sheet, Split } from "lucide-react";
 import { Suspense, lazy, useState } from "react";
 import { useSearchParams } from "react-router";
+import { canConvert } from "../lib/convert";
 import { canSign, newNote, onMac, openDocument, signNext } from "../lib/library";
 
 // The PDF tools carry pdf-lib and pdf.js: loaded when one is opened.
@@ -9,6 +10,7 @@ const CombineTool = lazy(() => tools().then((m) => ({ default: m.CombineTool }))
 const PagesTool = lazy(() => tools().then((m) => ({ default: m.PagesTool })));
 const ScanTool = lazy(() => tools().then((m) => ({ default: m.ScanTool })));
 const DocumentPicker = lazy(() => tools().then((m) => ({ default: m.DocumentPicker })));
+const ConvertTool = lazy(() => import("../components/Convert").then((m) => ({ default: m.ConvertTool })));
 const Waiting = () => <p className="m-0 text-[13px] text-ink-2">Opening…</p>;
 
 type Tool = { id: string; name: string; note: string; Icon: LucideIcon; ready: boolean };
@@ -23,7 +25,7 @@ const PDF: Tool[] = [
   { id: "combine", name: "Combine PDFs", note: "Several documents into one", Icon: Combine, ready: true },
   { id: "pages", name: "Split or reorder", note: "Pick, move, turn, remove pages", Icon: Split, ready: true },
   { id: "scan", name: "Scan to PDF", note: "Photos of a paper into one PDF", Icon: FileScan, ready: true },
-  { id: "convert", name: "Convert", note: "Word, PDF, Markdown, images, sheets", Icon: Repeat, ready: false },
+  { id: "convert", name: "Convert", note: "Word, PDF, Markdown, pictures, sheets", Icon: Repeat, ready: true },
   { id: "redact", name: "Redact", note: "Black out IDs and addresses for a copy", Icon: EyeOff, ready: false },
 ];
 
@@ -115,6 +117,7 @@ export function Tools() {
             {chosen === "sign" && <PickToSign />}
             {chosen === "combine" && <CombineTool />}
             {chosen === "scan" && <ScanTool />}
+            {chosen === "convert" && <ConvertTool picker={(onPick) => <DocumentPicker filter={canConvert} onPick={onPick} />} />}
           </Suspense>
           {chosen === "note" && (
             <div className="flex flex-col gap-3">

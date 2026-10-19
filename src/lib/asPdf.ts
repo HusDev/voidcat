@@ -37,3 +37,26 @@ export async function asPdf(doc: Pick<Document, "id" | "mime">) {
   if (mime.startsWith("image/")) return photosPdf([await photoOf(bytes, mime)]);
   throw new Error("This kind of file can't be made into a PDF yet.");
 }
+
+/** A picture re-encoded as JPEG or PNG (JPEG gets a white background where the picture was see-through). */
+export async function encodeImage(bytes: Uint8Array, mime: string, as: "image/jpeg" | "image/png") {
+  const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: mime }));
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    [canvas.width, canvas.height] = [img.naturalWidth, img.naturalHeight];
+    const ctx = canvas.getContext("2d")!;
+    if (as === "image/jpeg") {
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.drawImage(img, 0, 0);
+    const out = await new Promise<Blob | null>((done) => canvas.toBlob(done, as, 0.92));
+    if (!out) throw new Error("This picture could not be converted.");
+    return new Uint8Array(await out.arrayBuffer());
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

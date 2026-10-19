@@ -16,10 +16,11 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - Reading and filing happen on your Mac with the local model. Nothing is uploaded to do this.
 
 ## Tools and + New
-- [Tools](#/tools) in the sidebar lists everything you can do with documents. Ready now: **New document**, **Sign** (pick a document and it opens ready to sign), **Combine PDFs**, **Split or reorder** and **Scan to PDF**. Marked **Coming**: New sheet, Fill a form, Convert and Redact.
+- [Tools](#/tools) in the sidebar lists everything you can do with documents. Ready now: **New document**, **Sign** (pick a document and it opens ready to sign), **Combine PDFs**, **Split or reorder** and **Scan to PDF**. **Convert**. Marked **Coming**: New sheet, Fill a form and Redact.
 - **Combine PDFs**: pick documents in order (photos and notes become pages too), move them up or down, name it, and they become one new PDF next to the first one.
 - **Split or reorder**: pick a document (or click **Pages** in its tab) to see every page small. Untick pages to leave them out, move them, turn them; **Save as a new PDF**, or **Save each page separately**.
 - **Scan to PDF**: choose photos of a paper, one per page, put them in order, and they become one PDF that is read and filed on this Mac like anything you add.
+- **Convert** (in Tools, or **Convert** in a document's tab) makes a copy in another format, next to the original: Word, OpenDocument, rich text and web pages into each other, to PDF or to plain text; Markdown notes to PDF, Word or text; spreadsheets to CSV (one per sheet) and CSV to Excel; pictures to PDF, JPEG or PNG; a PDF to plain text or to pictures (one per page). It's all done on this Mac with nothing to download. PDF to Word isn't offered: it comes out rough everywhere.
 - Tools never change the original: what they make is a new document, and its facts stay on the originals.
 - **+ New** at the top of the sidebar makes a document from any screen: **Document** (Markdown) or **Plain text**.
 

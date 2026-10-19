@@ -74,15 +74,26 @@ export const canSign = canBePdf;
 export const saveSigned = (originalId: string, pdf: Uint8Array) =>
   invoke<Document>("save_signed", pdf, { headers: { "Content-Type": "application/octet-stream", "x-voidcat-id": originalId } });
 /**
- * Keeps a PDF made by a tool as a new document. `like`: the document it rearranges (folder and type taken from it,
- * text saved after with `saveReading`). `folder`: where a scan goes (it is then read and filed like any import).
+ * Keeps a file made by a tool as a new document of type `ext` (pdf by default). `like`: the document it was made from
+ * (folder and type taken from it); `copyText` copies that document's read text too, otherwise the caller saves it with
+ * `saveReading`. `folder`: where a scan goes (it is then read and filed like any import).
  */
-export const saveMadePdf = (title: string, pdf: Uint8Array, to: { like?: string; folder?: string }) => {
+export const saveMade = (title: string, bytes: Uint8Array, to: { ext?: string; like?: string; folder?: string; copyText?: boolean }) => {
   const hex = [...new TextEncoder().encode(title)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return invoke<Document>("save_made_pdf", pdf, {
-    headers: { "Content-Type": "application/octet-stream", "x-voidcat-name": hex, "x-voidcat-like": to.like ?? "", "x-voidcat-folder": to.folder ?? "" },
+  return invoke<Document>("save_made", bytes, {
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "x-voidcat-name": hex,
+      "x-voidcat-ext": to.ext ?? "pdf",
+      "x-voidcat-like": to.like ?? "",
+      "x-voidcat-folder": to.folder ?? "",
+      "x-voidcat-copy-text": to.copyText ? "1" : "",
+    },
   });
 };
+export const saveMadePdf = (title: string, pdf: Uint8Array, to: { like?: string; folder?: string }) => saveMade(title, pdf, to);
+/** A Word, OpenDocument, rich-text, web-page or text document converted on this Mac (textutil; AppKit for PDF). */
+export const convertOffice = async (id: string, to: string) => new Uint8Array(await invoke<ArrayBuffer>("convert_office", { id, to }));
 /** Your saved signature (a PNG, sealed on this Mac), or null. */
 export const getSignature = async () => {
   const bytes = new Uint8Array(await invoke<ArrayBuffer>("get_signature"));
