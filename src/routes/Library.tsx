@@ -438,9 +438,13 @@ export function Library() {
       <Fragment key={d.id}>
         <tr draggable onDragStart={(e) => dragDocument(e, d.id)} title="Drag onto a folder in the sidebar to move it" className="group border-b border-line last:border-b-0 hover:bg-ground/50">
           <td className="max-w-0 px-3 py-2">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              {title(d)}
-              {now}
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                {title(d)}
+                {now}
+                <LabelChips documentId={d.id} labels={labels.labels.filter((l) => l.kind !== "duplicate")} />
+              </div>
+              {confirming === d.id ? confirmRemove(d, true) : <span className="shrink-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">{actions(d)}</span>}
             </div>
           </td>
           <td className="max-w-0 truncate px-3 py-2 font-mono text-[12px] text-ink-2">{d.folderName ? <Private>{d.folderName}</Private> : (d.area ?? "Not filed")}</td>
@@ -458,16 +462,10 @@ export function Library() {
             ) : null}
           </td>
           <td className="whitespace-nowrap px-3 py-2 text-[12.5px] text-ink-2">{addedShort(new Date(d.addedAt), ctx.now)}</td>
-          <td className="px-2 py-1.5">
-            <div className="flex items-center justify-end gap-2">
-              <LabelChips documentId={d.id} labels={labels.labels.filter((l) => l.kind !== "duplicate")} />
-              {confirming === d.id ? confirmRemove(d, true) : <span className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">{actions(d)}</span>}
-            </div>
-          </td>
         </tr>
         {moving === d.id && (
           <tr>
-            <td colSpan={5} className="px-3 pb-3">
+            <td colSpan={4} className="px-3 pb-3">
               {picking(d)}
             </td>
           </tr>
@@ -543,11 +541,10 @@ export function Library() {
         <div className="overflow-x-auto rounded-xl border border-line bg-card">
           <table className="w-full min-w-[720px] table-fixed border-collapse text-[13px]">
             <colgroup>
-              <col className="w-[34%]" />
+              <col className="w-[44%]" />
               <col className="w-[20%]" />
-              <col className="w-[24%]" />
-              <col className="w-[9%]" />
-              <col className="w-[13%]" />
+              <col className="w-[25%]" />
+              <col className="w-[11%]" />
             </colgroup>
             <thead>
               <tr className="border-b border-line text-left text-[12px] text-ink-2">
@@ -555,9 +552,6 @@ export function Library() {
                 <th className="px-3 py-2 font-medium">Folder</th>
                 <th className="px-3 py-2 font-medium">Key fact</th>
                 <th className="px-3 py-2 font-medium">Added</th>
-                <th className="px-3 py-2">
-                  <span className="sr-only">Labels and actions</span>
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -565,7 +559,7 @@ export function Library() {
                 ? byTime(page, ctx.now).map((g) => (
                     <Fragment key={g.title}>
                       <tr>
-                        <th colSpan={5} scope="colgroup" className="border-b border-line bg-ground/70 px-3 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-2">
+                        <th colSpan={4} scope="colgroup" className="border-b border-line bg-ground/70 px-3 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-2">
                           {g.title} · {g.docs.length}
                         </th>
                       </tr>
