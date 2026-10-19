@@ -155,3 +155,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 18 Oct 2026 — Terms: governing law is Spain (his: "country is Spain").
 - 19 Oct 2026 — Writing documents in Voidcat (grill-me session; he took every recommendation except the model running after edits: "you can do it manually, like fact check button"): .md/.txt notes with a formatting editor, autosave, Edit for any text document, Word export, one previous version, Mac only.
 - 19 Oct 2026 — Discarding notes (his question: "how can i discard this if i dont want to save it?" → "do both"): Delete in a note's tab with one confirmation, and an empty "Untitled" note is removed when you close it.
+- 19 Oct 2026 — The "to file" cards get a trash icon (remove for good, asks once) and their name opens the document (his report: a note waiting there could only be filed, "nothing is there" to delete it).

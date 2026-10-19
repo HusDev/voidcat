@@ -1,7 +1,7 @@
-import { Folder as FolderIcon, FolderPlus, Pencil } from "lucide-react";
+import { Folder as FolderIcon, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { AREAS } from "../lib/extract";
-import { type Document, type Folder, announceChange, fileInFolder } from "../lib/library";
+import { type Document, type Folder, announceChange, fileInFolder, openDocument, removeDocument } from "../lib/library";
 import { Private } from "../lib/veil";
 import { FolderPicker } from "./FolderPicker";
 
@@ -12,6 +12,8 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
   const [picking, setPicking] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<{ id: string; area: string; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  /** The document whose removal is being confirmed. */
+  const [removing, setRemoving] = useState<string | null>(null);
   if (!docs.length) return null;
 
   const file = async (d: Document, area: string, name: string) => {
@@ -49,9 +51,9 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
           <article key={d.id} className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-4 gap-y-3 rounded-xl border border-line bg-card p-4 lg:grid-cols-[40px_minmax(0,1fr)_340px]">
             <span className="grid h-12 w-10 place-items-center rounded-md bg-accent-soft text-[10.5px] font-bold text-link">{ext(d.fileName)}</span>
             <div className="flex min-w-0 flex-col gap-1">
-              <span className="text-[15px] font-semibold">
+              <button type="button" onClick={() => openDocument(d.id)} className="self-start text-left text-[15px] font-semibold hover:underline">
                 <Private>{d.title}</Private>
-              </span>
+              </button>
               <span className="truncate text-[12.5px] text-ink-2">
                 <Private>{d.fileName}</Private>
               </span>
@@ -131,6 +133,34 @@ export function ToFile({ docs, folders }: { docs: Document[]; folders: Folder[] 
                   )}
                   <button type="button" onClick={() => setPicking(d.id)} className="h-8 rounded-md border border-line-strong bg-card px-3 text-[13px] hover:border-ink-2">
                     Other folder…
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRemoving(d.id)}
+                    aria-label={`Remove ${d.title}`}
+                    title="Remove this document"
+                    className="grid size-8 place-items-center rounded-md border border-line-strong bg-card text-ink-2 hover:border-danger hover:text-danger"
+                  >
+                    <Trash2 aria-hidden className="size-4" />
+                  </button>
+                </div>
+              )}
+              {removing === d.id && (
+                <div role="group" aria-label="Remove this document?" className="flex flex-wrap items-center gap-2 text-[13px]">
+                  <span className="text-ink-2">Remove it from Voidcat?</span>
+                  <button type="button" autoFocus onClick={() => setRemoving(null)} className="h-7 rounded-md border border-line-strong px-2 hover:border-ink-2">
+                    Keep
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await removeDocument(d.id);
+                      setRemoving(null);
+                      announceChange();
+                    }}
+                    className="h-7 rounded-md bg-danger px-2 font-semibold text-white"
+                  >
+                    Remove for good
                   </button>
                 </div>
               )}
