@@ -62,3 +62,9 @@ export function parseAsk(body: unknown): { messages: Turn[]; today: Date } | str
   const day = typeof today === "string" && /^\d{4}-\d{2}-\d{2}$/.test(today) ? new Date(`${today}T12:00:00Z`) : new Date();
   return { messages: turns, today: Number.isNaN(day.getTime()) ? new Date() : day };
 }
+
+/** Bots and link previews follow the Download link too; only a real browser's GET counts as a download. */
+export function countsAsDownload(method: string, userAgent: string | null): boolean {
+  if (method !== "GET" || !userAgent) return false;
+  return !/bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|headless|curl|wget|python|go-http|java\/|okhttp/i.test(userAgent);
+}

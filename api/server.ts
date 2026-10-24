@@ -10,17 +10,19 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { SYSTEM as ASK_SYSTEM, todayLine } from "../src/lib/askPrompt";
 import { AREAS, CLOUD, SYSTEM } from "../src/lib/filing";
-import { type Filed, month, parseAsk, parseFiled, parseRequest, type Turn } from "./read";
+import { countsAsDownload, type Filed, month, parseAsk, parseFiled, parseRequest, type Turn } from "./read";
 
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT ?? "voidcat-cloud";
 const LOCATION = process.env.VERTEX_LOCATION ?? "europe-west1";
 const MODEL = process.env.MODEL ?? "gemini-2.5-flash";
 const BUCKET = process.env.FILES_BUCKET ?? "voidcat-cloud-files";
 const ORIGINS = (process.env.ALLOWED_ORIGINS ?? "https://app.voidcat.io,https://voidcat-web-1094942921673.europe-west1.run.app,http://localhost:1430").split(",");
+/** The Mac app's .dmg in Storage; voidcat.io/download/mac comes here (Hosting rewrite), is counted, and goes on. */
+const DMG_URL = process.env.DMG_URL ?? "https://firebasestorage.googleapis.com/v0/b/voidcat-cloud-files/o/downloads%2FVoidcat-0.1.0-mac-arm64.dmg?alt=media&token=c6afcba6-6d23-4263-8967-2da69dbdecb8";
 export const READS_PER_MONTH = Number(process.env.READS_PER_MONTH ?? 300);
 export const ASKS_PER_MONTH = Number(process.env.ASKS_PER_MONTH ?? 1000);
 
@@ -153,6 +155,17 @@ export async function handle(req: Request): Promise<Response> {
   const path = new URL(req.url).pathname;
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
   if (path === "/health") return json({ ok: true }, 200, headers);
+
+  // The download counter: a number only (no address, no browser details), shown on voidcat.io's Download buttons.
+  if (path === "/download/mac" && (req.method === "GET" || req.method === "HEAD")) {
+    if (countsAsDownload(req.method, req.headers.get("User-Agent")))
+      await db.collection("stats").doc("downloads").set({ mac: FieldValue.increment(1) }, { merge: true }).catch(() => console.error("download count failed"));
+    return new Response(null, { status: 302, headers: { Location: DMG_URL, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
+  }
+  if (path === "/api/downloads" && req.method === "GET") {
+    const snap = await db.collection("stats").doc("downloads").get();
+    return json({ mac: Number(snap.get("mac") ?? 0) }, 200, { ...headers, "Cache-Control": "public, max-age=60" });
+  }
 
   if (path === "/v1/usage" && req.method === "GET") {
     const uid = await who(req);

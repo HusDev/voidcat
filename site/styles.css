@@ -436,6 +436,13 @@ h1 span {
   color: var(--ink);
   font-weight: 600;
 }
+.button .count {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid currentColor;
+  font-weight: 400;
+  opacity: 0.62;
+}
 
 /* footer */
 .foot {
