@@ -226,10 +226,19 @@ h1 span {
   height: auto;
 }
 
+/* demo film */
+.demo {
+  padding-block: clamp(72px, 10vw, 128px) 0;
+}
+.demo .install-video {
+  margin-top: clamp(28px, 4vw, 48px);
+}
+
 /* how it works: alternating text and real screenshots */
 .how {
   padding-block: clamp(72px, 10vw, 128px) 0;
 }
+.demo > h2,
 .how > h2,
 .privacy > h2,
 .mask > h2 {
