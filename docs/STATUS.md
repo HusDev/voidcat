@@ -80,6 +80,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
    - a Rename-folder button in the folder view;
    - (done 17 Oct) reminders when the window is closed: menu bar cat, Open at login;
    - (done 17 Oct) `docType` description now says "never a folder, area or person name"; filing no longer shows folders in the first step anyway.
+5. **Sign and notarize the Mac app** (later, his call 24 Oct): Apple Developer account ($99/year), a "Developer ID Application" certificate, then `tauri build` with `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` (app-specific), `APPLE_TEAM_ID`; ship the notarized .dmg and drop the Terminal step from voidcat.io. Also ends the Keychain prompt after every rebuild.
 
 ## How Hussein likes to work
 - Short answers; challenge with evidence instead of folding.

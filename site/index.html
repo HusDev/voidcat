@@ -139,8 +139,8 @@
         </div>
         <ol class="install">
           <li><strong>Open the download</strong> and drag Voidcat into Applications.</li>
-          <li><strong>Open it once from Settings.</strong> Voidcat isn't signed by Apple yet, so macOS stops it the first time. Go to System Settings › Privacy &amp; Security and choose Open Anyway. You only do this once.</li>
-          <li><strong>Let it set up reading.</strong> Voidcat installs the local model for you, no Terminal needed. Leave about 7 GB free.</li>
+          <li><strong>Let your Mac open it.</strong> Voidcat isn't signed by Apple yet, so macOS says it "is damaged and can't be opened". It isn't damaged. Open Terminal, paste this line and press Return, then open Voidcat. You only do this once.<code class="command">xattr -dr com.apple.quarantine /Applications/Voidcat.app</code></li>
+          <li><strong>Let it set up reading.</strong> Voidcat installs the local model for you, nothing more to type. Leave about 7 GB free.</li>
         </ol>
       </section>
     </main>
