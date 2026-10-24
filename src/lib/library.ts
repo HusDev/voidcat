@@ -31,6 +31,8 @@ export type Document = {
   written?: boolean;
   /** The text changed since facts and filing were last found. */
   contentChanged?: boolean;
+  /** For a signed copy: the document it was signed from. */
+  signedFrom?: string | null;
 };
 
 export type Folder = { id: string; area: string; name: string; documents: number };
@@ -64,6 +66,21 @@ export const discardEmptyNote = (id: string) => invoke<boolean>("discard_empty_n
 export const hasPreviousVersion = (id: string) => invoke<boolean>("has_previous_version", { id });
 /** Swaps in the kept earlier version (doing it again undoes it). */
 export const restorePreviousVersion = (id: string) => invoke<void>("restore_previous_version", { id });
+/** PDFs, photos and scans, and notes can be signed (the last two become a PDF first). */
+export const canSign = (doc: Pick<Document, "mime">) => doc.mime === "application/pdf" || !!doc.mime?.startsWith("image/") || isEditable(doc);
+/** Keeps a signed PDF made from `originalId` as a new document beside it. */
+export const saveSigned = (originalId: string, pdf: Uint8Array) =>
+  invoke<Document>("save_signed", pdf, { headers: { "Content-Type": "application/octet-stream", "x-voidcat-id": originalId } });
+/** Your saved signature (a PNG, sealed on this Mac), or null. */
+export const getSignature = async () => {
+  const bytes = new Uint8Array(await invoke<ArrayBuffer>("get_signature"));
+  return bytes.length ? bytes : null;
+};
+export const saveSignature = (png: Uint8Array) => invoke<void>("save_signature", png, { headers: { "Content-Type": "application/octet-stream" } });
+export const forgetSignature = () => invoke<void>("forget_signature");
+
+/** Documents chosen in Tools → Sign, which their tab opens ready to sign (once). */
+export const signNext = new Set<string>();
 /** Notes just made, which their tab opens in edit mode (once). */
 export const freshNotes = new Set<string>();
 /** Makes a note and opens it in its tab, ready to type in. */

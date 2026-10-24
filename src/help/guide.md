@@ -4,14 +4,23 @@ Voidcat keeps your important papers (passports, residence cards, leases, payslip
 
 Your **library** means all your documents in Voidcat and everything Voidcat learned from them. Links like [Library](#/) open that screen in Voidcat.
 
+## The Library
+- Tabs across the top show one view at a time: **Needs you** (what's waiting: documents to file, facts to check, possible copies), **Recently added** (the last 30 days), **Expiring soon** (IDs and permits expiring in the next three months, or already expired), **Unsigned**, **Notes I wrote** and **Everything**. The Library opens on Needs you when something waits, otherwise on Recently added.
+- Documents show as a compact list grouped by when they were added, each with its folder and one key fact (an expiry, an amount or a date). Filter by **Area**, **Type**, **Year** or **Label**, sort by date, name or folder, and switch between **List** and **Cards**. More load as you scroll.
+- Hover a row for its actions: keep in the cloud, rename, move, re-file, remove. Click a name to open it.
+
 ## Adding documents
-- Drag files onto the [Library](#/), or click **Choose files**.
+- Drop files anywhere on the [Library](#/), or click **Add files**.
 - Voidcat reads PDFs, photos and scans (it reads the text in pictures on your Mac), Word (.docx), Excel and other spreadsheets (.xlsx, .xls, .ods, .csv), text and Markdown.
 - The same file twice is added once.
 - Reading and filing happen on your Mac with the local model. Nothing is uploaded to do this.
 
+## Tools and + New
+- [Tools](#/tools) in the sidebar lists everything you can do with documents. Ready now: **New document** and **Sign** (pick a document and it opens ready to sign). The others are marked **Coming**: New sheet, Fill a form, Combine PDFs, Split or reorder, Scan to PDF, Convert and Redact.
+- **+ New** at the top of the sidebar makes a document from any screen: **Document** (Markdown) or **Plain text**.
+
 ## Writing your own documents
-- Click **New document** on the [Library](#/) to write a note right in Voidcat. The arrow next to it makes **Plain text** instead of **Markdown** (headings, lists, bold, tables). Inside a folder's view, or with right-click on a folder in the sidebar → **New document here**, the note goes straight into that folder.
+- Click **+ New** at the top of the sidebar to write a note right in Voidcat: **Document** (Markdown: headings, lists, bold, tables) or **Plain text**. Right-click a folder in the sidebar → **New document here** to put the note straight into that folder.
 - Type its name first, then write. It saves by itself a moment after you stop typing; ⌘S saves at once. "Saved" shows under the name.
 - Any Markdown or text document can be changed: open it and click **Edit**, then **Done**. Photos, PDFs and Word files can't be edited.
 - What you write is searchable at once. To file it and find facts in it, click **Find facts & file** (a dot on it means the text changed since it last ran). The local model never reads your notes on its own.
@@ -21,12 +30,21 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - While **Hide private details** is on, notes are blurred and can't be edited.
 - In a browser, notes can be read but are edited on your Mac.
 
+## Signing
+- Open a PDF, a photo or scan, or a note and click **Sign**. Photos and notes are made into a PDF first.
+- The first time, make your signature: **Draw** it with the trackpad or mouse, **Type** your name in a handwriting style, or **Upload** a photo of it on white paper (the paper is made see-through). It's kept on this Mac, locked, and never goes to an AI or to the cloud on its own.
+- Voidcat puts your signature where the document asks for it ("Firma", "Signature"), with today's date under it. Drag it to move it, drag its corner to resize it. **Signature**, **Date** and **Text** add more: click the button, then the page. Text boxes offer values from your approved facts, like your name.
+- **Save signed copy** makes a new PDF called "… (signed)" next to the original, in the same folder. The original stays as it is, and each links to the other.
+- This is a visible signature, like signing on paper. A digital signature with your FNMT certificate or DNIe comes later.
+- **Forget my signature** in [Settings](#/settings) removes the kept signature. Hide private details blurs it, and signing waits until it's off.
+- In a browser, signing happens on your Mac.
+
 ## Folders
 - Documents are filed as **Area › Folder**, for example Home › Lease or Identity › Passport.
-- If Voidcat isn't sure where a document goes, it waits in the **to file** strip at the top of the [Library](#/) with a suggestion: File here, Create and file, or pick another folder. Click its name to open it, or the trash icon to remove it without filing.
+- If Voidcat isn't sure where a document goes, it waits under **To file** in the Library's **Needs you** view with a suggestion: File here (or Create and file), the pencil to rename the new folder, or **Other…** to pick another. Click its name to open it, or the trash icon to remove it without filing.
 - The sidebar shows your folders like Finder. Drag a document onto a folder to move it. Drag a folder onto an area to move the whole folder.
-- **Rename**: hover a folder or document (in the sidebar or on its card) and click the **pencil**; the name becomes a field right there. Enter saves, Esc cancels. An open folder has a pencil next to its title. Double-click or right-click → Rename work too.
-- **Re-file** on a document card asks the local model again where it belongs.
+- **Rename**: hover a folder or document (in the sidebar or in the Library's list) and click the **pencil**; the name becomes a field right there. Enter saves, Esc cancels. An open folder has a pencil next to its title. Double-click or right-click → Rename work too.
+- **Re-file** (in a document's row actions) asks the local model again where it belongs.
 - A folder's view has **Download zip** to save all its documents at once.
 
 ## Facts to approve

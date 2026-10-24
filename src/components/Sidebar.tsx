@@ -1,4 +1,5 @@
-import { CalendarDays, Check, ChevronRight, Cloud, CloudCheck, Pencil, Eye, EyeOff, FileText, FilePlus, Folder as FolderIcon, FolderOpen, Inbox, Library, Lightbulb, Link2, LockKeyhole, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { CalendarDays, Check, ChevronRight, Cloud, CloudCheck, Pencil, Eye, EyeOff, FileText, FilePlus, Folder as FolderIcon, Plus, Wrench, FolderOpen, Inbox, Library, Lightbulb, Link2, LockKeyhole, MessageSquareText, Settings, UserRound, Contact } from "lucide-react";
 import { type DragEvent, type MouseEvent, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from "react-router";
 import { AREAS } from "../lib/extract";
@@ -395,6 +396,36 @@ function TreeMenu({
   );
 }
 
+/** "+ New" at the top of the sidebar: make a document from any screen. */
+function NewMenu() {
+  const navigate = useNavigate();
+  const make = (kind: "md" | "txt") => () => void newNote(kind).catch(() => navigate("/tools"));
+  return (
+    <Menu>
+      <MenuButton className="flex h-9 items-center gap-2 rounded-lg border border-white/12 bg-rail-2 px-3 text-[13.5px] font-semibold text-rail-ink hover:bg-white/10">
+        <Plus aria-hidden className="size-4" /> New
+      </MenuButton>
+      <MenuItems anchor="bottom start" className="z-50 mt-1 flex w-60 flex-col rounded-lg border border-white/10 bg-rail-3 p-1 text-rail-ink shadow-xl focus:outline-none">
+        <MenuItem>
+          <button type="button" onClick={make("md")} className="flex flex-col items-start rounded-md px-2.5 py-1.5 text-left text-[13.5px] data-focus:bg-rail-2">
+            Document <span className="text-[12px] text-rail-mute">Markdown: headings, lists, tables</span>
+          </button>
+        </MenuItem>
+        <MenuItem>
+          <button type="button" onClick={make("txt")} className="flex flex-col items-start rounded-md px-2.5 py-1.5 text-left text-[13.5px] data-focus:bg-rail-2">
+            Plain text <span className="text-[12px] text-rail-mute">Just the words, as typed</span>
+          </button>
+        </MenuItem>
+        <MenuItem>
+          <button type="button" onClick={() => navigate("/tools")} className="flex flex-col items-start rounded-md px-2.5 py-1.5 text-left text-[13.5px] data-focus:bg-rail-2">
+            More in Tools <span className="text-[12px] text-rail-mute">Sign, and what's coming next</span>
+          </button>
+        </MenuItem>
+      </MenuItems>
+    </Menu>
+  );
+}
+
 export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: number; soon: number }) {
   const veil = useVeil();
   return (
@@ -403,6 +434,7 @@ export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: nu
         <Logo />
         <span className="font-display text-[21px] font-light tracking-tight">Voidcat</span>
       </div>
+      {onMac && <NewMenu />}
 
       <div className="flex flex-col gap-px">
         <NavLink to="/" end className={link}>
@@ -413,6 +445,10 @@ export function Sidebar({ pending, toFile, soon }: { pending: number; toFile: nu
               {toFile}
             </span>
           )}
+        </NavLink>
+        <NavLink to="/tools" className={link}>
+          <span aria-hidden className="size-1.5 shrink-0 rounded-full group-aria-[current=page]:bg-eye group-aria-[current=page]:shadow-[0_0_8px_rgb(245_184_61/0.8)]" />
+          <Wrench aria-hidden className="size-4" /> Tools
         </NavLink>
         <NavLink to="/me" className={link}>
           <span aria-hidden className="size-1.5 shrink-0 rounded-full group-aria-[current=page]:bg-eye group-aria-[current=page]:shadow-[0_0_8px_rgb(245_184_61/0.8)]" />

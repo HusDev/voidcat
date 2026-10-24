@@ -1,6 +1,6 @@
 import { call as invoke } from "../lib/backend";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { Check, ChevronDown, Download, ExternalLink, Trash2, FolderInput, History, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Download, ExternalLink, PenLine, Trash2, FolderInput, History, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText, Sparkles } from "lucide-react";
 import { readDocument, saveReading } from "../lib/reader";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -21,16 +21,19 @@ import {
   type Sheet,
   LIBRARY_CHANGED,
   announceChange,
+  canSign,
   documentPages,
   fileInFolder,
   discardEmptyNote,
   freshNotes,
+  signNext,
   hasPreviousVersion,
   isEditable,
   isSpreadsheet,
   listFacts,
   listFolders,
   onMac,
+  openDocument,
   openInDefaultApp,
   readSheets,
   removeDocument,
@@ -49,6 +52,7 @@ import { Blurred, Private, useVeil } from "../lib/veil";
 let onScreen: string | null = null;
 
 const NoteEditor = lazy(() => import("../components/NoteEditor"));
+const Signer = lazy(() => import("../components/Signer").then((m) => ({ default: m.Signer })));
 
 const bytesOf = async (id: string) => new Uint8Array(await invoke<ArrayBuffer>("document_bytes", { id }));
 
@@ -353,12 +357,15 @@ export function Viewer() {
   /** Writing in a note (Markdown or text); a note just made opens this way, with its name ready to type. */
   const [editing, setEditing] = useState(false);
   const [saveState, setSaveState] = useState<{ state: SaveState; error: string | null }>({ state: "saved", error: null });
+  /** Signing it: the pages with your signature placed, and the signing tools beside them. */
+  const [signing, setSigning] = useState(false);
   /** Bumped when the file changes under the page (restoring the earlier version), so it loads again. */
   const [version, setVersion] = useState(0);
   useEffect(() => {
     const fresh = freshNotes.delete(id);
     setEditing(fresh);
     setRenaming(fresh);
+    setSigning(signNext.delete(id));
     setSaveState({ state: "saved", error: null });
   }, [id]);
   // A note closed while still empty and "Untitled" (made by mistake) is removed, once its last save is done.
@@ -375,8 +382,9 @@ export function Viewer() {
       });
     };
   }, [id]);
-  // Hiding private details closes the editor (which saves first).
-  const writing = editing && !veil.on && onMac;
+  // Hiding private details closes the editor (which saves first) and stops signing.
+  const writing = editing && !veil.on && onMac && !signing;
+  const signingNow = signing && !veil.on && onMac;
 
   useEffect(() => {
     const load = () => Promise.all([listFacts("pending"), listFacts("approved")]).then(([p, a]) => setFacts([...p, ...a].filter((f) => f.documentId === id)));
@@ -454,6 +462,24 @@ export function Viewer() {
           <span className="font-mono text-xs text-ink-2">
             {doc.folderName ? <Private>{doc.folderName}</Private> : "Not filed"}
             {doc.pageCount && !isEditable(doc) ? ` · ${doc.pageCount} ${doc.pageCount === 1 ? "page" : "pages"}` : ""}
+            {doc.signedFrom && documents.get(doc.signedFrom) && (
+              <>
+                {" · "}
+                <button type="button" onClick={() => openDocument(doc.signedFrom!)} className="text-link hover:underline">
+                  Signed copy of <Private>{documents.get(doc.signedFrom)!.title}</Private>
+                </button>
+              </>
+            )}
+            {[...documents.values()]
+              .filter((d) => d.signedFrom === doc.id)
+              .map((d) => (
+                <span key={d.id}>
+                  {" · "}
+                  <button type="button" onClick={() => openDocument(d.id)} className="text-link hover:underline">
+                    Signed copy
+                  </button>
+                </span>
+              ))}
             {writing && (
               <span role="status" className={saveState.state === "error" ? "text-danger" : ""} title={saveState.error ?? undefined}>
                 {" · "}
@@ -490,6 +516,24 @@ export function Viewer() {
             <MessageSquareText aria-hidden className="size-4" /> Ask
           </button>
         </div>
+        {canSign(doc) &&
+          (onMac ? (
+            <button
+              type="button"
+              aria-pressed={signingNow}
+              disabled={veil.on}
+              title={veil.on ? "Turn off Hide private details to sign" : "Sign this document; the signed copy is saved next to it"}
+              onClick={() => {
+                setEditing(false);
+                setSigning(!signingNow);
+              }}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] disabled:opacity-50 ${signingNow ? "bg-accent font-semibold text-on-accent hover:bg-accent-strong" : "border border-line-strong hover:border-ink-2"}`}
+            >
+              <PenLine aria-hidden className="size-4" /> Sign
+            </button>
+          ) : (
+            <span className="text-[12.5px] text-ink-2">Sign on your Mac</span>
+          ))}
         {isEditable(doc) &&
           (onMac ? (
             <button
@@ -549,7 +593,11 @@ export function Viewer() {
           />
         </div>
       )}
-      {side ? (
+      {signingNow ? (
+        <Suspense fallback={<Loading />}>
+          <Signer doc={doc} onClose={() => setSigning(false)} />
+        </Suspense>
+      ) : side ? (
         <div className="flex flex-wrap items-start gap-5">
           <div className="min-w-0 flex-[999_1_520px]">
             <Blurred>{body}</Blurred>

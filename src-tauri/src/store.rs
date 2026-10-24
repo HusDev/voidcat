@@ -47,6 +47,8 @@ pub struct Document {
     written: bool,
     /// The text changed since facts and filing were last found.
     content_changed: bool,
+    /// For a signed copy: the document it was signed from.
+    signed_from: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -188,6 +190,7 @@ fn migrate(db: &Connection) -> rusqlite::Result<()> {
         "suggestion_reason text",
         "written integer not null default 0",
         "content_changed integer not null default 0",
+        "signed_from text",
     ] {
         let name = col.split(' ').next().unwrap();
         if !has(name)? {
@@ -210,7 +213,7 @@ fn migrate(db: &Connection) -> rusqlite::Result<()> {
 pub(crate) const COLUMNS: &str = "id, title, file_name, mime, size_bytes, area, doc_type, status, added_at, text_method, page_count, folder_id,
   (select f.area || ' › ' || f.name from folders f where f.id = documents.folder_id), filing, suggested_area, suggested_folder,
   suggested_folder is not null and not exists (select 1 from folders f where f.area = documents.suggested_area collate nocase and f.name = documents.suggested_folder collate nocase),
-  suggestion_reason, written, content_changed";
+  suggestion_reason, written, content_changed, signed_from";
 
 pub(crate) fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
     Ok(Document {
@@ -234,6 +237,7 @@ pub(crate) fn row_to_document(r: &rusqlite::Row) -> rusqlite::Result<Document> {
         suggestion_reason: r.get(17)?,
         written: r.get(18)?,
         content_changed: r.get(19)?,
+        signed_from: r.get(20)?,
     })
 }
 
@@ -341,6 +345,9 @@ fn place(tx: &Connection, id: &str, s: &Suggestion) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+/// Your saved signature, in the library folder.
+pub(crate) const SIGNATURE: &str = "signature.sealed";
 
 /// Where "Open in default app" puts decrypted copies; emptied on every start.
 const OPENED: &str = "opened";
@@ -1073,6 +1080,70 @@ impl Store {
         Ok(true)
     }
 
+    /// Keeps a signed PDF made from `original` as a new document beside it: "<title> (signed)", in the same folder, with
+    /// the original's reading (its text is the same) and none of its facts, which stay on the original. It counts as
+    /// checked for labels, so it isn't flagged as unsigned or as a copy of the original.
+    pub fn save_signed(&self, original: &str, pdf: &[u8]) -> Result<Document, String> {
+        if !pdf.starts_with(b"%PDF") {
+            return Err("The signed copy isn't a PDF.".into());
+        }
+        let (title, file_name): (String, String) = {
+            let db = self.db.lock().unwrap();
+            db.query_row("select title, file_name from documents where id = ?1", [original], |r| Ok((r.get(0)?, r.get(1)?)))
+                .map_err(|_| "Document not found.".to_string())?
+        };
+        let stem = Path::new(&file_name).file_stem().and_then(|s| s.to_str()).unwrap_or("Document").to_string();
+        let id = uuid::Uuid::new_v4().to_string();
+        let stored = self.files.join(format!("{id}.pdf"));
+        fs::write(&stored, self.vault.encrypt(pdf)?).map_err(|e| e.to_string())?;
+        let mut db = self.db.lock().unwrap();
+        let tx = db.transaction().map_err(|e| e.to_string())?;
+        let done = (|| -> rusqlite::Result<()> {
+            tx.execute(
+                "insert into documents (id, title, file_name, mime, size_bytes, sha256, stored_path, area, doc_type, status, text_method, page_count, folder_id, filing, signed_from)
+                 select ?1, ?2, ?3, 'application/pdf', ?4, ?5, ?6, area, doc_type, case when status = 'filed' then 'filed' else 'read' end, text_method, page_count, folder_id,
+                        case when folder_id is null then null else 'confirmed' end, id
+                 from documents where id = ?7",
+                params![id, format!("{title} (signed)"), format!("{stem} (signed).pdf"), pdf.len() as i64, note_sha(pdf, &id), stored.to_string_lossy(), original],
+            )?;
+            tx.execute("insert into pages (document_id, page, text) select ?1, page, text from pages where document_id = ?2", params![id, original])?;
+            tx.execute("insert or ignore into label_checks (document_id) values (?1)", [&id])?;
+            Ok(())
+        })();
+        if let Err(e) = done.and_then(|_| tx.commit()) {
+            let _ = fs::remove_file(&stored);
+            return Err(e.to_string());
+        }
+        db.query_row(&format!("select {COLUMNS} from documents where id = ?1"), [&id], row_to_document)
+            .map_err(|e| e.to_string())
+    }
+
+    /// Where your saved signature is kept (a picture, sealed like the documents).
+    pub(crate) fn signature_path(&self) -> PathBuf {
+        self.files.parent().unwrap_or(&self.files).join(SIGNATURE)
+    }
+
+    pub fn signature(&self) -> Result<Option<Vec<u8>>, String> {
+        match fs::read(self.signature_path()) {
+            Ok(bytes) => self.vault.decrypt(bytes).map(Some),
+            Err(_) => Ok(None),
+        }
+    }
+
+    pub fn save_signature(&self, png: &[u8]) -> Result<(), String> {
+        if !png.starts_with(b"\x89PNG") {
+            return Err("The signature must be a PNG picture.".into());
+        }
+        fs::write(self.signature_path(), self.vault.encrypt(png)?).map_err(|e| e.to_string())
+    }
+
+    pub fn forget_signature(&self) -> Result<(), String> {
+        match fs::remove_file(self.signature_path()) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.to_string()),
+            _ => Ok(()),
+        }
+    }
+
     /// Whether a document has an earlier version kept by `save_note`.
     pub fn has_previous(&self, id: &str) -> Result<bool, String> {
         Ok(Path::new(&previous(&self.path_of(id)?)).exists())
@@ -1249,6 +1320,46 @@ mod tests {
         assert!(!store.discard_empty_note(&named.id).unwrap());
         assert!(!store.discard_empty_note(&empty.id).unwrap(), "already gone");
         assert_eq!(store.list().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn keeps_a_signed_copy_beside_the_original() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
+        let src = dir.join("lease.pdf");
+        fs::write(&src, b"%PDF-1.4 lease").unwrap();
+        store.import(vec![src.to_string_lossy().to_string()]);
+        let original = store.list().unwrap().remove(0);
+        store.save_reading(&original.id, vec!["Firma del arrendatario".into()], "pdf-text").unwrap();
+        let folder = store.file_document(&original.id, "Home", "Lease").unwrap();
+
+        assert!(store.save_signed(&original.id, b"not a pdf").is_err());
+        let signed = store.save_signed(&original.id, b"%PDF-1.4 lease, signed").unwrap();
+        assert_eq!(signed.title, "Lease (signed)");
+        assert_eq!(signed.file_name, "lease (signed).pdf");
+        assert_eq!(signed.folder_id.as_deref(), Some(folder.as_str()));
+        assert_eq!(signed.signed_from.as_deref(), Some(original.id.as_str()));
+        assert_eq!(store.bytes_of(&signed.id).unwrap(), b"%PDF-1.4 lease, signed");
+        assert_eq!(store.search("arrendatario", false).unwrap().len(), 2, "the copy is searchable too");
+        let checked: i64 = store.db.lock().unwrap().query_row("select count(*) from label_checks where document_id = ?1", [&signed.id], |r| r.get(0)).unwrap();
+        assert_eq!(checked, 1);
+        // The same signed bytes again are still a new copy, not refused as a duplicate.
+        assert!(store.save_signed(&original.id, b"%PDF-1.4 lease, signed").is_ok());
+    }
+
+    #[test]
+    fn keeps_and_forgets_the_signature() {
+        let dir = std::env::temp_dir().join(format!("voidcat-test-{}", uuid::Uuid::new_v4()));
+        let store = Store::open(&dir, crate::vault::Vault::from_master(&[3; 32])).unwrap();
+        assert_eq!(store.signature().unwrap(), None);
+        assert!(store.save_signature(b"GIF89a").is_err());
+        let png = b"\x89PNG\r\n\x1a\nsignature";
+        store.save_signature(png).unwrap();
+        assert_ne!(fs::read(store.signature_path()).unwrap(), png.to_vec(), "sealed on disk");
+        assert_eq!(store.signature().unwrap().as_deref(), Some(&png[..]));
+        store.forget_signature().unwrap();
+        store.forget_signature().unwrap();
+        assert_eq!(store.signature().unwrap(), None);
     }
 
     #[test]

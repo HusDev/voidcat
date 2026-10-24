@@ -389,6 +389,13 @@ impl Store {
                     written.push((prev, tmp));
                 }
             }
+            // Your saved signature moves to the new key too.
+            let signature = self.signature_path().to_string_lossy().to_string();
+            if let Ok(bytes) = fs::read(&signature) {
+                let tmp = format!("{signature}.rekeyed");
+                fs::write(&tmp, new.encrypt(&self.vault.decrypt(bytes)?)?).map_err(|e| e.to_string())?;
+                written.push((signature, tmp));
+            }
             let target = db_tmp.to_string_lossy().replace('\'', "''");
             db.execute_batch(&format!("attach database '{target}' as rekeyed key \"x'{}'\"; select sqlcipher_export('rekeyed'); detach database rekeyed;", new.db_key))
                 .map_err(|e| format!("Couldn't re-lock the database: {e}"))?;
