@@ -19,11 +19,15 @@ describe("restConfig", () => {
     });
   });
 
-  it("sends /download/mac to the Mac download", () => {
+  it("sends /download/mac and the download count to the API, which counts the click", () => {
     const [site] = firebase.hosting;
-    const [r] = restConfig(site as unknown as Parameters<typeof restConfig>[0]).redirects;
-    expect(r).toMatchObject({ glob: "/download/mac", statusCode: 302 });
-    expect(r.location).toMatch(/^https:\/\/firebasestorage\.googleapis\.com\/.+Voidcat-.+\.dmg/);
+    const config = restConfig(site as unknown as Parameters<typeof restConfig>[0]);
+    const api = { serviceId: "voidcat-api", region: "europe-west1" };
+    expect(config.rewrites).toEqual([
+      { glob: "/download/mac", run: api },
+      { glob: "/api/downloads", run: api },
+    ]);
+    expect(config.redirects).toEqual([]);
   });
 
   it("keeps the landing page locked down and sends the app to Cloud Run", () => {
