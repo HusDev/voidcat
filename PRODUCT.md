@@ -29,7 +29,7 @@ The AI never sees you. Reading happens on the user's own device, every copy is e
 - Encrypted library: SQLCipher database + AES-256-GCM files, key in the macOS Keychain, 13-group recovery key.
 - Facts to approve, calendar and reminders (expiries, renewals 60 days ahead, appointments, monthly payments, .ics export), labels (expired, duplicate, unsigned…), contacts and a "Me" profile, MCP server with per-app access levels, Hide private details (⌘⇧H).
 - Cloud: per-document sync choice, browser library, Read now (browser OCR + masking), Ask in the browser, export everything, delete account, 30-minute idle lock; 300 cloud reads and 1,000 questions a month.
-- Mac download: an unsigned .dmg for Apple silicon (macOS 15.2+), hosted on voidcat.io; macOS asks to confirm on first open ("Open anyway"). No Developer ID signing or notarization yet. Local reading needs Ollama, which the app sets up.
+- Mac download: an unsigned .dmg for Apple silicon (macOS 15.2+), hosted on voidcat.io; macOS calls it "damaged" on first open, so the site gives a one-time Terminal line (`xattr -dr com.apple.quarantine /Applications/Voidcat.app`) until Developer ID signing. No Developer ID signing or notarization yet. Local reading needs Ollama, which the app sets up.
 - Pricing (decided 18 Oct 2026): the Mac app is free and open source (MIT); Voidcat Cloud is free while in beta. No prices shown until payments are live.
 
 ## Brand Commitments
