@@ -407,6 +407,27 @@ h1 span {
   overflow-wrap: anywhere;
   user-select: all;
 }
+.install-video {
+  grid-column: 1 / -1;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+.install-video video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #1b1b21;
+}
+.install-video figcaption {
+  color: var(--ink-2);
+}
+.install-video figcaption strong {
+  color: var(--ink);
+  font-weight: 600;
+}
 
 /* footer */
 .foot {
