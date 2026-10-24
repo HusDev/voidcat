@@ -1,7 +1,7 @@
 import { PDFDocument, degrees } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { notePdf, photoPdf } from "./notePdf";
-import { type Run, cleanSignature, findSpot, stampPdf, toPdfPoint, todayText, trimInk, unsignedHint } from "./signing";
+import { type Run, cleanSignature, findSpot, formFields, stampPdf, toPdfPoint, todayText, trimInk, unsignedHint } from "./signing";
 
 const run = (str: string, x: number, y: number): Run => ({ str, x, y, w: 0.2, h: 0.015 });
 
@@ -68,6 +68,33 @@ describe("the signed PDF", () => {
     const out = await PDFDocument.load(bytes);
     expect(out.getPageCount()).toBe(2);
     expect(bytes.length).toBeGreaterThan((await src.save()).length);
+  });
+
+  it("lists a form's boxes and fills them into the page", async () => {
+    const src = await PDFDocument.create();
+    const page = src.addPage([595, 842]);
+    const form = src.getForm();
+    form.createTextField("nombre").addToPage(page, { x: 50, y: 700, width: 200, height: 20 });
+    form.createCheckBox("acepto").addToPage(page, { x: 50, y: 650, width: 12, height: 12 });
+    const city = form.createDropdown("ciudad");
+    city.addOptions(["Valencia", "Bilbao"]);
+    city.addToPage(page, { x: 50, y: 600, width: 120, height: 20 });
+    const bytes = await src.save();
+
+    expect(await formFields(bytes)).toEqual([
+      { name: "nombre", kind: "text", value: "", multiline: false },
+      { name: "acepto", kind: "check", value: false },
+      { name: "ciudad", kind: "choice", value: "", options: ["Valencia", "Bilbao"] },
+    ]);
+    const filled = await stampPdf(bytes, [{ id: "t", page: 1, kind: "text", x: 0.1, y: 0.5, text: "Extra line", size: 11 }], null, { nombre: "Lena Marsh", acepto: true, ciudad: "Lima" });
+    // Flattened: no boxes left, the values are drawn into the page.
+    expect(await formFields(filled)).toEqual([]);
+    expect((await PDFDocument.load(filled)).getPageCount()).toBe(1);
+    // A plain PDF has no boxes, and filling it is harmless.
+    const plain = await PDFDocument.create();
+    plain.addPage();
+    expect(await formFields(await plain.save())).toEqual([]);
+    expect((await PDFDocument.load(await stampPdf(await plain.save(), [], null, {}))).getPageCount()).toBe(1);
   });
 
   it("writes today like Spanish forms do", () => {

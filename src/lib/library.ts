@@ -104,6 +104,8 @@ export const forgetSignature = () => invoke<void>("forget_signature");
 
 /** Documents chosen in Tools → Sign, which their tab opens ready to sign (once). */
 export const signNext = new Set<string>();
+/** Documents chosen in Tools → Fill in a PDF, which their tab opens ready to write on (once). */
+export const fillNext = new Set<string>();
 /** Notes just made, which their tab opens in edit mode (once). */
 export const freshNotes = new Set<string>();
 /** Makes a note and opens it in its tab, ready to type in. */

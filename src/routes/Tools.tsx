@@ -2,7 +2,7 @@ import { ArrowLeft, Combine, EyeOff, FilePen, FilePlus, FileScan, FileInput, typ
 import { Suspense, lazy, useState } from "react";
 import { useSearchParams } from "react-router";
 import { canConvert } from "../lib/convert";
-import { canSign, newNote, onMac, openDocument, signNext } from "../lib/library";
+import { canSign, fillNext, newNote, onMac, openDocument, signNext } from "../lib/library";
 
 // The PDF tools carry pdf-lib and pdf.js: loaded when one is opened.
 const tools = () => import("../components/PdfTools");
@@ -18,7 +18,7 @@ type Tool = { id: string; name: string; note: string; Icon: LucideIcon; ready: b
 const WRITE: Tool[] = [
   { id: "note", name: "New document", note: "Markdown or plain text, written here", Icon: FilePlus, ready: true },
   { id: "sheet", name: "New sheet", note: "Rows and columns, saved as .xlsx", Icon: Sheet, ready: false },
-  { id: "form", name: "Fill a form", note: "Type into a PDF form; your facts offered", Icon: FileInput, ready: false },
+  { id: "form", name: "Fill in a PDF", note: "Type on any page or into its form; your facts offered", Icon: FileInput, ready: true },
 ];
 const PDF: Tool[] = [
   { id: "sign", name: "Sign", note: "Draw, type or upload your signature", Icon: PenLine, ready: true },
@@ -48,18 +48,20 @@ function Card({ tool, chosen, onPick }: { tool: Tool; chosen: boolean; onPick: (
   );
 }
 
-/** Picks the document to sign, then opens it ready to sign. */
-function PickToSign() {
+/** Picks the document to sign (or fill in), then opens it ready for that. */
+function PickToSign({ fill = false }: { fill?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-0.5">
-        <h2 className="m-0 text-[15px] font-bold">Sign a document</h2>
-        <span className="text-[12.5px] text-ink-2">PDFs, photos and notes. The signed copy goes next to the original.</span>
+        <h2 className="m-0 text-[15px] font-bold">{fill ? "Fill in a PDF" : "Sign a document"}</h2>
+        <span className="text-[12.5px] text-ink-2">
+          {fill ? "Type on its pages or into its form. The filled-in copy goes next to the original." : "PDFs, photos and notes. The signed copy goes next to the original."}
+        </span>
       </div>
       <DocumentPicker
         filter={canSign}
         onPick={(d) => {
-          signNext.add(d.id);
+          (fill ? fillNext : signNext).add(d.id);
           openDocument(d.id);
         }}
       />
@@ -115,6 +117,7 @@ export function Tools() {
         <aside aria-label="Tool" className="flex w-[340px] max-w-full flex-[1_1_300px] flex-col gap-3 rounded-xl border border-line bg-card p-4">
           <Suspense fallback={<Waiting />}>
             {chosen === "sign" && <PickToSign />}
+            {chosen === "form" && <PickToSign fill />}
             {chosen === "combine" && <CombineTool />}
             {chosen === "scan" && <ScanTool />}
             {chosen === "convert" && <ConvertTool picker={(onPick) => <DocumentPicker filter={canConvert} onPick={onPick} />} />}

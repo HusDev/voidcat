@@ -1,6 +1,6 @@
 import { call as invoke } from "../lib/backend";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { Check, ChevronDown, Download, ExternalLink, Files, PenLine, Trash2, FolderInput, History, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Download, ExternalLink, Files, PenLine, TextCursorInput, Trash2, FolderInput, History, ListChecks, LoaderCircle, MessageSquareText, Pencil, ScanText, Sparkles } from "lucide-react";
 import { readDocument, saveReading } from "../lib/reader";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -29,6 +29,7 @@ import {
   discardEmptyNote,
   freshNotes,
   signNext,
+  fillNext,
   hasPreviousVersion,
   isEditable,
   isSpreadsheet,
@@ -363,15 +364,16 @@ export function Viewer() {
   /** Writing in a note (Markdown or text); a note just made opens this way, with its name ready to type. */
   const [editing, setEditing] = useState(false);
   const [saveState, setSaveState] = useState<{ state: SaveState; error: string | null }>({ state: "saved", error: null });
-  /** Signing it: the pages with your signature placed, and the signing tools beside them. */
-  const [signing, setSigning] = useState(false);
+  /** Signing it (the pages with your signature placed, and the signing tools beside them), or filling it in (writing on its pages). */
+  const [stamping, setStamping] = useState<"sign" | "fill" | null>(null);
+  const signing = stamping !== null;
   /** Bumped when the file changes under the page (restoring the earlier version), so it loads again. */
   const [version, setVersion] = useState(0);
   useEffect(() => {
     const fresh = freshNotes.delete(id);
     setEditing(fresh);
     setRenaming(fresh);
-    setSigning(signNext.delete(id));
+    setStamping(signNext.delete(id) ? "sign" : fillNext.delete(id) ? "fill" : null);
     setSaveState({ state: "saved", error: null });
   }, [id]);
   // A note closed while still empty and "Untitled" (made by mistake) is removed, once its last save is done.
@@ -526,20 +528,36 @@ export function Viewer() {
           (onMac ? (
             <button
               type="button"
-              aria-pressed={signingNow}
+              aria-pressed={signingNow && stamping === "sign"}
               disabled={veil.on}
               title={veil.on ? "Turn off Hide private details to sign" : "Sign this document; the signed copy is saved next to it"}
               onClick={() => {
                 setEditing(false);
-                setSigning(!signingNow);
+                setStamping(signingNow && stamping === "sign" ? null : "sign");
               }}
-              className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] disabled:opacity-50 ${signingNow ? "bg-accent font-semibold text-on-accent hover:bg-accent-strong" : "border border-line-strong hover:border-ink-2"}`}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] disabled:opacity-50 ${signingNow && stamping === "sign" ? "bg-accent font-semibold text-on-accent hover:bg-accent-strong" : "border border-line-strong hover:border-ink-2"}`}
             >
               <PenLine aria-hidden className="size-4" /> Sign
             </button>
           ) : (
             <span className="text-[12.5px] text-ink-2">Sign on your Mac</span>
           ))}
+        {canSign(doc) &&
+          onMac && (
+            <button
+              type="button"
+              aria-pressed={signingNow && stamping === "fill"}
+              disabled={veil.on}
+              title={veil.on ? "Turn off Hide private details to fill it in" : "Type text on its pages or into its form; the filled-in copy is saved next to it"}
+              onClick={() => {
+                setEditing(false);
+                setStamping(signingNow && stamping === "fill" ? null : "fill");
+              }}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] disabled:opacity-50 ${signingNow && stamping === "fill" ? "bg-accent font-semibold text-on-accent hover:bg-accent-strong" : "border border-line-strong hover:border-ink-2"}`}
+            >
+              <TextCursorInput aria-hidden className="size-4" /> Fill in
+            </button>
+          )}
         {onMac && canBePdf(doc) && (
           <button
             type="button"
@@ -612,7 +630,7 @@ export function Viewer() {
       )}
       {signingNow ? (
         <Suspense fallback={<Loading />}>
-          <Signer doc={doc} onClose={() => setSigning(false)} />
+          <Signer key={stamping} doc={doc} mode={stamping ?? "sign"} onClose={() => setStamping(null)} />
         </Suspense>
       ) : side ? (
         <div className="flex flex-wrap items-start gap-5">

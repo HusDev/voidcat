@@ -1,4 +1,4 @@
-import { PDFDocument, type PDFFont, StandardFonts, degrees, rgb } from "pdf-lib";
+import { PDFCheckBox, PDFDocument, PDFDropdown, type PDFFont, PDFRadioGroup, PDFTextField, StandardFonts, degrees, rgb } from "pdf-lib";
 
 /**
  * Signing a document with a visible signature: where it goes, and the signed PDF. Positions are fractions of the page
@@ -79,10 +79,70 @@ export function writable(font: PDFFont, text: string) {
     .join("");
 }
 
-/** The signed PDF: each placed item drawn into its page, part of the page from then on. */
-export async function stampPdf(pdf: Uint8Array, items: Placed[], signaturePng: Uint8Array | null) {
+/** A box the PDF itself has for filling in (an AcroForm field): text, a tick box, or a choice of options. */
+export type FormField =
+  | { name: string; kind: "text"; value: string; multiline: boolean }
+  | { name: string; kind: "check"; value: boolean }
+  | { name: string; kind: "choice"; value: string; options: string[] };
+
+/** What you typed into the PDF's own boxes, by field name. */
+export type FieldValues = Record<string, string | boolean>;
+
+/** The boxes a PDF form has for filling in, in the order the form lists them; empty for a plain PDF. */
+export async function formFields(pdf: Uint8Array): Promise<FormField[]> {
+  const doc = await PDFDocument.load(pdf, { ignoreEncryption: true });
+  return doc
+    .getForm()
+    .getFields()
+    .flatMap((f): FormField[] => {
+      const name = f.getName();
+      if (f.isReadOnly()) return [];
+      if (f instanceof PDFTextField) return [{ name, kind: "text", value: f.getText() ?? "", multiline: f.isMultiline() }];
+      if (f instanceof PDFCheckBox) return [{ name, kind: "check", value: f.isChecked() }];
+      if (f instanceof PDFDropdown) return [{ name, kind: "choice", value: f.getSelected()[0] ?? "", options: f.getOptions() }];
+      if (f instanceof PDFRadioGroup) return [{ name, kind: "choice", value: f.getSelected() ?? "", options: f.getOptions() }];
+      return [];
+    });
+}
+
+/**
+ * Fills the PDF's own boxes and flattens the form, so what you typed is part of the page (it shows the same in every
+ * viewer, and text placed on top isn't hidden under a box's background). A form that can't be flattened keeps its boxes.
+ */
+function fillForm(doc: PDFDocument, font: PDFFont, values: FieldValues) {
+  const form = doc.getForm();
+  if (!form.getFields().length) return;
+  for (const [name, value] of Object.entries(values)) {
+    const field = form.getFieldMaybe(name);
+    try {
+      if (field instanceof PDFTextField) {
+        const text = writable(font, String(value));
+        const max = field.getMaxLength();
+        field.setText(max ? text.slice(0, max) : text);
+      } else if (field instanceof PDFCheckBox) {
+        if (value) field.check();
+        else field.uncheck();
+      } else if ((field instanceof PDFDropdown || field instanceof PDFRadioGroup) && typeof value === "string" && field.getOptions().includes(value)) field.select(value);
+    } catch {
+      // A box that refuses the value keeps what it had.
+    }
+  }
+  try {
+    form.updateFieldAppearances(font);
+    form.flatten();
+  } catch {
+    // Some forms' boxes can't be drawn into the page; they stay filled-in boxes.
+  }
+}
+
+/**
+ * The signed (or filled-in) PDF: the form's own boxes filled when `fields` is given, then each placed item drawn
+ * into its page, part of the page from then on.
+ */
+export async function stampPdf(pdf: Uint8Array, items: Placed[], signaturePng: Uint8Array | null, fields?: FieldValues) {
   const doc = await PDFDocument.load(pdf, { ignoreEncryption: true });
   const font = await doc.embedFont(StandardFonts.Helvetica);
+  if (fields) fillForm(doc, font, fields);
   const image = signaturePng && items.some((i) => i.kind === "signature") ? await doc.embedPng(signaturePng) : null;
   const pages = doc.getPages();
   for (const item of items) {

@@ -1,6 +1,6 @@
 # Voidcat — status and next steps
 
-Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 17 Oct 2026.
+Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 24 Oct 2026.
 
 ## The product
 **Voidcat** (final name; first called SafeBox): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
@@ -63,6 +63,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 27. **Library at scale (19 Oct, branch `feat/library-views`):** view tabs (Needs you, Recently added, Expiring soon, Unsigned, Notes I wrote, Everything), compact list by time with key facts, filters, sort, List/Cards, drop anywhere; plus the Tools screen and + New.
 28. **PDF tools (19 Oct, branch `feat/pdf-tools`):** Combine PDFs, Split or reorder (keep/move/turn, one PDF or one per page, **Pages** in a document's tab), Scan to PDF (photos → PDF, then read and filed); new documents carry the text over and none of the facts.
 29. **Convert (20 Oct, branch `feat/convert`):** built-in only (textutil, AppKit printing for PDF, the app's own docx/xlsx/PDF writers, canvas for pictures); copies next to the original; Convert menu in a document's tab and in Tools.
+30. **Fill in a PDF (21 Oct, branch `feat/convert`):** **Fill in** on a document's tab and Tools → Fill in a PDF; click to type anywhere on a page, choose the text size, fill the form's own text/check/choice boxes listed beside the pages; saved as "<title> (filled)" next to the original (form flattened, original kept). **Suggest what to fill**: the local model matches blanks to approved facts / the Me profile by id only, each added with a click or Add all.
 
 ## Next, in order
 1. **GitLab hackathon work** (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):

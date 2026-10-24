@@ -16,7 +16,7 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - Reading and filing happen on your Mac with the local model. Nothing is uploaded to do this.
 
 ## Tools and + New
-- [Tools](#/tools) in the sidebar lists everything you can do with documents. Ready now: **New document**, **Sign** (pick a document and it opens ready to sign), **Combine PDFs**, **Split or reorder** and **Scan to PDF**. **Convert**. Marked **Coming**: New sheet, Fill a form and Redact.
+- [Tools](#/tools) in the sidebar lists everything you can do with documents. Ready now: **New document**, **Sign** (pick a document and it opens ready to sign), **Combine PDFs**, **Split or reorder** and **Scan to PDF**, **Convert** and **Fill in a PDF**. Marked **Coming**: New sheet and Redact.
 - **Combine PDFs**: pick documents in order (photos and notes become pages too), move them up or down, name it, and they become one new PDF next to the first one.
 - **Split or reorder**: pick a document (or click **Pages** in its tab) to see every page small. Untick pages to leave them out, move them, turn them; **Save as a new PDF**, or **Save each page separately**.
 - **Scan to PDF**: choose photos of a paper, one per page, put them in order, and they become one PDF that is read and filed on this Mac like anything you add.
@@ -43,6 +43,12 @@ Your **library** means all your documents in Voidcat and everything Voidcat lear
 - This is a visible signature, like signing on paper. A digital signature with your FNMT certificate or DNIe comes later.
 - **Forget my signature** in [Settings](#/settings) removes the kept signature. Hide private details blurs it, and signing waits until it's off.
 - In a browser, signing happens on your Mac.
+
+## Filling in a PDF
+- Open a PDF, a photo or scan, or a note and click **Fill in** (or pick one in [Tools](#/tools) → Fill in a PDF). Click anywhere on a page to type there; each click starts another line. Drag the handle to move a line, and pick the **Text size** for new lines. **Date** adds today's date, and text boxes offer values from your approved facts.
+- If the PDF is a form with its own boxes, they're listed beside the pages: type into them, tick them or choose an option.
+- **Suggest what to fill** finds the empty places (a label like "Nombre:", a line of ____, the form's boxes) and your local model matches them to your approved facts, or to your Me profile once it's built. Each suggestion shows the page, the place and the value; **Add** puts it there, **Add all** adds every one. Check them; added text can be moved and edited. Nothing leaves this Mac.
+- **Save filled-in copy** makes a new PDF called "… (filled)" next to the original, in the same folder; what you wrote becomes part of the page and can be searched. The original stays as it is. Hide private details has to be off.
 
 ## Folders
 - Documents are filed as **Area › Folder**, for example Home › Lease or Identity › Passport.
