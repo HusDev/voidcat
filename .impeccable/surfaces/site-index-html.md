@@ -11,7 +11,7 @@ Scope: the public landing page at voidcat.io (`site/index.html`). Mode: Persuade
 Audience: people whose paperwork spans countries; judges see it as a real product.
 Action: Download for Mac (unsigned .dmg, Apple silicon, via /download/mac); secondary: open Voidcat Cloud in the browser (free beta).
 Proof: real screenshots of the app working on invented demo documents, and the masked sentence.
-Constraints: no GitLab link for the download; no invented claims, prices, users or testimonials; plain English.
+Constraints: no repo link for the download; no invented claims, prices, users or testimonials; plain English.
 
 ## Direction contract
 

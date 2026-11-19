@@ -31,8 +31,8 @@ if (args[0] === "--all") {
   }
 } else {
   const env = process.env;
-  const before = env.CI_COMMIT_BEFORE_SHA && !ZERO.test(env.CI_COMMIT_BEFORE_SHA) ? env.CI_COMMIT_BEFORE_SHA : undefined;
-  const base = env.CI_MERGE_REQUEST_DIFF_BASE_SHA ?? before ?? "HEAD~1";
+  // CI passes the pull request's base or the push's previous commit (all zeros for a new branch).
+  const base = env.GUARD_BASE && !ZERO.test(env.GUARD_BASE) ? env.GUARD_BASE : "HEAD~1";
   lines = addedLines(await $`git diff --unified=0 ${base} HEAD`.text()).filter((l) => !SKIP.test(l.file));
   console.log(`Checking ${lines.length} added lines since ${base.slice(0, 8)}.`);
 }

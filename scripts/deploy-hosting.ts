@@ -5,8 +5,9 @@
  *   bun scripts/deploy-hosting.ts            both sites
  *   bun scripts/deploy-hosting.ts site       one target
  *
- * Signs in with `gcloud auth print-access-token` locally; in CI it trades the job's GitLab ID token (GCP_ID_TOKEN)
- * for a short-lived gitlab-deploy@ token through Workload Identity Federation, so no key is stored anywhere.
+ * Signs in with `gcloud auth print-access-token` locally. Given an OIDC ID token in GCP_ID_TOKEN, it trades it for a
+ * short-lived gitlab-deploy@ token through Workload Identity Federation instead (the old GitLab CI path; CI doesn't
+ * deploy Voidcat Cloud for now).
  */
 import { createHash } from "node:crypto";
 import { readdir } from "node:fs/promises";

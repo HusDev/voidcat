@@ -1,0 +1,131 @@
+# Voidcat's checks: verify → privacy guard → MCP builds → release (main only).
+# Voidcat Cloud is not deployed from here for now; the Mac app is the focus.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun run test
+      - run: bun run build
+
+  rust-test:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tauri's Linux packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev pkg-config > /dev/null
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+      - run: bun install --frozen-lockfile
+      - run: bun run build:mcp
+      - run: cargo test --locked
+        working-directory: src-tauri
+
+  # Blocks personal data in what this push or pull request adds. Private words are listed only as SHA-256 hashes in
+  # the PRIVACY_WATCH secret; the log prints values redacted.
+  privacy-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+      - run: bun scripts/privacy-guard.ts
+        env:
+          PRIVACY_WATCH: ${{ secrets.PRIVACY_WATCH }}
+          GUARD_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+
+  mcp-server:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+      - run: bun install --frozen-lockfile
+      - run: |
+          mkdir -p out
+          bun build mcp/server.ts --compile --minify --target=bun-darwin-arm64 --outfile out/voidcat-mcp-aarch64-apple-darwin
+          bun build mcp/server.ts --compile --minify --target=bun-darwin-x64 --outfile out/voidcat-mcp-x86_64-apple-darwin
+          ls -lh out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcp-server
+          path: out/
+          retention-days: 30
+
+  # A version is released by merging it: bump package.json, tauri.conf.json and Cargo.toml together and add its
+  # CHANGELOG section. On main this job sees a version with no tag yet and creates the tag and the GitHub release
+  # (notes = that version's CHANGELOG section, assets = the MCP builds). Every other main run finds the tag and stops.
+  release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verify, rust-test, privacy-guard, mcp-server]
+    concurrency:
+      group: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        id: version
+        run: |
+          VERSION=$(awk -F'"' '/^  "version": /{print $4; exit}' package.json)
+          TAURI=$(awk -F'"' '/^  "version": /{print $4; exit}' src-tauri/tauri.conf.json)
+          CARGO=$(awk -F'"' '/^version = /{print $2; exit}' src-tauri/Cargo.toml)
+          echo "versions - package.json $VERSION, tauri.conf.json $TAURI, Cargo.toml $CARGO"
+          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "package.json version is not x.y.z"; exit 1; }
+          test "$VERSION" = "$TAURI" && test "$VERSION" = "$CARGO" || { echo "versions disagree"; exit 1; }
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null; then
+            echo "v$VERSION is already released; nothing to do."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.version.outputs.new == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: mcp-server
+          path: out
+      - if: steps.version.outputs.new == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          awk -v v="$VERSION" '/^## /{p = index($0, "## " v) == 1; next} p' CHANGELOG.md > notes.md
+          test -s notes.md || echo "See CHANGELOG.md." > notes.md
+          printf '\nThe Mac app is built on a Mac and published at https://voidcat.io/download/mac (always the latest build).\n' >> notes.md
+          gh release create "v$VERSION" out/* --target "$GITHUB_SHA" --title "Voidcat v$VERSION" --notes-file notes.md

@@ -14,7 +14,7 @@ issue. Say what you found and how to reproduce it; you'll get an answer within a
   voidcat-api, which checks your sign-in and a monthly limit and logs no text.
 - **Access rules:** each person reaches only their own locked records and files, and only with a verified email
   (`firestore.rules`, `storage.rules`).
-- **Deploys** from GitLab CI use Workload Identity Federation (no stored keys), limited to this project's protected
-  main branch.
+- **Deploys:** Voidcat Cloud is not deployed from CI for now. When it was, deploys used Workload Identity Federation
+  (no stored keys).
 
 The latest review and the risks we accept are in `docs/STATUS.md` ("Security review of Voidcat Cloud").

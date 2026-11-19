@@ -62,7 +62,7 @@ Every product, design and working decision Hussein made, with the date. When he 
 - **Plan, then build one phase at a time.** After each step: checks, commit, **push**, restart the app so he can try it.
 - **Record every decision** in this file, with the date.
 - **No Claude session links anywhere public** (commits, merge requests, issues, docs): never a `Claude-Session:` line or a claude.ai/code/session link. The repo and MRs are public.
-- **GitLab:** work happens in the hackathon workspace project gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase (git remote `showcase`; pipelines and Duo agents run there; public + MIT for the GitLab Transcend hackathon). gitlab.com/hus.dev/voidcat (remote `origin`) stays his private copy; he pushes to it later with a normal `git push origin main`. Full history kept as is, no squash or rewrite (his choice). Hackathon automation: **Supervised** autonomy (agents do the multi-step work; he approves outcomes: assigning an issue to the developer flow, merging, tagging a release), covering all nine lifecycle stages; plan in docs/STATUS.md.
+- **GitHub (20 Nov 2026):** the repo is github.com/HusDev/voidcat (public, MIT, full history). The hackathon project on GitLab (showcase) is left as it was; his private copy gitlab.com/hus.dev/voidcat gets archived. Checks and releases run on GitHub Actions; the GitLab Duo flows and `.gitlab-ci.yml` are gone (still in history). **Local Mac app only for now:** the Voidcat Cloud code stays in the repo but CI doesn't deploy it. He commits and pushes himself.
 
 ## Change log
 - 12 Oct 2026 — Idea: smart storage that any AI can use, with a privacy filter and a library of facts; a new project separate from Hus.
@@ -164,3 +164,4 @@ Every product, design and working decision Hussein made, with the date. When he 
 - 19 Oct 2026 — Tools screen and + New built (his report: "where is the tools tab i can't see it"; only signing had been built). Tools not built yet show as "Coming".
 - 19 Oct 2026 — Library redesigned for many files: views as tabs plus one compact list (option A + C of three designs; "go build it").
 - 19 Oct 2026 — The Library's "New document" button is gone; + New in the sidebar makes documents (his words: "can you delete this since we have new tab anyway").
+- 20 Nov 2026 — Moved to GitHub after the hackathon (his words: "i didn't won the competioin, i want to move voidcat from gitlab to github and keep it open source"; "for now let's keep it local and i don't want the one on cloud i mean the local app"): HusDev/voidcat, CI ported to Actions without the cloud deploys, GitLab-only files removed, hackathon wording dropped; cloud code kept, not removed or shut down.

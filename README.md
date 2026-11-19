@@ -1,15 +1,15 @@
 # Voidcat
 
-[![pipeline status](https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase/badges/main/pipeline.svg)](https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase/-/pipelines)
+[![CI](https://github.com/HusDev/voidcat/actions/workflows/ci.yml/badge.svg)](https://github.com/HusDev/voidcat/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-f5b83d.svg)](LICENSE)
 
 ![Voidcat](docs/cover.png)
 
-Smart storage for your life. Drop in any document: Voidcat reads it, files it and pulls out the facts. Any AI can use your knowledge, but personal details are masked before anything leaves. Your library lives encrypted on your Mac, and optionally in **Voidcat Cloud**, end-to-end encrypted, so you can open it in any browser.
+Smart storage for your life. Drop in any document: Voidcat reads it, files it and pulls out the facts. Any AI can use your knowledge, but personal details are masked before anything leaves. Your library lives encrypted on your Mac.
 
-Built for the GitLab Transcend Hackathon (October 2026).
+Started at the GitLab Transcend Hackathon (October 2026); now developed here on GitHub. The focus is the local Mac app.
 
-**Website:** https://voidcat.io · **Try Voidcat Cloud:** https://app.voidcat.io
+**Website:** https://voidcat.io
 
 ## Why
 
@@ -30,7 +30,9 @@ Your important papers (residence permits, leases, payslips, tax forms) are scatt
 - **MCP server**: Claude Desktop, Cursor or Claude Code can use your library through MCP, with per-app access levels and the same masking.
 - **Hide private details** on screen with ⌘⇧H, for screen sharing.
 
-**Voidcat Cloud (optional, in any browser)**
+**Voidcat Cloud (paused)**
+
+The code for an end-to-end encrypted browser version is in this repo (`src/cloud/`, `api/`, `deploy/`), but it is not deployed from here for now. What it does:
 
 - **End-to-end encrypted.** Everything is locked on your device before upload; Google Cloud stores only locked bytes. Signing in (email link or Google) says who you are; only your recovery key opens the library.
 - **Mac sync.** Connect your Mac in Settings; choose per document whether it's **In the cloud** or **only on this Mac**, with marks on every file.
@@ -98,9 +100,8 @@ The browser version needs a Firebase web config in `.env.local` (`VITE_FIREBASE_
 1. Drop documents onto the Library, or use **Choose files**.
 2. Approve or correct the facts in **Facts to approve**.
 3. Open **Ask** to question your library; you see exactly what will be sent before it goes.
-4. In **Settings → Voidcat Cloud**, connect your Mac to open your library in a browser.
-5. In **Connected AIs**, add Voidcat to Claude Desktop or Cursor, or copy the Claude Code command.
-6. Press ⌘⇧H anywhere to hide private details on screen.
+4. In **Connected AIs**, add Voidcat to Claude Desktop or Cursor, or copy the Claude Code command.
+5. Press ⌘⇧H anywhere to hide private details on screen.
 
 ## Checks
 
@@ -112,24 +113,19 @@ cd src-tauri && cargo test         # Rust tests (run build:mcp first)
 bun run privacy                    # the privacy guard
 ```
 
-## GitLab automation
+## CI
 
-Supervised autonomy: agents do the steps, a person approves the outcomes (assigning an issue, merging, tagging).
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on `main`:
 
-| Stage | What runs |
+| Job | What it does |
 |---|---|
-| plan | **Triage** flow labels new issues and comments a plan |
-| create | GitLab's **Developer** flow turns an approved issue into a merge request |
-| verify | `verify` and `rust-test` jobs; **Pipeline Doctor** flow explains failures and pushes small fixes |
-| secure | SAST, secret detection and dependency scanning on every merge request |
-| govern | `privacy-guard` job blocks personal data; **Privacy Guard** flow reviews masking and privacy rules |
-| package | `mcp-server` builds the MCP server for Apple silicon and Intel Macs; `web-config` and `web-build` build the web app |
-| deploy | `deploy-web` and `deploy-api` ship Voidcat Cloud to Cloud Run on every merge to `main`, signing in to Google through Workload Identity Federation (no stored keys) |
-| release | **Release** flow picks the version and prepares the changelog merge request; merging it is the approval, and the `release` job on main tags the version and publishes the MCP builds and a GitLab release |
-| configure | Agent runtime, review rules and flow sources versioned in `.gitlab/duo/` |
-| monitor | **Health Reporter** flow posts each `main` pipeline's numbers to a "Pipeline health" issue |
+| `verify` | typecheck, lint, TypeScript tests, build |
+| `rust-test` | `cargo test` on Linux with Tauri's packages |
+| `privacy-guard` | blocks personal data in what the change adds |
+| `mcp-server` | builds the MCP server for Apple silicon and Intel Macs |
+| `release` | on `main`, when the version in `package.json` has no tag yet: creates the tag and a GitHub release with that version's `CHANGELOG.md` section and the MCP builds |
 
-Flow sources are in `.gitlab/duo/flows/`; the rules agents follow are in `AGENTS.md`.
+To release: bump the version in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` together, add its `CHANGELOG.md` section, and merge.
 
 ## Stack
 
@@ -147,15 +143,15 @@ See `docs/STATUS.md` for what's built and what's next.
 
 ## Support
 
-Open an issue in this project. Security problems: see [SECURITY.md](SECURITY.md).
+Open an [issue on GitHub](https://github.com/HusDev/voidcat/issues). Security problems: see [SECURITY.md](SECURITY.md).
 
 ## Contributing
 
-Issues and merge requests are welcome. Run the checks above before opening a merge request. Use invented data in tests and examples, never real personal details.
+Issues and pull requests are welcome. Run the checks above before opening a pull request. Use invented data in tests and examples, never real personal details.
 
 ## Author
 
-Hussein Saad Hasan Al Khafaji ([@hus.dev](https://gitlab.com/hus.dev)).
+Hussein Saad Hasan Al Khafaji ([@HusDev](https://github.com/HusDev)).
 
 ## License
 
@@ -163,4 +159,4 @@ Hussein Saad Hasan Al Khafaji ([@hus.dev](https://gitlab.com/hus.dev)).
 
 ## Project status
 
-Under active development during the hackathon. Screenshots and the demo library use made-up example data.
+Under active development. Screenshots and the demo library use made-up example data.
