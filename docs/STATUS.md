@@ -1,6 +1,6 @@
 # Voidcat — status and next steps
 
-Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 17 Oct 2026.
+Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) at the start of a session. Last updated 20 Nov 2026.
 
 ## The product
 **Voidcat** (final name; first called SafeBox): a desktop app for smart, private storage of your life's documents. You drop documents in. It reads them on your Mac, files them into folders, and pulls out facts for you to approve. Any AI can use that knowledge, but personal details are masked before anything leaves.
@@ -8,7 +8,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 - **Tagline:** "Drop your life in. Any AI can use it. None of them can take it."
 - **First target users:** people whose paperwork spans countries (immigrants, expats, international workers).
 - **Design canvas (all screens, private artifact):** https://claude.ai/artifact/97fHrNDyKQs6Q6DQ7cmB1Z (local copy in the Claude scratchpad; the published version is the reference)
-- **Repo:** https://gitlab.com/gitlab-ai-hackathon/transcend-october-2026/8599176/showcase (remote `showcase`, where work happens; must be public + MIT for the hackathon). Private copy: https://gitlab.com/hus.dev/voidcat (remote `origin`), pushed to later.
+- **Repo:** https://github.com/HusDev/voidcat (public, MIT; remote `origin`). Before 20 Nov 2026 it lived on GitLab (hackathon showcase project, left as is; private copy gitlab.com/hus.dev/voidcat, remote `gitlab`, to be archived). Focus now: the local Mac app; Voidcat Cloud is not deployed from CI.
 - **Owner:** Hussein (husdev). Separate from Hus, his private app in `~/lab/hus`. Never copy Hus's personal data into this repo.
 
 ## Built
@@ -63,7 +63,7 @@ Read this with `PREFERENCES.md` (his decisions) and `CLAUDE.md` (the code map) a
 27. **Library at scale (19 Oct, branch `feat/library-views`):** view tabs (Needs you, Recently added, Expiring soon, Unsigned, Notes I wrote, Everything), compact list by time with key facts, filters, sort, List/Cards, drop anywhere; plus the Tools screen and + New.
 
 ## Next, in order
-1. **GitLab hackathon work** (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):
+1. **GitLab hackathon work — ended 20 Nov 2026** (the hackathon is over and the repo moved to GitHub; the Duo flows and GitLab pipeline are gone, kept below as history) (Supervised autonomy, all nine stages; full plan in ~/.claude/plans/sprightly-sparking-tiger.md):
    - Phase 1, pipeline stages: verify (+ Rust tests), secure (SAST, secret detection, dependency scanning), govern (`scripts/privacy-guard.ts`), package (MCP binaries for Apple silicon and Intel), release (on `v*` tags: generic packages + GitLab release from `CHANGELOG.md`);
    - Phase 2, Duo groundwork: `.gitlab/duo/agent-config.yml`, `AGENTS.md`, `.gitlab/duo/mr-review-instructions.yaml`;
    - Phase 3, foundational flows on (Code Review, Developer, Fix CI/CD Pipeline, Security Review, SAST flows);

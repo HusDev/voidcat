@@ -12,7 +12,7 @@ export type Leak = { kind: string; value: string };
 
 const KINDS = new Set(["EMAIL", "IBAN", "ID"]);
 // Example domains, GitLab's noreply addresses, and Google Cloud service accounts (robots, never a person).
-const SAFE_EMAIL = /@(?:example\.(?:com|org|net)|[\w.-]+\.invalid|users\.noreply\.gitlab\.com|[\w-]+\.iam\.gserviceaccount\.com|developer\.gserviceaccount\.com)$|^noreply@/i;
+const SAFE_EMAIL = /@(?:example\.(?:com|org|net)|[\w.-]+\.invalid|users\.noreply\.(?:gitlab|github)\.com|[\w-]+\.iam\.gserviceaccount\.com|developer\.gserviceaccount\.com)$|^noreply@/i;
 const FILE_NAME = /\.(?:png|jpe?g|svg|gif|webp|icns|ico|json|ts|tsx|js|css|md)$/i;
 
 /** Lower case, accents off, punctuation to spaces: "Calle Robles, 214" → "calle robles 214". */

@@ -40,7 +40,7 @@ The AI never sees you. Reading happens on the user's own device, every copy is e
 
 ## Evidence on Hand
 
-- Live product: https://app.voidcat.io; source (MIT) on GitLab.
+- Live product: https://app.voidcat.io; source (MIT) on GitHub: https://github.com/HusDev/voidcat.
 - Invented demo documents in `demo/documents/` (Lena Ortiz Brandt, NIE X1234567L, valid until 01/02/2027) and real app screenshots of them.
 - Measured: local filing 24 s per document on an M5; ≈ 0.06 g CO₂e per document (SCI, `docs/SUSTAINABILITY.md`); 7.5 CI runner-hours for the whole hackathon.
 - Absent, never to be invented: testimonials, user counts, customers, press, ratings, benchmarks against competitors, prices.

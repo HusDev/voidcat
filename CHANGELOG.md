@@ -1,9 +1,10 @@
 # Changelog
 
-Each version's section becomes its GitLab release notes.
+Each version's section becomes its GitHub release notes.
 
 ## Unreleased
 
+- Moved to GitHub (github.com/HusDev/voidcat), still MIT. Checks and releases run on GitHub Actions; Voidcat Cloud is no longer deployed from CI.
 - Library for big collections: view tabs (Needs you, Recently added, Expiring soon, Unsigned, Notes I wrote, Everything), one compact list grouped by when files were added with a key fact per row, filters, sorting, List or Cards; files drop anywhere on the page.
 - Tools screen in the sidebar (New document, Sign, and the tools coming next) and **+ New** at the top of the sidebar.
 - Signing: sign PDFs, photos and notes with a drawn, typed or uploaded signature (kept on this Mac, locked), placed where the document asks for it, with the date and text boxes; Save signed copy makes "… (signed)" next to the original. Settings → Your signature → Forget my signature.

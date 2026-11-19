@@ -19,7 +19,7 @@ bun run privacy      # privacy guard on the last commit
 ```
 Rust (`src-tauri/`) needs Tauri's system packages; CI runs `cargo test` in the `rust-test` job.
 
-## Merge requests
-- One change per MR, with a short description of what and why.
+## Pull requests
+- One change per pull request, with a short description of what and why.
 - Link the issue (`Closes #N`).
 - Add a line under `## Unreleased` in `CHANGELOG.md` for user-visible changes.
