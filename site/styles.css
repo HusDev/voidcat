@@ -175,6 +175,15 @@ a {
   color: var(--ink-3);
   font-size: 0.95rem;
 }
+.meta a,
+.download-main p a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+.meta a:hover,
+.download-main p a:hover {
+  color: var(--ink);
+}
 
 h1,
 h2,
